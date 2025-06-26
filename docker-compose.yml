@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: . # Lấy toàn bộ thư mục hiện tại làm ngữ cảnh để xây dựng.
+      dockerfile: Dockerfile # Sử dụng tệp Dockerfile của bạn.
+      target: production # ra lệnh cho Docker chỉ xây dựng đến giai đoạn production trong Dockerfile đa giai đoạn của bạn
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_USERNAME=lms_user
+      - DATABASE_PASSWORD=lms_password
+      - DATABASE_NAME=lms_ai_database
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/ap # thư mục uploads trên máy thật của bạn sẽ được ánh xạ vào thư mục /app/uploads bên trong container.
+    networks: # kết nối "trụ sở" vào "hệ thống đường nội bộ lms-network".
+      - lms-network
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=lms_ai_database
+      - MYSQL_USER=lms_user
+      - MYSQL_PASSWORD=lms_password
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - lms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      timeout: 20s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - lms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      timeout: 3s
+      retries: 5
+
+  # AI Python Service (sẽ được thêm trong các phần sau)
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    ports:
+      - '8000:8000'
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./ai-service:/app
+      - ai_models:/app/models
+    networks:
+      - lms-network
+    restart: unless-stopped
+    profiles: # khi bạn chạy docker-compose up, dịch vụ này sẽ KHÔNG khởi động.
+      - ai
+
+volumes:
+  mysql_data:
+  redis_data:
+  ai_models:
+
+networks:
+  lms-network:
+    driver: bridge
+
+
+# Để khởi động mọi thứ (trừ AI): docker-compose up
+# Để khởi động mọi thứ (bao gồm cả AI): docker-compose --profile ai up
+# Để tắt mọi thứ: docker-compose down

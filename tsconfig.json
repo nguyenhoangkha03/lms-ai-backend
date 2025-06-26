@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true, // tạo file .d.ts (declaration) bên cạnh file .js khi biên dịch
+    "removeComments": true, // Xóa tất cả comment khỏi file biên dịch .js.
+    "emitDecoratorMetadata": true, // Yêu cầu khi dùng decorators (VD: @Injectable(), @Controller()... trong NestJS).
+    "experimentalDecorators": true, // Cho phép dùng decorators trong TypeScript.
+    "allowSyntheticDefaultImports": true, //  Cho phép import default từ modules không có default export
+    "target": "ES2021",
+    "sourceMap": true, // Tạo file .map để debug code TypeScript trong trình duyệt hoặc debugger.
+    "outDir": "./dist", 
+    "baseUrl": "./", // Làm gốc cho các đường dẫn tương đối hoặc alias.
+    "incremental": true, // Bật tính năng biên dịch tăng dần (incremental build).
+    "skipLibCheck": true, // Bỏ qua kiểm tra type bên trong các thư viện node_modules.
+    "strictNullChecks": true, //  ép kiểm tra giá trị null hoặc undefined.
+    "forceConsistentCasingInFileNames": true, // bắt buộc dùng đồng nhất chữ hoa/thường trong tên file
+    "noImplicitAny": false, // buộc bạn khai báo rõ ràng kiểu của biến, giúp code an toàn hơn.
+    "strictBindCallApply": false, // kiểm tra strict cho bind/call/apply
+    "noFallthroughCasesInSwitch": false, //  cảnh báo lỗi nếu bạn quên break.
+    "paths": {
+      "@/*": ["src/*"],
+      "@/common/*": ["src/common/*"],
+      "@/config/*": ["src/config/*"],
+      "@/modules/*": ["src/modules/*"],
+      "@/database/*": ["src/database/*"]
+    }
+  }
+}

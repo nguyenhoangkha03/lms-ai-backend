@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - '3000:3000'
+      - '9229:9229' # Debug port
+    environment:
+      - NODE_ENV=development
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_USERNAME=lms_user
+      - DATABASE_PASSWORD=lms_password
+      - DATABASE_NAME=lms_ai_dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - lms-network
+    command: npm run start:debug
+
+  mysql:
+    extends:
+      file: docker-compose.yml
+      service: mysql
+    environment:
+      - MYSQL_DATABASE=lms_ai_dev
+    ports:
+      - '3307:3306'
+
+  redis:
+    extends:
+      file: docker-compose.yml
+      service: redis
+    ports:
+      - '6380:6379'
+
+networks:
+  lms-network:
+    driver: bridge
