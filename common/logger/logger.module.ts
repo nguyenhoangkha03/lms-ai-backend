@@ -20,7 +20,7 @@ import { WinstonLoggerService } from './winston-logger.service';
           levels: {
             error: 0,
             warn: 1,
-            log: 2, // NestJS log level
+            // log: 2, // NestJS log level
             info: 2, // Winston info level
             debug: 3,
             verbose: 4,

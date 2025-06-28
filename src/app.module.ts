@@ -2,9 +2,13 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import configuration from 'config/configuration';
+import configuration from '@/config/configuration';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'common/logger/logger.module';
+import { DatabaseModule } from './database/database.module';
+import { CustomCacheModule } from './cache/cache.module';
+import { RedisModule } from './redis/redis.module';
+import { DatabaseController } from './database/database.controller';
 
 @Module({
   imports: [
@@ -29,8 +33,11 @@ import { LoggerModule } from 'common/logger/logger.module';
     }),
 
     LoggerModule,
+    DatabaseModule,
+    CustomCacheModule,
+    RedisModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, DatabaseController],
   providers: [AppService],
 })
 export class AppModule {}

@@ -17,13 +17,16 @@ services:
       - DATABASE_NAME=lms_ai_database
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - BACKUP_DIR=/app/backups
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
-      - ./uploads:/ap # thư mục uploads trên máy thật của bạn sẽ được ánh xạ vào thư mục /app/uploads bên trong container.
+      - ./uploads:/app/uploads # thư mục uploads trên máy thật của bạn sẽ được ánh xạ vào thư mục /app/uploads bên trong container.
+      - ./backups:/app/backups
+      - ./logs:/app/logs
     networks: # kết nối "trụ sở" vào "hệ thống đường nội bộ lms-network".
       - lms-network
     restart: unless-stopped
@@ -41,6 +44,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
       - ./docker/mysql/init:/docker-entrypoint-initdb.d
+      - ./backups:/backups
     networks:
       - lms-network
     restart: unless-stopped
@@ -48,6 +52,7 @@ services:
       test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
       timeout: 20s
       retries: 10
+    command: --default-authentication-plugin=mysql_native_password
 
   redis:
     image: redis:7-alpine
@@ -64,6 +69,37 @@ services:
       test: ['CMD', 'redis-cli', 'ping']
       timeout: 3s
       retries: 5
+
+  # Database monitoring tool (optional)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - PMA_USER=lms_user
+      - PMA_PASSWORD=lms_password
+    ports:
+      - '8080:80'
+    depends_on:
+      - mysql
+    networks:
+      - lms-network
+    profiles:
+      - tools
+
+  # Redis monitoring tool (optional)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - '8081:8081'
+    depends_on:
+      - redis
+    networks:
+      - lms-network
+    profiles:
+      - tools
 
   # AI Python Service (sẽ được thêm trong các phần sau)
   ai-service:
