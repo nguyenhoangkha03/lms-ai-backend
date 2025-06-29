@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 @Injectable()
 export class DatabaseOptimizationService {

@@ -1,7 +1,7 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 @Injectable()
 export class CacheService {
@@ -44,7 +44,7 @@ export class CacheService {
 
   async reset(): Promise<void> {
     try {
-      await this.cacheManager.clear();
+      await this.cacheManager.reset();
       this.logger.log('Cache reset completed');
     } catch (error) {
       this.logger.error('Cache reset error:', error.message);

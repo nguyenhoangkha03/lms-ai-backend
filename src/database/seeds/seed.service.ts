@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { SystemSeeder } from './system.seeder';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 @Injectable()
 export class SeedService {

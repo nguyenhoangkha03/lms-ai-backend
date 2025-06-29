@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../app.module';
 import { SeedService } from './seed.service';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 async function runSeeds() {
   // logger winston

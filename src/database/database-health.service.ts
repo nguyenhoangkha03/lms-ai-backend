@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { CacheService } from '../cache/cache.service';
-import { RedisService } from '../redis/redis.service';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { CacheService } from '@/cache/cache.service';
+import { RedisService } from '@/redis/redis.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 @Injectable()
 export class DatabaseHealthService {

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import * as mysql from 'mysql2/promise';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit {

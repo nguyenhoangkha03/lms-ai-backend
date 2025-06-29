@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { CacheService } from '../cache/cache.service';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { CacheService } from '@/cache/cache.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 @Injectable()
 export class DatabaseMonitoringService {

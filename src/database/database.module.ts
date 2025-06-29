@@ -1,9 +1,9 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DatabaseConfig } from 'config/configuration';
+import { DatabaseConfig } from '@/config/configuration';
 import { DatabaseService } from './database.service';
-import { LoggerModule } from 'common/logger/logger.module';
+import { LoggerModule } from '@/logger/logger.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CustomCacheModule } from '@/cache/cache.module';
 import { RedisModule } from '@/redis/redis.module';

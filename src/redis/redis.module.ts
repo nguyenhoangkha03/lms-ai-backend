@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { RedisService } from './redis.service';
-import { LoggerModule } from 'common/logger/logger.module';
+import { LoggerModule } from '@/logger/logger.module';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
 

@@ -4,11 +4,13 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/config/configuration';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { LoggerModule } from 'common/logger/logger.module';
+import { LoggerModule } from '@/logger/logger.module';
 import { DatabaseModule } from './database/database.module';
 import { CustomCacheModule } from './cache/cache.module';
 import { RedisModule } from './redis/redis.module';
 import { DatabaseController } from './database/database.controller';
+import { AuthModule } from './modules/auth/auth.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { DatabaseController } from './database/database.controller';
     DatabaseModule,
     CustomCacheModule,
     RedisModule,
+    AuthModule,
+    UserModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],

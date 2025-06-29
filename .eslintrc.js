@@ -23,7 +23,10 @@ module.exports = {
     // Báo lỗi nếu có biến không được sử dụng,
     // NHƯNG bỏ qua cho các tham số hàm bắt đầu bằng dấu '_'
     // Rất hữu ích khi bạn cần khai báo tham số nhưng không dùng đến nó.
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      { varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
+    ],
     '@typescript-eslint/no-empty-function': 'off', // Cho phép các hàm rỗng (không có nội dung)
     'prettier/prettier': [
       // nếu không chuẩn prettier báo lỗi

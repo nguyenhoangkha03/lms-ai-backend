@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 const execAsync = promisify(exec);
 
@@ -22,7 +22,7 @@ export class BackupService {
     private readonly logger: WinstonLoggerService,
   ) {
     this.logger.setContext(BackupService.name);
-    this.backupDir = this.configService.get<string>('BACKUP_DIR') || './backups';
+    this.backupDir = this.configService.get<string>('BACKUP_DIR') || './src/backups';
     this.ensureBackupDirectory();
   }
 

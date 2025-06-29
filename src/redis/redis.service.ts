@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 import Redis from 'ioredis';
 // import { REDIS_CLIENT } from './redis.module';
 

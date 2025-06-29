@@ -1,6 +1,6 @@
 import { DataSource, ObjectLiteral, Repository } from 'typeorm';
 import { SeederInterface } from './seed.interface';
-import { WinstonLoggerService } from 'common/logger/winston-logger.service';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
 
 export abstract class BaseSeeder implements SeederInterface {
   constructor(

@@ -5,7 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import * as request from 'supertest';
 import { DatabaseModule } from '../../src/database/database.module';
 import { DatabaseHealthService } from '../../src/database/database-health.service';
-import configuration from '../../config/configuration';
+import configuration from '../../src/config/configuration';
 
 describe('Database Management (e2e)', () => {
   let app: INestApplication;

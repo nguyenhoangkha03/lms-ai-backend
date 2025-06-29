@@ -8,6 +8,7 @@ services:
       target: production # ra lệnh cho Docker chỉ xây dựng đến giai đoạn production trong Dockerfile đa giai đoạn của bạn
     ports:
       - '3000:3000'
+      - '3443:3443' # HTTPS port
     environment:
       - NODE_ENV=production
       - DATABASE_HOST=mysql
@@ -18,6 +19,11 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - BACKUP_DIR=/app/backups
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - SSL_ENABLED=true
+      - SSL_KEY_PATH=/app/ssl/private.key
+      - SSL_CERT_PATH=/app/ssl/certificate.crt
     depends_on:
       mysql:
         condition: service_healthy
@@ -27,9 +33,21 @@ services:
       - ./uploads:/app/uploads # thư mục uploads trên máy thật của bạn sẽ được ánh xạ vào thư mục /app/uploads bên trong container.
       - ./backups:/app/backups
       - ./logs:/app/logs
+      - ./ssl:/app/ssl:ro
     networks: # kết nối "trụ sở" vào "hệ thống đường nội bộ lms-network".
       - lms-network
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
 
   mysql:
     image: mysql:8.0
@@ -127,6 +145,8 @@ volumes:
 networks:
   lms-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: lms-bridge
 
 
 # Để khởi động mọi thứ (trừ AI): docker-compose up
