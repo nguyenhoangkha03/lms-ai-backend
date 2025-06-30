@@ -34,10 +34,13 @@ import { UserModule } from './modules/user/user.module';
       }),
     }),
 
+    // Core modules
     LoggerModule,
     DatabaseModule,
     CustomCacheModule,
     RedisModule,
+
+    // Feature modules
     AuthModule,
     UserModule,
   ],

@@ -1,4 +1,4 @@
-import { UserService } from '@/modules/user/user.service';
+import { UserService } from '@/modules/user/services/user.service';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
@@ -36,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User account is not active');
     }
 
-    if (payload.iat! < user.passwordChangedAt?.getTime() / 1000) {
+    if (user.passwordChangedAt && payload.iat! < user.passwordChangedAt.getTime() / 1000) {
       throw new UnauthorizedException('Token expired due to password change');
     }
 

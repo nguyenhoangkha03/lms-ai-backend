@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
-import { UserService } from '@/modules/user/user.service';
+import { UserService } from '@/modules/user/services/user.service';
 
 @Injectable()
 export class TwoFactorService {
@@ -44,7 +44,7 @@ export class TwoFactorService {
     }
 
     const isValid = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: user.twoFactorSecret!,
       encoding: 'base32',
       token,
       window: 2, // Allow for time skew
@@ -66,7 +66,7 @@ export class TwoFactorService {
     }
 
     const isValid = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: user.twoFactorSecret!,
       encoding: 'base32',
       token,
       window: 2,

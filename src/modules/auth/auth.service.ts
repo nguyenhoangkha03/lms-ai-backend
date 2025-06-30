@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UserService } from '../user/user.service';
+import { UserService } from '../user/services/user.service';
 import { PasswordService } from './services/password.service';
 import { CacheService } from '../../cache/cache.service';
 import { JwtPayload, AuthTokens, LoginResponse } from './interfaces/jwt-payload.interface';
@@ -11,6 +11,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { UserType } from '@/common/enums/user.enums';
 
 @Injectable()
 export class AuthService {
@@ -115,7 +116,7 @@ export class AuthService {
       email: registerDto.email,
       username: registerDto.username,
       passwordHash,
-      userType: registerDto.userType || 'student',
+      userType: registerDto.userType || UserType.STUDENT,
       status: 'pending', // Require email verification
     };
 

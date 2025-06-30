@@ -1,3 +1,4 @@
+import { UserType } from '@/common/enums/user.enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsString, MinLength, IsEnum, IsOptional, Matches } from 'class-validator';
 
@@ -39,7 +40,7 @@ export class RegisterDto {
   @IsEnum(['student', 'teacher', 'admin'], {
     message: 'User type must be either student, teacher, or admin',
   })
-  userType?: 'student' | 'teacher' | 'admin';
+  userType?: UserType;
 
   @ApiPropertyOptional({
     description: 'First name',
