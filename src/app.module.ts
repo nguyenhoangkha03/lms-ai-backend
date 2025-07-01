@@ -11,6 +11,7 @@ import { RedisModule } from './redis/redis.module';
 import { DatabaseController } from './database/database.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
+import { CourseModule } from './modules/course/course.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { UserModule } from './modules/user/user.module';
     // Feature modules
     AuthModule,
     UserModule,
+    CourseModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
