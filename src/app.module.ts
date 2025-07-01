@@ -12,6 +12,9 @@ import { DatabaseController } from './database/database.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { CourseModule } from './modules/course/course.module';
+import { AssessmentModule } from './modules/assessment/assessment.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -45,6 +48,9 @@ import { CourseModule } from './modules/course/course.module';
     AuthModule,
     UserModule,
     CourseModule,
+    AssessmentModule,
+    AnalyticsModule,
+    AiModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],

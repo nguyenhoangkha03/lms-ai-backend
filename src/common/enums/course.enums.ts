@@ -31,6 +31,8 @@ export enum EnrollmentStatus {
   COMPLETED = 'completed',
   DROPPED = 'dropped',
   PAUSED = 'paused',
+  SUSPENDED = 'suspended',
+  EXPIRED = 'expired',
 }
 
 export enum PaymentStatus {
