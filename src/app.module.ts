@@ -15,6 +15,10 @@ import { CourseModule } from './modules/course/course.module';
 import { AssessmentModule } from './modules/assessment/assessment.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AiModule } from './modules/ai/ai.module';
+import { CommunicationModule } from './modules/communication/communication.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { SystemModule } from './modules/system/system.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -51,6 +55,10 @@ import { AiModule } from './modules/ai/ai.module';
     AssessmentModule,
     AnalyticsModule,
     AiModule,
+    CommunicationModule,
+    NotificationModule,
+    SystemModule,
+    ChatbotModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
