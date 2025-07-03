@@ -17,4 +17,12 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   newPassword: string;
+
+  @ApiProperty({
+    description: 'Confirm new password (must match new password)',
+    example: 'NewSecurePassword123!',
+    minLength: 8,
+  })
+  @IsString()
+  confirmPassword: string;
 }

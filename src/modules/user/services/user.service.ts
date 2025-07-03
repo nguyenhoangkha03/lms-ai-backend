@@ -390,6 +390,17 @@ export class UserService {
     this.logger.log(`User deleted: ${id}`);
   }
 
+  // mới code mẫu: -->
+  async linkOAuthAccount(_id: any, _iv: any): Promise<void> {}
+  async createOAuthUser(id: any): Promise<User> {
+    return this.findById(id);
+  }
+  // mới code mẫu: <--
+
+  // mới code mẫu: -->
+  async unlinkOAuthAccount(_userId: string, _provider: 'google' | 'facebook'): Promise<void> {}
+  // mới code mẫu: <--
+
   private async createUserProfile(user: User): Promise<void> {
     // Create basic user profile
     const userProfile = this.userProfileRepository.create({

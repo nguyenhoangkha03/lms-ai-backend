@@ -38,6 +38,7 @@ import { CustomCacheModule } from '@/cache/cache.module';
   ],
   exports: [
     UserService,
+    TypeOrmModule,
     // UserProfileService,
     // StudentProfileService,
     // TeacherProfileService,

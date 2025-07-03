@@ -56,13 +56,11 @@ async function bootstrap() {
       }),
     );
   }
-
   // Dùng thư viện compression (Express middleware) để nén dữ liệu HTTP response (thường là gzip hoặc Brotli).
   if (configService.get<boolean>('security.compression')) {
     app.use(compression());
   }
-
-  app.use(cookieParser());
+  app.use(cookieParser(configService.get<string>('auth.cookie.secret')));
 
   // CORS configuration
   app.enableCors({

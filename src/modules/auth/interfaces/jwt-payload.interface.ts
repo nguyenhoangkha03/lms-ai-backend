@@ -7,6 +7,7 @@ export interface JwtPayload {
   iat?: number; // Issued at
   exp?: number; // Expires at
   jti?: string; // JWT ID for token tracking
+  sessionId?: string; // Session ID for correlation
 }
 
 export interface AuthTokens {
@@ -26,4 +27,8 @@ export interface LoginResponse extends AuthTokens {
     lastName?: string;
     avatar?: string;
   };
+  sessionId?: string;
+  requires2FA?: boolean;
+  tempToken?: string;
+  requiresEmailVerification?: boolean;
 }

@@ -24,6 +24,14 @@ export class CacheService {
     }
   }
 
+  async getKeys(pattern: string): Promise<string[]> {
+    const store = this.cacheManager.store;
+    if (typeof (store as any).keys === 'function') {
+      return await (store as any).keys(pattern);
+    }
+    throw new Error('getKeys is not supported by current cache store');
+  }
+
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
     try {
       await this.cacheManager.set(key, value, ttl);

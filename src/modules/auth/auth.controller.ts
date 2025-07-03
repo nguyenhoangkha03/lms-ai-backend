@@ -1,16 +1,22 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
+  Ip,
+  Param,
+  Patch,
   Post,
+  Query,
   Request,
   Response,
   UseGuards,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthService } from './services/auth.service';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { WinstonLoggerService } from '@/logger/winston-logger.service';
 import { Public } from './decorators/public.decorator';
 import { RegisterDto } from './dto/register.dto';
@@ -23,7 +29,14 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { DisableTwoFactorDto, VerifyTwoFactorDto } from './dto/two-factor.dto';
+import { FacebookAuthGuard, GoogleAuthGuard } from './guards/oauth.guard';
+import { ConfigService } from '@nestjs/config';
+import { SessionService } from './services/session.service';
+import { DeviceInfo } from './interfaces/device-info.interface';
+import { CurrentSession } from './decorators/session.decorator';
+import { Complete2FALoginDto, Enable2FADto, Verify2FADto } from './dto/two-factor.dto';
+import { LinkOAuthDto } from './dto/oauth.dto';
+import { UserService } from '../user/services/user.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -32,6 +45,9 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly logger: WinstonLoggerService,
     private readonly twoFactorService: TwoFactorService,
+    private readonly configService: ConfigService,
+    private readonly sessionService: SessionService,
+    private readonly userService: UserService,
   ) {
     this.logger.setContext(AuthController.name);
   }
@@ -41,51 +57,48 @@ export class AuthController {
   @ApiOperation({ summary: 'Register new user account' })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Validation error or user already exists' })
-  async register(@Body() registerDto: RegisterDto, @Response() res) {
-    const result = await this.authService.register(registerDto);
+  @ApiResponse({ status: 409, description: 'User already exists' })
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Headers('user-agent') userAgent: string,
+    @Ip() ip: string,
+  ) {
+    const deviceInfo: DeviceInfo = this.extractDeviceInfo(userAgent, ip);
+    const result = await this.authService.register(registerDto, deviceInfo);
 
-    this.setAuthCookies(res, result.accessToken, result.refreshToken);
-
-    return res.status(HttpStatus.CREATED).json({
+    return {
       message: 'User registered successfully',
-      user: result.user,
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    });
+      ...result,
+    };
   }
 
   @Public()
-  @UseGuards(LocalAuthGuard)
   @Post('login')
+  @UseGuards(LocalAuthGuard)
   // dùng để thiết lập HTTP status code trả về cho một route mặc định là 200 OK
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: LoginDto, @Request() req, @Response() res) {
-    const user = req.user;
+  @ApiResponse({ status: 403, description: 'Account locked or suspended' })
+  async login(
+    @Body() loginDto: LoginDto,
+    @Headers('user-agent') userAgent: string,
+    @Ip() ip: string,
+    @Response({ passthrough: true }) res,
+  ) {
+    const deviceInfo: DeviceInfo = this.extractDeviceInfo(userAgent, ip);
+    const result = await this.authService.login(loginDto, deviceInfo);
 
-    // Check if 2FA is enabled
-    if (user.twoFactorEnabled) {
-      return res.json({
-        message: 'Two-factor authentication required',
-        requiresTwoFactor: true,
-        userId: user.id,
-      });
+    // Set cookies if not requiring 2FA
+    if (!result.requires2FA) {
+      this.setAuthCookies(res, result);
     }
 
-    const result = await this.authService.login(loginDto);
-
-    this.setAuthCookies(res, result.accessToken, result.refreshToken);
-
-    this.logger.log(`User logged in: ${user.email}`);
-
-    return res.json({
-      message: 'Login successful',
-      user: result.user,
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    });
+    return {
+      message: result.requires2FA ? '2FA verification required' : 'Login successful',
+      ...result,
+    };
   }
 
   @Public()
@@ -94,51 +107,45 @@ export class AuthController {
   @ApiOperation({ summary: 'Complete login with 2FA' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid 2FA code' })
-  async loginWith2FA(@Body() body: { userId: string; token: string }, @Response() res) {
-    const { userId, token } = body;
+  async complete2FALogin(
+    @Body() complete2FADto: Complete2FALoginDto,
+    @Headers('user-agent') userAgent: string,
+    @Ip() ip: string,
+    @Response({ passthrough: true }) res,
+  ) {
+    const deviceInfo: DeviceInfo = this.extractDeviceInfo(userAgent, ip);
+    const result = await this.authService.complete2FALogin(
+      complete2FADto.tempToken,
+      complete2FADto.code,
+      deviceInfo,
+    );
 
-    const isValidToken = await this.twoFactorService.verifyTwoFactorToken(userId, token);
+    this.setAuthCookies(res, result);
 
-    if (!isValidToken) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({
-        message: 'Invalid verification code',
-      });
-    }
-
-    // Generate tokens for authenticated user
-    const user = await this.authService['userService'].findById(userId);
-    const result = await this.authService.login({ email: user.email, password: '' });
-
-    this.setAuthCookies(res, result.accessToken, result.refreshToken);
-
-    return res.json({
-      message: 'Login successful',
-      user: result.user,
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    });
+    return {
+      message: '2FA login successful',
+      ...result,
+    };
   }
 
   @Public()
-  @UseGuards(RefreshJwtAuthGuard)
   @Post('refresh')
+  @UseGuards(RefreshJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refresh(@Request() req, @Response() res) {
+  async refreshToken(@Request() req, @Response({ passthrough: true }) res) {
     const refreshToken =
-      req.cookies['refresh-token'] || req.headers.authorization?.replace('Bearer ', '');
+      req.cookies?.['refresh-token'] || req.headers?.authorization?.replace('Bearer ', '');
 
-    const result = await this.authService.refreshToken(refreshToken);
+    const tokens = await this.authService.refreshToken(refreshToken);
+    this.setAuthCookies(res, tokens);
 
-    this.setAuthCookies(res, result.accessToken, result.refreshToken);
-
-    return res.json({
+    return {
       message: 'Token refreshed successfully',
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-    });
+      ...tokens,
+    };
   }
 
   @ApiBearerAuth('JWT-auth')
@@ -147,26 +154,44 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User logout' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
-  async logout(@CurrentUser('id') userId: string, @Request() req, @Response() res) {
-    const refreshToken = req.cookies['refresh-token'];
+  async logout(
+    @CurrentUser('id') userId: string,
+    @CurrentSession('sessionId') sessionId: string,
+    @Request() req,
+    @Response({ passthrough: true }) res,
+  ) {
+    const refreshToken = req.cookies?.['refresh-token'];
 
-    await this.authService.logout(userId, refreshToken);
+    await this.authService.logout(userId, sessionId, refreshToken);
+    this.clearAuthCookies(res);
 
-    // Clear cookies
-    res.clearCookie('access-token');
-    res.clearCookie('refresh-token');
-
-    this.logger.log(`User logged out: ${userId}`);
-
-    return res.json({
+    return {
       message: 'Logout successful',
-    });
+    };
   }
 
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-  @Post('change-password')
+  @Post('logout-all')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout from all devices' })
+  @ApiResponse({ status: 200, description: 'Logged out from all devices' })
+  async logoutFromAllDevices(
+    @CurrentUser('id') userId: string,
+    @CurrentSession('sessionId') currentSessionId: string,
+    @Response({ passthrough: true }) _res,
+  ) {
+    await this.authService.logoutFromAllDevices(userId, currentSessionId);
+
+    return {
+      message: 'Logged out from all devices successfully',
+    };
+  }
+
+  // Password Management
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Patch('change-password')
   @ApiOperation({ summary: 'Change user password' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
   @ApiResponse({ status: 400, description: 'Invalid current password or weak new password' })
@@ -174,7 +199,11 @@ export class AuthController {
     @CurrentUser('id') userId: string,
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
-    await this.authService.changePassword(userId, changePasswordDto);
+    await this.authService.changePassword(
+      userId,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword,
+    );
 
     return {
       message: 'Password changed successfully',
@@ -209,16 +238,28 @@ export class AuthController {
   }
 
   @Public()
-  @Get('verify-email/:token')
+  @Get('verify-email')
   @ApiOperation({ summary: 'Verify email address' })
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
   @ApiResponse({ status: 400, description: 'Invalid or expired verification token' })
-  async verifyEmail(@Request() req) {
-    const token = req.params.token;
+  async verifyEmail(@Query('token') token: string) {
     await this.authService.verifyEmail(token);
 
     return {
       message: 'Email verified successfully',
+    };
+  }
+
+  @Public()
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend email verification' })
+  @ApiResponse({ status: 200, description: 'Verification email sent' })
+  async resendVerificationEmail(@Body('email') email: string) {
+    await this.authService.resendVerificationEmail(email);
+
+    return {
+      message: 'Verification email sent if the account exists',
     };
   }
 
@@ -245,18 +286,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Enable 2FA with verification code' })
   @ApiResponse({ status: 200, description: '2FA enabled successfully' })
   @ApiResponse({ status: 400, description: 'Invalid verification code' })
-  async enable2FA(
-    @CurrentUser('id') userId: string,
-    @Body() verifyTwoFactorDto: VerifyTwoFactorDto,
-  ) {
-    await this.twoFactorService.enableTwoFactor(userId, verifyTwoFactorDto.token);
-
-    // Generate backup codes
-    const backupCodes = await this.twoFactorService.generateBackupCodes(userId);
+  async enable2FA(@CurrentUser('id') userId: string, @Body() enable2FADto: Enable2FADto) {
+    await this.twoFactorService.enableTwoFactor(userId, enable2FADto.code);
 
     return {
       message: '2FA enabled successfully',
-      backupCodes,
     };
   }
 
@@ -267,11 +301,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Disable 2FA with verification code' })
   @ApiResponse({ status: 200, description: '2FA disabled successfully' })
   @ApiResponse({ status: 400, description: 'Invalid verification code' })
-  async disable2FA(
-    @CurrentUser('id') userId: string,
-    @Body() disableTwoFactorDto: DisableTwoFactorDto,
-  ) {
-    await this.twoFactorService.disableTwoFactor(userId, disableTwoFactorDto.token);
+  async disable2FA(@CurrentUser('id') userId: string, @Body() verify2FADto: Verify2FADto) {
+    await this.twoFactorService.disableTwoFactor(userId, verify2FADto.code);
 
     return {
       message: '2FA disabled successfully',
@@ -280,32 +311,329 @@ export class AuthController {
 
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-  @Get('me')
+  @Post('2fa/backup-codes')
+  @ApiOperation({ summary: 'Generate backup codes for 2FA' })
+  @ApiResponse({ status: 200, description: 'Backup codes generated' })
+  async generateBackupCodes(@CurrentUser('id') userId: string) {
+    const backupCodes = await this.twoFactorService.generateBackupCodes(userId);
+
+    return {
+      message: 'Backup codes generated successfully',
+      backupCodes,
+    };
+  }
+
+  // Profile and Account Management
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   async getProfile(@CurrentUser() user: any) {
     return {
-      user,
+      message: 'Profile retrieved successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        userType: user.userType,
+        roles: user.roles,
+        permissions: user.permissions,
+      },
     };
   }
 
-  private setAuthCookies(res: any, accessToken: string, refreshToken: string): void {
-    const isProduction = process.env.NODE_ENV === 'production';
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Get('check-auth')
+  @ApiOperation({ summary: 'Check authentication status' })
+  @ApiResponse({ status: 200, description: 'Authentication status' })
+  async checkAuth(@CurrentUser() user: any, @CurrentSession() session: any) {
+    return {
+      authenticated: true,
+      user,
+      session: session
+        ? {
+            sessionId: session.sessionId,
+            createdAt: session.createdAt,
+            lastAccessedAt: session.lastAccessedAt,
+          }
+        : null,
+    };
+  }
 
-    // Set access token cookie
-    res.cookie('access-token', accessToken, {
-      httpOnly: true, // Cookie chỉ gửi qua HTTP, JavaScript không đọc được → chống XSS
-      secure: isProduction, // Chỉ gửi cookie qua HTTPS nếu isProduction === true → chống MITM
-      sameSite: 'strict', // 'strict' ngăn chặn gửi cookie qua các yêu cầu cross-site → chống CSRF
-      maxAge: 15 * 60 * 1000, // Cookie tồn tại trong 15 phút tính từ khi được gửi
+  // Security and Audit
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Get('security/login-history')
+  @ApiOperation({ summary: 'Get user login history' })
+  @ApiResponse({ status: 200, description: 'Login history retrieved' })
+  async getLoginHistory(
+    @CurrentUser('id') userId: string,
+    @Query('limit') _limit: string = '20',
+    @Query('offset') _offset: string = '0',
+  ) {
+    // This would typically come from audit logs
+    // For now, return session statistics
+    const sessionStats = await this.sessionService.getUserSessionStats(userId);
+
+    return {
+      message: 'Login history retrieved successfully',
+      stats: sessionStats,
+      // TODO: Implement actual login history from audit logs
+      history: [],
+    };
+  }
+
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Get('security/devices')
+  @ApiOperation({ summary: 'Get user trusted devices' })
+  @ApiResponse({ status: 200, description: 'Trusted devices retrieved' })
+  async getTrustedDevices(@CurrentUser('id') userId: string) {
+    const sessions = await this.authService.getUserSessions(userId);
+
+    return {
+      message: 'Trusted devices retrieved successfully',
+      devices: sessions.map(session => ({
+        sessionId: session.sessionId,
+        device: session.deviceInfo.device,
+        browser: session.deviceInfo.browser,
+        os: session.deviceInfo.os,
+        lastAccessed: session.lastAccessedAt,
+        current: session.current,
+      })),
+    };
+  }
+
+  // Account Security Actions
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Post('security/revoke-all-tokens')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke all refresh tokens and sessions' })
+  @ApiResponse({ status: 200, description: 'All tokens and sessions revoked' })
+  async revokeAllTokens(
+    @CurrentUser('id') userId: string,
+    @CurrentSession('sessionId') currentSessionId: string,
+  ) {
+    await this.authService.logoutFromAllDevices(userId, currentSessionId);
+
+    return {
+      message: 'All tokens and sessions revoked successfully',
+    };
+  }
+
+  @Public()
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Login with Google' })
+  @ApiResponse({ status: 302, description: 'Redirect to Google OAuth' })
+  async googleAuth() {
+    // Guard redirects to Google
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  @ApiResponse({ status: 200, description: 'OAuth login successful' })
+  async googleAuthCallback(@Request() req, @Response() res) {
+    const user = req.user;
+
+    if (!user) {
+      return res.redirect(
+        `${this.configService.get<string>('frontend.url')}/auth/error?message=OAuth failed`,
+      );
+    }
+
+    // Generate JWT tokens
+    const tokens = await this.authService.generateTokens(user);
+    this.setAuthCookies(res, tokens);
+
+    return res.redirect(`${this.configService.get<string>('frontend.url')}/auth/oauth-success`);
+  }
+
+  @Public()
+  @Get('facebook')
+  @UseGuards(FacebookAuthGuard)
+  @ApiOperation({ summary: 'Login with Facebook' })
+  @ApiResponse({ status: 302, description: 'Redirect to Facebook OAuth' })
+  async facebookAuth() {
+    // Guard redirects to Facebook
+  }
+
+  @Public()
+  @Get('facebook/callback')
+  @UseGuards(FacebookAuthGuard)
+  @ApiOperation({ summary: 'Facebook OAuth callback' })
+  @ApiResponse({ status: 200, description: 'OAuth login successful' })
+  async facebookAuthCallback(@Request() req, @Response() res) {
+    const user = req.user;
+
+    if (!user) {
+      return res.redirect(
+        `${this.configService.get<string>('frontend.url')}/auth/error?message=OAuth failed`,
+      );
+    }
+
+    // Generate JWT tokens
+    const tokens = await this.authService.generateTokens(user);
+    this.setAuthCookies(res, tokens);
+
+    return res.redirect(`${this.configService.get<string>('frontend.url')}/auth/oauth-success`);
+  }
+
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Post('link-oauth')
+  @ApiOperation({ summary: 'Link OAuth account to existing user' })
+  @ApiResponse({ status: 200, description: 'OAuth account linked successfully' })
+  async linkOAuthAccount(@CurrentUser('id') userId: string, @Body() linkOAuthDto: LinkOAuthDto) {
+    await this.userService.linkOAuthAccount(userId, {
+      provider: linkOAuthDto.provider,
+      providerId: linkOAuthDto.providerId,
+      accessToken: linkOAuthDto.accessToken,
+      refreshToken: linkOAuthDto.refreshToken,
+      profileData: linkOAuthDto.profileData,
     });
 
-    // Set refresh token cookie
-    res.cookie('refresh-token', refreshToken, {
+    return {
+      message: 'OAuth account linked successfully',
+    };
+  }
+
+  // Session Management endpoints
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Get('sessions')
+  @ApiOperation({ summary: 'Get user active sessions' })
+  @ApiResponse({ status: 200, description: 'Active sessions retrieved' })
+  async getUserSessions(@CurrentUser('id') userId: string) {
+    const sessions = await this.authService.getUserSessions(userId);
+
+    return {
+      message: 'Active sessions retrieved successfully',
+      sessions,
+    };
+  }
+
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Delete('sessions/:sessionId')
+  @ApiOperation({ summary: 'Terminate specific session' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID to terminate' })
+  @ApiResponse({ status: 200, description: 'Session terminated successfully' })
+  async terminateSession(@CurrentUser('id') userId: string, @Param('sessionId') sessionId: string) {
+    await this.authService.terminateSession(userId, sessionId);
+
+    return {
+      message: 'Session terminated successfully',
+    };
+  }
+
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Delete('unlink-oauth/:provider')
+  @ApiOperation({ summary: 'Unlink OAuth account' })
+  @ApiResponse({ status: 200, description: 'OAuth account unlinked successfully' })
+  async unlinkOAuthAccount(
+    @CurrentUser('id') userId: string,
+    @Param('provider') provider: 'google' | 'facebook',
+  ) {
+    await this.userService.unlinkOAuthAccount(userId, provider);
+
+    return {
+      message: 'OAuth account unlinked successfully',
+    };
+  }
+
+  private setAuthCookies(res: any, tokens: any) {
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    const domain = this.configService.get<string>('cookie.domain');
+
+    res.cookie('access-token', tokens.accessToken, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'strict',
+      domain,
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.cookie('refresh-token', tokens.refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'strict',
+      domain,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
+
+    if (tokens.sessionId) {
+      res.cookie('session-id', tokens.sessionId, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'strict',
+        domain,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+    }
+  }
+
+  private extractDeviceInfo(userAgent: string, ip: string): DeviceInfo {
+    // Basic device info extraction - in production, use a proper user-agent parser
+    const device = this.getDeviceType(userAgent);
+    const browser = this.getBrowserInfo(userAgent);
+    const os = this.getOSInfo(userAgent);
+
+    return {
+      userAgent: userAgent || 'Unknown',
+      ip: ip || '0.0.0.0',
+      device,
+      browser,
+      os,
+    };
+  }
+
+  private getDeviceType(userAgent: string): string {
+    if (!userAgent) return 'Unknown';
+
+    if (/Mobile|Android|iPhone|iPad/.test(userAgent)) {
+      return 'Mobile';
+    } else if (/Tablet/.test(userAgent)) {
+      return 'Tablet';
+    } else {
+      return 'Desktop';
+    }
+  }
+
+  private getBrowserInfo(userAgent: string): string {
+    if (!userAgent) return 'Unknown';
+
+    if (userAgent.includes('Chrome')) return 'Chrome';
+    if (userAgent.includes('Firefox')) return 'Firefox';
+    if (userAgent.includes('Safari')) return 'Safari';
+    if (userAgent.includes('Edge')) return 'Edge';
+    if (userAgent.includes('Opera')) return 'Opera';
+
+    return 'Unknown';
+  }
+
+  private getOSInfo(userAgent: string): string {
+    if (!userAgent) return 'Unknown';
+
+    if (userAgent.includes('Windows')) return 'Windows';
+    if (userAgent.includes('Mac OS')) return 'macOS';
+    if (userAgent.includes('Linux')) return 'Linux';
+    if (userAgent.includes('Android')) return 'Android';
+    if (userAgent.includes('iOS')) return 'iOS';
+
+    return 'Unknown';
+  }
+  private clearAuthCookies(res: any) {
+    const domain = this.configService.get<string>('cookie.domain');
+
+    res.clearCookie('access-token', { domain });
+    res.clearCookie('refresh-token', { domain });
+    res.clearCookie('session-id', { domain });
   }
 }

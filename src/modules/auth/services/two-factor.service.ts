@@ -123,4 +123,8 @@ export class TwoFactorService {
 
     return true;
   }
+
+  // mới code mẫu
+  async cleanupExpiredBackupCodes(): Promise<void> {}
+  // mới code mẫu
 }

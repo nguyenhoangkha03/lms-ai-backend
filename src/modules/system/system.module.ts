@@ -4,11 +4,12 @@ import { SystemController } from './system.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SystemSetting } from './entities/system-setting.entity';
 import { AuditLog } from './entities/audit-log.entity';
+import { AuditLogService } from './services/audit-log.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([SystemSetting, AuditLog])],
   controllers: [SystemController],
-  providers: [SystemService],
-  exports: [TypeOrmModule],
+  providers: [SystemService, AuditLogService],
+  exports: [TypeOrmModule, AuditLogService],
 })
 export class SystemModule {}
