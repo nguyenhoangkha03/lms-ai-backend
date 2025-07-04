@@ -134,6 +134,10 @@ export interface AuditConfig {
   retentionDays: number;
 }
 
+export interface CacheConfig {
+  ttl: number;
+}
+
 export interface Configuration {
   app: AppConfig;
   database: DatabaseConfig;
@@ -150,6 +154,7 @@ export interface Configuration {
   email: EmailConfig;
   frontend: FrontendConfig;
   audit: AuditConfig;
+  cache: CacheConfig;
 }
 
 export default (): Configuration => ({
@@ -275,5 +280,8 @@ export default (): Configuration => ({
     logSessionActivity: process.env.AUDIT_LOG_SESSION_ACTIVITY === 'true',
     logSecurityEvents: process.env.AUDIT_LOG_SECURITY_EVENTS === 'true',
     retentionDays: parseInt(process.env.AUDIT_RETENTION_DAYS || '365'),
+  },
+  cache: {
+    ttl: parseInt(process.env.CACHE_TTL || '3600'),
   },
 });

@@ -10,6 +10,7 @@ export enum UserStatus {
   INACTIVE = 'inactive',
   SUSPENDED = 'suspended',
   BANNED = 'banned',
+  DELETED = 'deleted',
 }
 
 export enum Gender {
@@ -24,6 +25,12 @@ export enum LearningStyle {
   AUDITORY = 'auditory',
   READING = 'reading',
   KINESTHETIC = 'kinesthetic',
+}
+
+export enum DifficultyPreference {
+  EASY = 'easy',
+  MEDIUM = 'medium',
+  HARD = 'hard',
 }
 
 export enum DifficultyLevel {

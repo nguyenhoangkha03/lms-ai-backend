@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, MaxLength, MinLength, Matches } from 'class-validator';
+import { IsString, IsOptional, MaxLength, MinLength, Matches, IsEmail } from 'class-validator';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({
@@ -15,6 +15,25 @@ export class UpdateUserDto {
     message: 'Username can only contain letters, numbers, underscores, and hyphens',
   })
   username: string;
+
+  @ApiPropertyOptional({
+    description: 'Email address',
+    example: 'johndoe@example.com',
+  })
+  @IsOptional()
+  @IsEmail({}, { message: 'Invalid email format' })
+  @MaxLength(255, { message: 'Email must not exceed 255 characters' })
+  email?: string;
+
+  //   @ApiPropertyOptional({
+  //     description: 'Password (min 6 chars)',
+  //     example: 'StrongP@ssw0rd',
+  //   })
+  //   @IsOptional()
+  //   @IsString()
+  //   @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  //   @MaxLength(100, { message: 'Password must not exceed 100 characters' })
+  //   password?: string;
 
   @ApiPropertyOptional({
     description: 'First name',

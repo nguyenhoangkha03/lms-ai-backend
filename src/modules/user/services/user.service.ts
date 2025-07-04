@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { UserProfile } from '../entities/user-profile.entity';
 import { StudentProfile } from '../entities/student-profile.entity';
@@ -9,11 +14,25 @@ import { UserStatus, UserType } from '@/common/enums/user.enums';
 import { CacheService } from '@/cache/cache.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { UserQueryDto } from '../dto/user-query.dto';
+import { PaginatedResult } from '../interfaces/paginated-result.interface';
+import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { ConfigService } from '@nestjs/config';
+import { Permission } from '../entities/permission.entity';
+import { PasswordService } from '@/modules/auth/services/password.service';
+import { Role } from '../entities/role.entity';
+import {
+  BulkAssignRolesDto,
+  BulkUpdateStatusDto,
+  ImportUsersDto,
+} from '../dto/bulk-user-operations.dto';
+import { parse } from 'csv-parse/sync';
+import { UpdateUserProfileDto } from '../dto/update-user-profile.dto';
+import { UpdateStudentProfileDto } from '../dto/update-student-profile.dto';
+import { UpdateTeacherProfileDto } from '../dto/update-teacher-profile.dto';
 
 @Injectable()
 export class UserService {
-  private readonly logger = new Logger(UserService.name);
-
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -24,7 +43,14 @@ export class UserService {
     @InjectRepository(TeacherProfile)
     private readonly teacherProfileRepository: Repository<TeacherProfile>,
     private readonly cacheService: CacheService,
-  ) {}
+    private readonly logger: WinstonLoggerService,
+    private readonly configService: ConfigService,
+    private readonly passwordService: PasswordService,
+    @InjectRepository(Role) private readonly roleRepository: Repository<Role>,
+    @InjectRepository(Permission) private readonly permissionRepository: Repository<Permission>,
+  ) {
+    this.logger.setContext(UserService.name);
+  }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     // Check if user already exists
@@ -48,12 +74,47 @@ export class UserService {
     // Create appropriate profile based on user type
     await this.createUserProfile(savedUser);
 
-    // Generate user-specific codes
-    await this.generateUserCodes(savedUser);
+    // Assign default role
+    await this.assignDefaultRole(savedUser);
 
     this.logger.log(`User created: ${savedUser.email} (${savedUser.userType})`);
 
     return this.findById(savedUser.id, { includeProfiles: true });
+  }
+
+  async findAll(queryDto: UserQueryDto): Promise<PaginatedResult<User>> {
+    const cacheKey = `users:${JSON.stringify(queryDto)}`;
+    const cached = await this.cacheService.get<PaginatedResult<User>>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const queryBuilder = this.createUserQueryBuilder(queryDto);
+
+    // Apply pagination
+    const skip = (queryDto.page! - 1) * queryDto.limit!;
+    queryBuilder.skip(skip).take(queryDto.limit);
+
+    // Apply sorting
+    queryBuilder.orderBy(`user.${queryDto.sortBy}`, queryDto.sortOrder);
+
+    // Execute query
+    const [users, total] = await queryBuilder.getManyAndCount();
+
+    const result: PaginatedResult<User> = {
+      data: users,
+      meta: {
+        page: queryDto.page!,
+        limit: queryDto.limit!,
+        total,
+        totalPages: Math.ceil(total / queryDto.limit!),
+        hasNext: queryDto.page! < Math.ceil(total / queryDto.limit!),
+        hasPrev: queryDto.page! > 1,
+      },
+    };
+
+    await this.cacheService.set(cacheKey, result, this.configService.get<number>('CACHE_TTL'));
+    return result;
   }
 
   async findById(
@@ -67,25 +128,31 @@ export class UserService {
       return cached;
     }
 
-    const relations: string[] = [];
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('user')
+      .where('user.id = :id', { id });
+
     if (options?.includeProfiles) {
-      relations.push('userProfile', 'studentProfile', 'teacherProfile', 'socials');
+      queryBuilder
+        .leftJoinAndSelect('user.userProfile', 'userProfile')
+        .leftJoinAndSelect('user.studentProfile', 'studentProfile')
+        .leftJoinAndSelect('user.teacherProfile', 'teacherProfile')
+        .leftJoinAndSelect('user.socials', 'socials');
     }
+
     if (options?.includeRoles) {
-      relations.push('roles', 'permissions');
+      queryBuilder
+        .leftJoinAndSelect('user.roles', 'roles')
+        .leftJoinAndSelect('roles.permissions', 'rolePermissions')
+        .leftJoinAndSelect('user.permissions', 'userPermissions');
     }
 
-    const user = await this.userRepository.findOne({
-      where: { id },
-      relations,
-    });
-
+    const user = await queryBuilder.getOne();
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    await this.cacheService.set(cacheKey, user, 300); // Cache for 5 minutes
-
+    await this.cacheService.set(cacheKey, user, this.configService.get<number>('CACHE_TTL'));
     return user;
   }
 
@@ -116,55 +183,110 @@ export class UserService {
     });
   }
 
-  async findByEmailOrUsername(email: string, username: string): Promise<User | null> {
-    return this.userRepository.findOne({
-      where: [{ email }, { username }],
+  async getUserPermissions(userId: string): Promise<Permission[]> {
+    const user = await this.findById(userId, { includeRoles: true });
+
+    const permissions = new Set<Permission>();
+
+    // Add direct permissions
+    user.permissions?.forEach(permission => permissions.add(permission));
+
+    // Add role permissions
+    user.roles?.forEach(role => {
+      role.permissions?.forEach(permission => permissions.add(permission));
     });
+
+    return Array.from(permissions);
   }
 
+  async hasPermission(userId: string, resource: string, action: string): Promise<boolean> {
+    const permissions = await this.getUserPermissions(userId);
+
+    return permissions.some(
+      permission => permission.resource === resource && permission.action === action,
+    );
+  }
+
+  async getUserStats(): Promise<any> {
+    const cacheKey = 'user:stats';
+    const cached = await this.cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const [
+      totalUsers,
+      activeUsers,
+      pendingUsers,
+      students,
+      teachers,
+      admins,
+      verifiedUsers,
+      twoFactorUsers,
+    ] = await Promise.all([
+      this.userRepository.count(),
+      this.userRepository.count({ where: { status: UserStatus.ACTIVE } }),
+      this.userRepository.count({ where: { status: UserStatus.PENDING } }),
+      this.userRepository.count({ where: { userType: UserType.STUDENT } }),
+      this.userRepository.count({ where: { userType: UserType.TEACHER } }),
+      this.userRepository.count({ where: { userType: UserType.ADMIN } }),
+      this.userRepository.count({ where: { emailVerified: true } }),
+      this.userRepository.count({ where: { twoFactorEnabled: true } }),
+    ]);
+
+    const stats = {
+      totalUsers,
+      activeUsers,
+      pendingUsers,
+      usersByType: { students, teachers, admins },
+      verifiedUsers,
+      twoFactorUsers,
+      verificationRate: totalUsers > 0 ? ((verifiedUsers / totalUsers) * 100).toFixed(2) : 0,
+      twoFactorRate: totalUsers > 0 ? ((twoFactorUsers / totalUsers) * 100).toFixed(2) : 0,
+    };
+
+    await this.cacheService.set(cacheKey, stats, 600); // 10 minutes cache
+    return stats;
+  }
+
+  async findByEmailOrUsername(email: string, username?: string): Promise<User | null> {
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    if (username) {
+      queryBuilder.where('user.email = :email OR user.username = :username', { email, username });
+    } else {
+      queryBuilder.where('user.email = :email', { email });
+    }
+
+    return queryBuilder.getOne();
+  }
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findById(id);
 
-    // Check for email/username conflicts if being updated
-    if (updateUserDto.username) {
-      const existing = await this.userRepository.findOne({
-        where: [
-          //   updateUserDto.email ? { email: updateUserDto.email } : {},
-          updateUserDto.username ? { username: updateUserDto.username } : {},
-        ].filter(where => Object.keys(where).length > 0),
-      });
-
-      if (existing && existing.id !== id) {
-        throw new ConflictException('Email or username already in use');
+    // Check email/username uniqueness if changed
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existingUser = await this.findByEmail(updateUserDto.email);
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Email already exists');
       }
     }
 
-    Object.assign(user, updateUserDto);
-    user.updatedAt = new Date();
+    if (updateUserDto.username && updateUserDto.username !== user.username) {
+      const existingUser = await this.findByUsername(updateUserDto.username);
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Username already exists');
+      }
+    }
 
+    const updateData: any = { ...updateUserDto };
+
+    Object.assign(user, updateData);
     const updatedUser = await this.userRepository.save(user);
 
-    // Invalidate cache
-    await this.invalidateUserCache(id);
+    // Clear cache
+    await this.clearUserCache(id);
 
-    this.logger.log(`User updated: ${updatedUser.id}`);
-
-    return this.findById(id, { includeProfiles: true });
+    this.logger.log(`User updated: ${updatedUser.email}`);
+    return updatedUser;
   }
-
-  async updateStatus(id: string, status: UserStatus): Promise<User> {
-    const user = await this.findById(id);
-    user.status = status;
-    user.updatedAt = new Date();
-
-    await this.userRepository.save(user);
-    await this.invalidateUserCache(id);
-
-    this.logger.log(`User status updated: ${id} -> ${status}`);
-
-    return user;
-  }
-
   async updateLastLogin(id: string, ip?: string): Promise<void> {
     await this.userRepository.update(id, {
       lastLoginAt: new Date(),
@@ -186,6 +308,14 @@ export class UserService {
 
     await this.userRepository.save(user);
     await this.invalidateUserCache(id);
+  }
+
+  async createOAuthUser(oauthUser: any): Promise<User> {
+    return {
+      ...oauthUser,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+    };
   }
 
   async unlockAccount(id: string): Promise<void> {
@@ -294,6 +424,104 @@ export class UserService {
     });
   }
 
+  async assignRoles(userId: string, roleIds: string[]): Promise<User> {
+    const user = await this.findById(userId, { includeRoles: true });
+    const roles = await this.roleRepository.findBy({ id: In(roleIds) });
+
+    if (roles.length !== roleIds.length) {
+      throw new NotFoundException('Some roles not found');
+    }
+
+    user.roles = [...(user.roles || []), ...roles];
+    const updatedUser = await this.userRepository.save(user);
+
+    await this.clearUserCache(userId);
+    return updatedUser;
+  }
+
+  async removeRoles(userId: string, roleIds: string[]): Promise<User> {
+    const user = await this.findById(userId, { includeRoles: true });
+
+    user.roles = user.roles?.filter(role => !roleIds.includes(role.id)) || [];
+    const updatedUser = await this.userRepository.save(user);
+
+    await this.clearUserCache(userId);
+    return updatedUser;
+  }
+
+  async assignPermissions(userId: string, permissionIds: string[]): Promise<User> {
+    const user = await this.findById(userId, { includeRoles: true });
+    const permissions = await this.permissionRepository.findBy({ id: In(permissionIds) });
+
+    if (permissions.length !== permissionIds.length) {
+      throw new NotFoundException('Some permissions not found');
+    }
+
+    user.permissions = [...(user.permissions || []), ...permissions];
+    const updatedUser = await this.userRepository.save(user);
+
+    await this.clearUserCache(userId);
+    return updatedUser;
+  }
+
+  async bulkUpdateStatus(bulkUpdateDto: BulkUpdateStatusDto): Promise<{ affected: number }> {
+    const result = await this.userRepository.update(
+      { id: In(bulkUpdateDto.userIds) },
+      {
+        status: bulkUpdateDto.status,
+        metadata: bulkUpdateDto.reason
+          ? ({ statusChangeReason: bulkUpdateDto.reason } as Record<string, any>)
+          : undefined,
+      },
+    );
+
+    // Clear cache for all affected users
+    await Promise.all(bulkUpdateDto.userIds.map(id => this.clearUserCache(id)));
+
+    this.logger.log(
+      `Bulk status update: ${result.affected} users updated to ${bulkUpdateDto.status}`,
+    );
+    return { affected: result.affected || 0 };
+  }
+
+  async bulkAssignRoles(bulkAssignDto: BulkAssignRolesDto): Promise<{ affected: number }> {
+    const users = await this.userRepository.findBy({ id: In(bulkAssignDto.userIds) });
+    const roles = await this.roleRepository.findBy({ id: In(bulkAssignDto.roleIds) });
+
+    if (roles.length !== bulkAssignDto.roleIds.length) {
+      throw new NotFoundException('Some roles not found');
+    }
+
+    let affected = 0;
+    for (const user of users) {
+      const existingRoleIds = user.roles?.map(r => r.id) || [];
+      const newRoles = roles.filter(role => !existingRoleIds.includes(role.id));
+
+      if (newRoles.length > 0) {
+        user.roles = [...(user.roles || []), ...newRoles];
+        await this.userRepository.save(user);
+        await this.clearUserCache(user.id);
+        affected++;
+      }
+    }
+
+    this.logger.log(`Bulk role assignment: ${affected} users affected`);
+    return { affected };
+  }
+
+  async bulkDelete(userIds: string[]): Promise<{ affected: number }> {
+    const result = await this.userRepository.update(
+      { id: In(userIds) },
+      { status: UserStatus.DELETED },
+    );
+
+    // Clear cache for all affected users
+    await Promise.all(userIds.map(id => this.clearUserCache(id)));
+
+    this.logger.log(`Bulk delete: ${result.affected} users deleted`);
+    return { affected: result.affected || 0 };
+  }
+
   async resetPasswordWithToken(userId: string, passwordHash: string): Promise<void> {
     await this.userRepository.update(userId, {
       passwordHash,
@@ -303,6 +531,78 @@ export class UserService {
     });
 
     await this.invalidateUserCache(userId);
+  }
+
+  async importUsers(importDto: ImportUsersDto): Promise<{ imported: number; errors: string[] }> {
+    const errors: string[] = [];
+    let imported = 0;
+
+    try {
+      const records = parse(importDto.csvData, {
+        columns: true,
+        skip_empty_lines: true,
+      });
+
+      for (const record of records) {
+        try {
+          const createUserDto: CreateUserDto = {
+            email: record.email,
+            username: record.username || record.email.split('@')[0],
+            passwordHash:
+              (await this.passwordService.hashPassword(record.password)) ||
+              this.generateRandomPassword(),
+            firstName: record.firstName,
+            lastName: record.lastName,
+            userType: record.userType || UserType.STUDENT,
+            phone: record.phone,
+          };
+
+          await this.create(createUserDto);
+          imported++;
+        } catch (error) {
+          errors.push(`Row ${imported + errors.length + 1}: ${error.message}`);
+        }
+      }
+    } catch (error) {
+      throw new BadRequestException(`CSV parsing error: ${error.message}`);
+    }
+
+    this.logger.log(`Import completed: ${imported} users imported, ${errors.length} errors`);
+    return { imported, errors };
+  }
+
+  async exportUsers(queryDto: UserQueryDto): Promise<string> {
+    const { data: users } = await this.findAll({ ...queryDto, limit: 10000 }); // Large limit for export
+
+    const csvHeaders = [
+      'id',
+      'email',
+      'username',
+      'firstName',
+      'lastName',
+      'userType',
+      'status',
+      'emailVerified',
+      'createdAt',
+    ];
+
+    const csvRows = users.map(user => [
+      user.id,
+      user.email,
+      user.username,
+      user.firstName || '',
+      user.lastName || '',
+      user.userType,
+      user.status,
+      user.emailVerified,
+      user.createdAt.toISOString(),
+    ]);
+
+    const csvContent = [csvHeaders, ...csvRows]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    return csvContent;
   }
 
   // Two-factor authentication
@@ -338,44 +638,81 @@ export class UserService {
     await this.invalidateUserCache(userId);
   }
 
-  // Search and filtering
-  async findUsers(options: {
-    userType?: UserType;
-    status?: UserStatus;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<{ users: User[]; total: number }> {
-    const { userType, status, search, page = 1, limit = 20 } = options;
+  async updateUserProfile(id: string, updateDto: UpdateUserProfileDto): Promise<UserProfile> {
+    const user = await this.findById(id, { includeProfiles: true });
 
-    const queryBuilder = this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.userProfile', 'profile')
-      .leftJoinAndSelect('user.studentProfile', 'studentProfile')
-      .leftJoinAndSelect('user.teacherProfile', 'teacherProfile');
-
-    if (userType) {
-      queryBuilder.andWhere('user.userType = :userType', { userType });
+    let profile = user.userProfile;
+    if (!profile) {
+      profile = this.userProfileRepository.create({ user });
     }
 
-    if (status) {
-      queryBuilder.andWhere('user.status = :status', { status });
+    Object.assign(profile, updateDto);
+    const updatedProfile = await this.userProfileRepository.save(profile);
+
+    await this.clearUserCache(id);
+    return updatedProfile;
+  }
+
+  async updateStudentProfile(
+    id: string,
+    updateDto: UpdateStudentProfileDto,
+  ): Promise<StudentProfile> {
+    const user = await this.findById(id, { includeProfiles: true });
+
+    if (user.userType !== UserType.STUDENT) {
+      throw new BadRequestException('User is not a student');
     }
 
-    if (search) {
-      queryBuilder.andWhere(
-        '(user.email LIKE :search OR user.username LIKE :search OR user.firstName LIKE :search OR user.lastName LIKE :search)',
-        { search: `%${search}%` },
-      );
+    let profile = user.studentProfile;
+    if (!profile) {
+      profile = this.studentProfileRepository.create({ user });
     }
 
-    const [users, total] = await queryBuilder
-      .orderBy('user.createdAt', 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
+    Object.assign(profile, updateDto);
+    const updatedProfile = await this.studentProfileRepository.save(profile);
 
-    return { users, total };
+    await this.clearUserCache(id);
+    return updatedProfile;
+  }
+
+  async updateTeacherProfile(
+    id: string,
+    updateDto: UpdateTeacherProfileDto,
+  ): Promise<TeacherProfile> {
+    const user = await this.findById(id, { includeProfiles: true });
+
+    if (user.userType !== UserType.TEACHER) {
+      throw new BadRequestException('User is not a teacher');
+    }
+
+    let profile = user.teacherProfile;
+    if (!profile) {
+      profile = this.teacherProfileRepository.create({ user });
+    }
+
+    Object.assign(profile, updateDto);
+    const updatedProfile = await this.teacherProfileRepository.save(profile);
+
+    await this.clearUserCache(id);
+    return updatedProfile;
+  }
+
+  async updateAvatar(id: string, avatarUrl: string): Promise<User> {
+    const user = await this.findById(id);
+    user.avatarUrl = avatarUrl;
+    const updatedUser = await this.userRepository.save(user);
+
+    await this.clearUserCache(id);
+    return updatedUser;
+  }
+
+  async updateCoverImage(id: string, coverUrl: string): Promise<User> {
+    const user = await this.findById(id);
+    user.coverUrl = coverUrl;
+    const updatedUser = await this.userRepository.save(user);
+
+    await this.clearUserCache(id);
+    return updatedUser;
   }
 
   async delete(id: string): Promise<void> {
@@ -390,11 +727,27 @@ export class UserService {
     this.logger.log(`User deleted: ${id}`);
   }
 
+  async activateUser(id: string): Promise<User> {
+    return this.updateUserStatus(id, UserStatus.ACTIVE);
+  }
+
+  async deactivateUser(id: string): Promise<User> {
+    return this.updateUserStatus(id, UserStatus.INACTIVE);
+  }
+
+  async suspendUser(id: string, reason?: string): Promise<User> {
+    const user = await this.updateUserStatus(id, UserStatus.SUSPENDED);
+
+    if (reason) {
+      user.metadata = { ...user.metadata, suspensionReason: reason };
+      await this.userRepository.save(user);
+    }
+
+    return user;
+  }
+
   // mới code mẫu: -->
   async linkOAuthAccount(_id: any, _iv: any): Promise<void> {}
-  async createOAuthUser(id: any): Promise<User> {
-    return this.findById(id);
-  }
   // mới code mẫu: <--
 
   // mới code mẫu: -->
@@ -430,11 +783,6 @@ export class UserService {
     }
   }
 
-  private async generateUserCodes(_user: User): Promise<void> {
-    // This will be implemented based on your code generation strategy
-    // For now, we'll use a simple timestamp-based approach
-  }
-
   private async generateStudentCode(): Promise<string> {
     const year = new Date().getFullYear();
     const count = await this.studentProfileRepository.count();
@@ -452,6 +800,113 @@ export class UserService {
 
     for (const pattern of patterns) {
       await this.cacheService.invalidateByTag(pattern);
+    }
+  }
+
+  private createUserQueryBuilder(queryDto: UserQueryDto): SelectQueryBuilder<User> {
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    // Include profiles if requested
+    if (queryDto.includeProfiles) {
+      queryBuilder
+        .leftJoinAndSelect('user.userProfile', 'userProfile')
+        .leftJoinAndSelect('user.studentProfile', 'studentProfile')
+        .leftJoinAndSelect('user.teacherProfile', 'teacherProfile')
+        .leftJoinAndSelect('user.socials', 'socials');
+    }
+
+    // Include roles if requested
+    if (queryDto.includeRoles) {
+      queryBuilder
+        .leftJoinAndSelect('user.roles', 'roles')
+        .leftJoinAndSelect('user.permissions', 'permissions');
+    }
+
+    // Apply filters
+    if (queryDto.search) {
+      queryBuilder.andWhere(
+        '(user.firstName LIKE :search OR user.lastName LIKE :search OR user.email LIKE :search OR user.username LIKE :search)',
+        { search: `%${queryDto.search}%` },
+      );
+    }
+
+    if (queryDto.userType) {
+      queryBuilder.andWhere('user.userType = :userType', { userType: queryDto.userType });
+    }
+
+    if (queryDto.status) {
+      queryBuilder.andWhere('user.status = :status', { status: queryDto.status });
+    }
+
+    if (queryDto.emailVerified !== undefined) {
+      queryBuilder.andWhere('user.emailVerified = :emailVerified', {
+        emailVerified: queryDto.emailVerified,
+      });
+    }
+
+    if (queryDto.twoFactorEnabled !== undefined) {
+      queryBuilder.andWhere('user.twoFactorEnabled = :twoFactorEnabled', {
+        twoFactorEnabled: queryDto.twoFactorEnabled,
+      });
+    }
+
+    if (queryDto.createdAfter) {
+      queryBuilder.andWhere('user.createdAt >= :createdAfter', {
+        createdAfter: queryDto.createdAfter,
+      });
+    }
+
+    if (queryDto.createdBefore) {
+      queryBuilder.andWhere('user.createdAt <= :createdBefore', {
+        createdBefore: queryDto.createdBefore,
+      });
+    }
+
+    if (queryDto.lastLoginAfter) {
+      queryBuilder.andWhere('user.lastLoginAt >= :lastLoginAfter', {
+        lastLoginAfter: queryDto.lastLoginAfter,
+      });
+    }
+
+    return queryBuilder;
+  }
+
+  private async updateUserStatus(id: string, status: UserStatus): Promise<User> {
+    const user = await this.findById(id);
+    user.status = status;
+    const updatedUser = await this.userRepository.save(user);
+
+    await this.clearUserCache(id);
+    this.logger.log(`User ${user.email} status changed to ${status}`);
+
+    return updatedUser;
+  }
+
+  private async assignDefaultRole(user: User): Promise<void> {
+    const roleName = user.userType.toLowerCase();
+    const defaultRole = await this.roleRepository.findOne({ where: { name: roleName } });
+
+    if (defaultRole) {
+      user.roles = [defaultRole];
+      await this.userRepository.save(user);
+    }
+  }
+
+  private generateRandomPassword(): string {
+    const length = 12;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return password;
+  }
+
+  private async clearUserCache(userId: string): Promise<void> {
+    const patterns = [`user:${userId}:*`, `users:*`];
+
+    for (const pattern of patterns) {
+      await this.cacheService.del(pattern);
     }
   }
 }

@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { UserService } from './services/user.service';
-import { UserController } from './user.controller';
+import { PermissionController, RoleController, UserController } from './user.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { UserProfile } from './entities/user-profile.entity';
@@ -10,6 +10,12 @@ import { UserSocial } from './entities/user-social.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { CustomCacheModule } from '@/cache/cache.module';
+import { MulterModule } from '@nestjs/platform-express';
+import { RoleService } from './services/role.service';
+import { PermissionService } from './services/permission.service';
+import { FileUploadService } from './services/file-upload.service';
+import { LoggerModule } from '@/logger/logger.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -23,13 +29,25 @@ import { CustomCacheModule } from '@/cache/cache.module';
       Permission,
     ]),
     CustomCacheModule,
+    forwardRef(() => AuthModule),
+    LoggerModule,
+    MulterModule.registerAsync({
+      useFactory: () => ({
+        dest: './uploads',
+      }),
+    }),
   ],
   controllers: [
     UserController,
+    RoleController,
+    PermissionController,
     // ProfileController, RoleController
   ],
   providers: [
     UserService,
+    RoleService,
+    PermissionService,
+    FileUploadService,
     // UserProfileService,
     // StudentProfileService,
     // TeacherProfileService,
@@ -38,6 +56,9 @@ import { CustomCacheModule } from '@/cache/cache.module';
   ],
   exports: [
     UserService,
+    RoleService,
+    PermissionService,
+    FileUploadService,
     TypeOrmModule,
     // UserProfileService,
     // StudentProfileService,

@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, forwardRef } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserModule } from '@/modules/user/user.module';
 import { CustomCacheModule } from '@/cache/cache.module';
 import { LoggerModule } from '@/logger/logger.module';
+import { SystemModule } from '../system/system.module';
 
 // Service
 import { AuthService } from './services/auth.service';
@@ -31,7 +32,6 @@ import { GoogleAuthGuard, FacebookAuthGuard } from './guards/oauth.guard';
 
 // Middleware
 import { SessionMiddleware } from './middleware/session.middleware';
-import { SystemModule } from '../system/system.module';
 
 @Module({
   imports: [
@@ -45,7 +45,7 @@ import { SystemModule } from '../system/system.module';
         },
       }),
     }),
-    UserModule,
+    forwardRef(() => UserModule),
     CustomCacheModule,
     LoggerModule,
     SystemModule,
