@@ -33,7 +33,15 @@ export enum SettingType {
 
 export enum AuditAction {
   LOGIN = 'login',
+  LOGIN_2FA_REQUIRED = 'login_2fa_required',
+  USER_LOGIN_2FA_SUCCESS = 'user_login_2fa_success',
+  LOGIN_2FA_COMPLETED = 'login_2fa_completed',
+  USER_REGISTERED = 'user_registered',
+  USER_UPDATED = 'user_updated',
+  USER_DELETED = 'user_deleted',
   LOGOUT = 'logout',
+  USER_LOGOUT = 'user_logout',
+  USER_LOGOUT_ALL_DEVICES = 'user_logout_all_devices',
   CREATE = 'create',
   READ = 'read',
   UPDATE = 'update',
@@ -49,10 +57,15 @@ export enum AuditAction {
   RESET_PASSWORD = 'reset_password',
   CHANGE_PASSWORD = 'change_password',
   GRANT_PERMISSION = 'grant_permission',
+  PASSWORD_RESET_REQUESTED = 'password_reset_requested',
+  PASSWORD_RESET_COMPLETED = 'password_reset_completed',
   REVOKE_PERMISSION = 'revoke_permission',
   SYSTEM_CONFIG = 'system_config',
   BACKUP = 'backup',
   RESTORE = 'restore',
+  EMAIL_VERIFIED = 'email_verified',
+  EMAIL_VERIFICATION_RESENT = 'email_verification_resent',
+  SESSION_TERMINATED = 'session_terminated',
 }
 
 export enum AuditLevel {

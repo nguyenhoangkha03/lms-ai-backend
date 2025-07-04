@@ -32,6 +32,13 @@ import { GoogleAuthGuard, FacebookAuthGuard } from './guards/oauth.guard';
 
 // Middleware
 import { SessionMiddleware } from './middleware/session.middleware';
+import { PermissionCheckMiddleware } from './middleware/permission-check.middleware';
+import { EnhancedPermissionsGuard } from './guards/enhanced-permissions.guard';
+import { ResourceGuard } from './guards/resource.guard';
+import { RateLimitGuard } from './guards/rate-limit.guard';
+import { OwnerGuard } from './guards/owner.guard';
+import { ApiKeyGuard } from './guards/api-key.guard';
+import { SecurityEventInterceptor } from './interceptors/security-event.interceptor';
 
 @Module({
   imports: [
@@ -74,6 +81,14 @@ import { SessionMiddleware } from './middleware/session.middleware';
     SessionGuard,
     GoogleAuthGuard,
     FacebookAuthGuard,
+    EnhancedPermissionsGuard,
+    ResourceGuard,
+    RateLimitGuard,
+    OwnerGuard,
+    ApiKeyGuard,
+
+    // Interceptors
+    SecurityEventInterceptor,
   ],
   exports: [
     AuthService,
@@ -84,10 +99,20 @@ import { SessionMiddleware } from './middleware/session.middleware';
     JwtAuthGuard,
     RolesGuard,
     SessionGuard,
+    EnhancedPermissionsGuard,
+    ResourceGuard,
+    RateLimitGuard,
+    OwnerGuard,
+    ApiKeyGuard,
+    SecurityEventInterceptor,
   ],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(SessionMiddleware).forRoutes('*');
+    consumer
+      .apply(SessionMiddleware)
+      .forRoutes('*')
+      .apply(PermissionCheckMiddleware)
+      .forRoutes('*');
   }
 }

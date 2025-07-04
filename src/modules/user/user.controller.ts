@@ -48,12 +48,17 @@ import {
   ImportUsersDto,
 } from './dto/bulk-user-operations.dto';
 import { User } from './entities/user.entity';
-import { UserType } from '@/common/enums/user.enums';
+import { PermissionAction, PermissionResource, UserType } from '@/common/enums/user.enums';
 import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { SecurityEventInterceptor } from '../auth/interceptors/security-event.interceptor';
+import { Authorize } from '../auth/decorators/authorize.decorator';
+import { OwnerOnly } from '../auth/decorators/owner-only.decorator';
+import { RequireApiKey } from '../auth/decorators/api-key.decorator';
 
 @ApiTags('User Management')
 @Controller('users')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(SecurityEventInterceptor)
 @ApiBearerAuth()
 export class UserController {
   constructor(
@@ -69,6 +74,10 @@ export class UserController {
   // ==================== USER CRUD OPERATIONS ====================
 
   @Post()
+  @Authorize({
+    roles: [UserType.ADMIN],
+    rateLimit: { points: 10, duration: 60 }, // 10 requests per minute
+  })
   @UseGuards(RolesGuard)
   @Roles(UserType.ADMIN)
   @ApiOperation({ summary: 'Create new user (Admin only)' })
@@ -79,6 +88,10 @@ export class UserController {
   }
 
   @Get()
+  @Authorize({
+    permissions: ['read:user'],
+    rateLimit: { points: 100, duration: 60 }, // 100 requests per minute
+  })
   @UseGuards(PermissionsGuard)
   @Permissions('read:user')
   @ApiOperation({ summary: 'Get all users with filtering and pagination' })
@@ -131,6 +144,14 @@ export class UserController {
   }
 
   @Patch(':id')
+  @Authorize({
+    resource: {
+      resource: PermissionResource.USER,
+      action: PermissionAction.UPDATE,
+      allowOwner: true, // Users can update their own profile
+      ownerField: 'userId',
+    },
+  })
   @UseGuards(PermissionsGuard)
   @Permissions('update:user')
   @ApiOperation({ summary: 'Update user by ID' })
@@ -139,6 +160,21 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.userService.update(id, updateUserDto);
+  }
+
+  // Owner-only access for profile updates
+  @Patch(':id/profile')
+  @OwnerOnly({
+    entityType: 'User',
+    entityField: 'id',
+    userField: 'id', // User can only update their own profile
+    allowedRoles: [UserType.ADMIN], // Admins can update any profile
+  })
+  async updateProfileOwner(
+    @Param('id') id: string,
+    @Body() updateProfileDto: UpdateUserProfileDto,
+  ) {
+    return this.userService.updateUserProfile(id, updateProfileDto);
   }
 
   @Delete(':id')
@@ -341,6 +377,11 @@ export class UserController {
   }
 
   @Get('export')
+  @RequireApiKey()
+  @Authorize({
+    permissions: ['export:user'],
+    rateLimit: { points: 5, duration: 3600 }, // 5 exports per hour
+  })
   @UseGuards(PermissionsGuard)
   @Permissions('read:user')
   @ApiOperation({ summary: 'Export users to CSV' })
@@ -434,6 +475,11 @@ export class RoleController {
   }
 
   @Delete(':id')
+  @Authorize({
+    roles: [UserType.ADMIN],
+    permissions: ['delete:user'],
+    rateLimit: { points: 5, duration: 300 }, // 5 deletes per 5 minutes
+  })
   @UseGuards(RolesGuard)
   @Roles(UserType.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)

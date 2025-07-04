@@ -16,6 +16,7 @@ import { PermissionService } from './services/permission.service';
 import { FileUploadService } from './services/file-upload.service';
 import { LoggerModule } from '@/logger/logger.module';
 import { AuthModule } from '../auth/auth.module';
+import { SystemModule } from '../system/system.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AuthModule } from '../auth/auth.module';
     CustomCacheModule,
     forwardRef(() => AuthModule),
     LoggerModule,
+    SystemModule,
     MulterModule.registerAsync({
       useFactory: () => ({
         dest: './uploads',

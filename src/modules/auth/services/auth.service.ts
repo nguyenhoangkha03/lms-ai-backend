@@ -22,6 +22,7 @@ import { SessionService } from './session.service';
 import { LoginAttempt } from '../interfaces/login-attempt.interface';
 import { AuditLogService } from '@/modules/system/services/audit-log.service';
 import { TwoFactorService } from './two-factor.service';
+import { AuditAction } from '@/common/enums/system.enums';
 
 @Injectable()
 export class AuthService {
@@ -123,10 +124,10 @@ export class AuthService {
         // Generate temporary token for 2FA
         const tempToken = await this.generate2FAToken(user.id);
 
-        await this.auditLogService.log({
+        await this.auditLogService.createAuditLog({
           userId: user.id,
-          action: 'LOGIN_2FA_REQUIRED',
-          resource: 'auth',
+          action: AuditAction.LOGIN_2FA_REQUIRED,
+          entityType: 'auth',
           metadata: { email, deviceInfo },
         });
 
@@ -172,10 +173,10 @@ export class AuthService {
       await this.userService.updateLastLogin(user.id, deviceInfo.ip);
 
       // Log successful login
-      await this.auditLogService.log({
+      await this.auditLogService.createAuditLog({
         userId: user.id,
-        action: 'USER_LOGIN',
-        resource: 'auth',
+        action: AuditAction.LOGIN,
+        entityType: 'auth',
         metadata: { email, deviceInfo, sessionId },
       });
 
@@ -251,10 +252,10 @@ export class AuthService {
     await this.userService.updateLastLogin(user.id, deviceInfo.ip);
 
     // Log successful 2FA login
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId: user.id,
-      action: 'USER_LOGIN_2FA_SUCCESS',
-      resource: 'auth',
+      action: AuditAction.LOGIN_2FA_COMPLETED,
+      entityType: 'auth',
       metadata: { deviceInfo, sessionId },
     });
 
@@ -330,11 +331,11 @@ export class AuthService {
     await this.sendVerificationEmail(user.email, verificationToken);
 
     // Log registration
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId: user.id,
-      action: 'USER_REGISTERED',
-      resource: 'auth',
-      resourceId: user.id,
+      action: AuditAction.USER_REGISTERED,
+      entityType: 'auth',
+      entityId: user.id,
       metadata: {
         email: user.email,
         userType: user.userType,
@@ -422,10 +423,10 @@ export class AuthService {
     }
 
     // Log logout
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId,
-      action: 'USER_LOGOUT',
-      resource: 'auth',
+      action: AuditAction.USER_LOGOUT,
+      entityType: 'auth',
       metadata: { sessionId },
     });
 
@@ -445,10 +446,10 @@ export class AuthService {
     await this.userService.revokeAllRefreshTokens(userId);
 
     // Log logout all
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId,
-      action: 'USER_LOGOUT_ALL_DEVICES',
-      resource: 'auth',
+      action: AuditAction.USER_LOGOUT_ALL_DEVICES,
+      entityType: 'auth',
       metadata: { excludedSessionId: currentSessionId },
     });
 
@@ -495,10 +496,10 @@ export class AuthService {
     // Update password
     await this.userService.updatePassword(userId, passwordHash);
 
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId,
-      action: 'PASSWORD_CHANGED',
-      resource: 'auth',
+      action: AuditAction.CHANGE_PASSWORD,
+      entityType: 'auth',
       metadata: {},
     });
 
@@ -513,10 +514,10 @@ export class AuthService {
       // Log password reset request
       const user = await this.userService.findByEmail(email);
       if (user) {
-        await this.auditLogService.log({
+        await this.auditLogService.createAuditLog({
           userId: user.id,
-          action: 'PASSWORD_RESET_REQUESTED',
-          resource: 'auth',
+          action: AuditAction.PASSWORD_RESET_REQUESTED,
+          entityType: 'auth',
           metadata: { email },
         });
       }
@@ -552,10 +553,10 @@ export class AuthService {
     await this.userService.revokeAllRefreshTokens(tokenData.userId);
 
     // Log password reset
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId: tokenData.userId,
-      action: 'PASSWORD_RESET_COMPLETED',
-      resource: 'auth',
+      action: AuditAction.PASSWORD_RESET_COMPLETED,
+      entityType: 'auth',
       metadata: { email: tokenData.email },
     });
 
@@ -566,10 +567,10 @@ export class AuthService {
     const verificationData = await this.emailVerificationService.verifyEmailToken(token);
 
     // Log email verification
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId: verificationData.userId,
-      action: 'EMAIL_VERIFIED',
-      resource: 'auth',
+      action: AuditAction.EMAIL_VERIFIED,
+      entityType: 'auth',
       metadata: { email: verificationData.email },
     });
 
@@ -592,10 +593,10 @@ export class AuthService {
     await this.sendVerificationEmail(email, verificationToken);
 
     // Log resend verification
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId: user.id,
-      action: 'EMAIL_VERIFICATION_RESENT',
-      resource: 'auth',
+      action: AuditAction.EMAIL_VERIFICATION_RESENT,
+      entityType: 'auth',
       metadata: { email },
     });
 
@@ -617,10 +618,10 @@ export class AuthService {
     await this.sessionService.destroySession(sessionId);
 
     // Log session termination
-    await this.auditLogService.log({
+    await this.auditLogService.createAuditLog({
       userId,
-      action: 'SESSION_TERMINATED',
-      resource: 'auth',
+      action: AuditAction.SESSION_TERMINATED,
+      entityType: 'auth',
       metadata: { sessionId },
     });
   }
