@@ -16,7 +16,7 @@ import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { UserQueryDto } from '../dto/user-query.dto';
 import { PaginatedResult } from '../interfaces/paginated-result.interface';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import { ConfigService } from '@nestjs/config';
 import { Permission } from '../entities/permission.entity';
 import { PasswordService } from '@/modules/auth/services/password.service';
@@ -43,7 +43,7 @@ export class UserService {
     @InjectRepository(TeacherProfile)
     private readonly teacherProfileRepository: Repository<TeacherProfile>,
     private readonly cacheService: CacheService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
     private readonly configService: ConfigService,
     private readonly passwordService: PasswordService,
     @InjectRepository(Role) private readonly roleRepository: Repository<Role>,

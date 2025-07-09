@@ -7,12 +7,12 @@ import { CourseSection } from '@/modules/course/entities/course-section.entity';
 import { Lesson } from '@/modules/course/entities/lesson.entity';
 import { User } from '@/modules/user/entities/user.entity';
 import { CourseLevel, CourseStatus, LessonType } from '../../common/enums/course.enums';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import { UserType } from '@/common/enums/user.enums';
 
 @Injectable()
 export class CourseSeeder extends BaseSeeder {
-  constructor(dataSource: DataSource, logger: WinstonLoggerService) {
+  constructor(dataSource: DataSource, logger: WinstonService) {
     super(dataSource, logger);
   }
 

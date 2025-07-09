@@ -93,22 +93,6 @@ export class UserProfile extends BaseEntity {
 
   @Column({
     type: 'varchar',
-    length: 50,
-    nullable: true,
-    comment: 'Timezone identifier',
-  })
-  timezone?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 10,
-    nullable: true,
-    comment: 'Preferred language code',
-  })
-  languagePreference?: string;
-
-  @Column({
-    type: 'varchar',
     length: 255,
     nullable: true,
     comment: 'Organization or company',

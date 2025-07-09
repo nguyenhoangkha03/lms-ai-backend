@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { UserService } from './services/user.service';
-import { PermissionController, RoleController, UserController } from './user.controller';
+import { UserController } from './controllers/user.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { UserProfile } from './entities/user-profile.entity';
@@ -14,9 +14,11 @@ import { MulterModule } from '@nestjs/platform-express';
 import { RoleService } from './services/role.service';
 import { PermissionService } from './services/permission.service';
 import { FileUploadService } from './services/file-upload.service';
-import { LoggerModule } from '@/logger/logger.module';
+import { WinstonModule } from '@/logger/winston.module';
 import { AuthModule } from '../auth/auth.module';
 import { SystemModule } from '../system/system.module';
+import { RoleController } from './controllers/role.controller';
+import { PermissionController } from './controllers/permission.controller';
 
 @Module({
   imports: [
@@ -31,7 +33,7 @@ import { SystemModule } from '../system/system.module';
     ]),
     CustomCacheModule,
     forwardRef(() => AuthModule),
-    LoggerModule,
+    WinstonModule,
     SystemModule,
     MulterModule.registerAsync({
       useFactory: () => ({

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { CacheService as CustomCacheService } from '@/cache/cache.service';
 import { randomBytes } from 'crypto';
 import { add } from 'date-fns';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import { ActiveSession, SessionData, SessionStatistics } from '../interfaces/session.interface';
 
 @Injectable()
@@ -16,7 +16,7 @@ export class SessionService {
   constructor(
     private readonly cacheService: CustomCacheService,
     private readonly configService: ConfigService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(SessionService.name);
   }

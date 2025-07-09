@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class DatabaseOptimizationService {
   constructor(
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(DatabaseOptimizationService.name);
   }

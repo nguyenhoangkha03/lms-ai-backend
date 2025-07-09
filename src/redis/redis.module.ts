@@ -2,12 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { RedisService } from './redis.service';
-import { LoggerModule } from '@/logger/logger.module';
-
-export const REDIS_CLIENT = 'REDIS_CLIENT';
+import { WinstonModule } from '@/logger/winston.module';
+import { REDIS_CLIENT } from '@/common/constants/redis.constant';
 
 @Module({
-  imports: [LoggerModule],
+  imports: [WinstonModule],
   providers: [
     {
       provide: REDIS_CLIENT,
@@ -20,23 +19,24 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
           db: configService.get<number>('redis.db'),
 
           // Connection options
-          //   retryDelayOnFailover: 100,
-          //   retryDelayOnClusterDown: 300,
-          maxRetriesPerRequest: 3,
-          enableOfflineQueue: false,
+          maxRetriesPerRequest: 3, // Thứ lại 3 lần
+          enableOfflineQueue: false, // Không xếp hàng lệnh khi đang mất kết nối
 
           // Reconnection
-          lazyConnect: true,
-          keepAlive: 30000,
-          connectTimeout: 10000,
-          commandTimeout: 5000,
+          lazyConnect: true, // Chỉ kết nối khi có lệnh đầu tiên
+          keepAlive: 30000, // Gửi lệnh PING mỗi 30 giây để giữ kết nối
+          connectTimeout: 10000, // Thời gian chờ kết nối tối đa 10 giây
+          commandTimeout: 5000, // Thời gian chờ lệnh tối đa 5 giây
 
           // Key prefix for this application
-          keyPrefix: 'lms-ai:',
+          keyPrefix: 'lms-ai:', // Tiền tố cho tất cả các khóa Redis
 
+          // Thử lại kết nối
           retryStrategy: times => {
             return Math.min(times * 100, 2000); // Retry sau 100ms, 200ms... tối đa 2s
           },
+
+          // Điều kiện tái kết nối khi gặp lỗi
           reconnectOnError: err => {
             const targetErrors = ['READONLY', 'ETIMEDOUT'];
             return targetErrors.some(msg => err.message.includes(msg));

@@ -2,15 +2,11 @@ import { Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { CacheService } from './cache.service';
-import { LoggerModule } from '@/logger/logger.module';
+import { WinstonModule } from '@/logger/winston.module';
 import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    // CacheModule.register({
-    //   ttl: 5000, // 5 giây
-    //   max: 100, // tối đa 100 items
-    // }),
     CacheModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
@@ -23,21 +19,16 @@ import { ConfigService } from '@nestjs/config';
           ttl: 300, // thời gian sống mặc định (300 giây = 5 phút)
           max: 1000, // Giới hạn số lượng cache tối đa là 1000 item.
 
-          // Redis specific options
-          //   retry_unfulfilled_commands: true, // thử lại các lệnh chưa được thực thi.
-          //   retry_delay_on_failover: 100, // Độ trễ (tính bằng mili giây) trước khi thử lại lệnh trong kịch bản "failover".
-          //   enable_offline_queue: false, // Bật/Tắt hàng đợi lệnh ngoại tuyến.
-
           // Connection options
           socket: {
-            keepAlive: true,
-            initialDelay: 0,
-            reconnectDelay: 50,
+            keepAlive: true, // Giữ kết nối Redis lâu dài, không tự ngắt sau thời gian rảnh
+            initialDelay: 0, // Độ trễ ban đầu trước khi bắt đầu keep-alive (0 = không trễ)
+            reconnectDelay: 50, // 	Thời gian chờ giữa các lần reconnect nếu mất kết nối (ms)
           },
         };
       },
     }),
-    LoggerModule,
+    WinstonModule,
   ],
   providers: [CacheService],
   exports: [CacheService],

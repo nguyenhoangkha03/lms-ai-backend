@@ -3,12 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import * as mysql from 'mysql2/promise';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit {
   constructor(
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
     @InjectDataSource()
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
@@ -89,7 +89,7 @@ export class DatabaseService implements OnModuleInit {
   }
 
   async getTableInfo(tableName: string) {
-    const queryRunner = this.dataSource.createQueryRunner();
+    const queryRunner = await this.getQueryRunner();
     try {
       const result = await queryRunner.query('DESCRIBE ??', [tableName]);
       return result;

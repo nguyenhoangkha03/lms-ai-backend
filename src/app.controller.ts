@@ -16,6 +16,7 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Public()
   @Get('health')
   @ApiOperation({ summary: 'Detailed health check' })
   @ApiResponse({ status: 200, description: 'Health status' })

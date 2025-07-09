@@ -14,7 +14,7 @@ import { JwtPayload, AuthTokens, LoginResponse } from '../interfaces/jwt-payload
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import { UserType } from '@/common/enums/user.enums';
 import { DeviceInfo } from '../interfaces/device-info.interface';
 import { EmailVerificationService } from './email-verification.service';
@@ -37,7 +37,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly passwordService: PasswordService,
     private readonly cacheService: CacheService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly auditLogService: AuditLogService,
     private readonly sessionService: SessionService,
@@ -287,12 +287,12 @@ export class AuthService {
     }
 
     // Check username availability
-    if (registerDto.username) {
-      const existingUsername = await this.userService.findByUsername(registerDto.username);
-      if (existingUsername) {
-        throw new ConflictException('Username is already taken');
-      }
-    }
+    // if (registerDto.username) {
+    //   const existingUsername = await this.userService.findByUsername(registerDto.username);
+    //   if (existingUsername) {
+    //     throw new ConflictException('Username is already taken');
+    //   }
+    // }
 
     // Validate password strength
     const passwordValidation = this.passwordService.validatePasswordStrength(registerDto.password);
@@ -310,7 +310,7 @@ export class AuthService {
     // Create user
     const userData = {
       email: registerDto.email,
-      username: registerDto.username,
+      username: 'temp',
       passwordHash,
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,

@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './services/auth.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import { Public } from './decorators/public.decorator';
 import { RegisterDto } from './dto/register.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
@@ -43,7 +43,7 @@ import { UserService } from '../user/services/user.service';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
     private readonly twoFactorService: TwoFactorService,
     private readonly configService: ConfigService,
     private readonly sessionService: SessionService,

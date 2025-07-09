@@ -3,7 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { CacheService } from '@/cache/cache.service';
 import { RedisService } from '@/redis/redis.service';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class DatabaseHealthService {
@@ -12,7 +12,7 @@ export class DatabaseHealthService {
     private readonly dataSource: DataSource,
     private readonly cacheService: CacheService,
     private readonly redisService: RedisService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(DatabaseHealthService.name);
   }

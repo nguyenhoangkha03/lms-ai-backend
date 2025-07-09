@@ -1,14 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import Redis from 'ioredis';
-// import { REDIS_CLIENT } from './redis.module';
-
+import { REDIS_CLIENT } from '@/common/constants/redis.constant';
 @Injectable()
 export class RedisService {
   constructor(
-    @Inject('REDIS_CLIENT')
+    @Inject(REDIS_CLIENT)
     private readonly redis: Redis,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(RedisService.name);
   }
@@ -42,6 +41,7 @@ export class RedisService {
     }
   }
 
+  // HSET user:101 <field1> <value1> <field2> <value2> .
   async hget(key: string, field: string): Promise<string | null> {
     try {
       return await this.redis.hget(key, field);
@@ -59,6 +59,7 @@ export class RedisService {
     }
   }
 
+  // Trả về một đối tượng (object) hoặc null.
   async hgetall(key: string): Promise<Record<string, string> | null> {
     try {
       return await this.redis.hgetall(key);
@@ -68,6 +69,7 @@ export class RedisService {
     }
   }
 
+  // thêm phần tử vào đầu danh sách: LPUSH key value [value ...]
   async lpush(key: string, ...values: string[]): Promise<number> {
     try {
       return await this.redis.lpush(key, ...values);
@@ -77,6 +79,7 @@ export class RedisService {
     }
   }
 
+  // Xóa và trả về phần tử cuối cùng của danh sách
   async rpop(key: string): Promise<string | null> {
     try {
       return await this.redis.rpop(key);
@@ -86,6 +89,7 @@ export class RedisService {
     }
   }
 
+  // Kiểm trả key có tồn tại không
   async exists(key: string): Promise<boolean> {
     try {
       const result = await this.redis.exists(key);
@@ -96,6 +100,7 @@ export class RedisService {
     }
   }
 
+  // Thiết lập ttl cho key
   async expire(key: string, seconds: number): Promise<void> {
     try {
       await this.redis.expire(key, seconds);
@@ -104,6 +109,7 @@ export class RedisService {
     }
   }
 
+  // Lấy ttl
   async ttl(key: string): Promise<number> {
     try {
       return await this.redis.ttl(key);
@@ -113,6 +119,7 @@ export class RedisService {
     }
   }
 
+  // Lấy danh sách các key khớp với pattern
   async keys(pattern: string): Promise<string[]> {
     try {
       return await this.redis.keys(pattern);
@@ -122,6 +129,7 @@ export class RedisService {
     }
   }
 
+  // Xóa tất cả dữ liệu trong database hiện tại
   async flushdb(): Promise<void> {
     try {
       await this.redis.flushdb();
@@ -131,6 +139,7 @@ export class RedisService {
     }
   }
 
+  // Kiểm tra kết nối
   async ping(): Promise<string> {
     try {
       return await this.redis.ping();
@@ -140,6 +149,7 @@ export class RedisService {
     }
   }
 
+  // Lấy thông tin về Redis
   async info(): Promise<string> {
     try {
       return await this.redis.info();
@@ -161,7 +171,7 @@ export class RedisService {
 
   async subscribe(channel: string, callback: (message: string) => void): Promise<void> {
     try {
-      const subscriber = this.redis.duplicate();
+      const subscriber = this.redis.duplicate(); // Redis client sau khi subscribe() không thể get, set... nên cần client riêng
       await subscriber.subscribe(channel);
 
       subscriber.on('message', (receivedChannel, message) => {
@@ -178,6 +188,7 @@ export class RedisService {
   async incrementLearningActivity(userId: string, activityType: string): Promise<void> {
     const key = `learning:${userId}:${activityType}`;
     const today = new Date().toISOString().split('T')[0];
+    // Tăng giá trị của trường trong key
     await this.redis.hincrby(key, today, 1);
     await this.redis.expire(key, 86400 * 30); // Keep for 30 days
   }

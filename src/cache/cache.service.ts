@@ -1,14 +1,14 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class CacheService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(CacheService.name);
   }
@@ -24,10 +24,11 @@ export class CacheService {
     }
   }
 
+  // Lấy danh sách các keys theo pattern
   async getKeys(pattern: string): Promise<string[]> {
-    const store = this.cacheManager.store;
-    if (typeof (store as any).keys === 'function') {
-      return await (store as any).keys(pattern);
+    const store = this.cacheManager.store as any;
+    if (typeof store.keys === 'function') {
+      return await store.keys(pattern);
     }
     throw new Error('getKeys is not supported by current cache store');
   }
@@ -59,6 +60,7 @@ export class CacheService {
     }
   }
 
+  // tag:users:	['user:1', 'user:2'], user:1:	{...}
   async setWithTags(key: string, value: any, tags: string[], ttl?: number): Promise<void> {
     await this.set(key, value, ttl);
 

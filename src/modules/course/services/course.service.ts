@@ -13,7 +13,7 @@ import { Enrollment } from '../entities/enrollment.entity';
 import { CacheService } from '@/cache/cache.service';
 import { CourseStatus, EnrollmentStatus, PaymentStatus } from '@/common/enums/course.enums';
 import { CreateCourseDto } from '../dto/create-course.dto';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import { CourseQueryDto } from '../dto/course-query.dto';
 import { UpdateCourseDto } from '../dto/update-course.dto';
 
@@ -29,7 +29,7 @@ export class CourseService {
     @InjectRepository(Enrollment)
     private readonly enrollmentRepository: Repository<Enrollment>,
     private readonly cacheService: CacheService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(CourseService.name);
   }

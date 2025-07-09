@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { BaseSeeder } from './base.seeder';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class SystemSeeder extends BaseSeeder {
-  constructor(dataSource: DataSource, logger: WinstonLoggerService) {
+  constructor(dataSource: DataSource, logger: WinstonService) {
     super(dataSource, logger);
   }
 

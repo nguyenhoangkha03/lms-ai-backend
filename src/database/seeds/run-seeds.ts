@@ -1,12 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../app.module';
 import { SeedService } from './seed.service';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 async function runSeeds() {
   // logger winston
   const app = await NestFactory.createApplicationContext(AppModule);
-  const logger = app.get(WinstonLoggerService);
+  const logger = app.get(WinstonService);
   logger.setContext('SeedRunner');
 
   try {

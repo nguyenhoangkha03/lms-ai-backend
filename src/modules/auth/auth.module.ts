@@ -5,7 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserModule } from '@/modules/user/user.module';
 import { CustomCacheModule } from '@/cache/cache.module';
-import { LoggerModule } from '@/logger/logger.module';
+import { WinstonModule } from '@/logger/winston.module';
 import { SystemModule } from '../system/system.module';
 
 // Service
@@ -54,7 +54,7 @@ import { SecurityEventInterceptor } from './interceptors/security-event.intercep
     }),
     forwardRef(() => UserModule),
     CustomCacheModule,
-    LoggerModule,
+    WinstonModule,
     SystemModule,
   ],
   controllers: [AuthController],

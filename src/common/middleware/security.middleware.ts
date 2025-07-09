@@ -2,13 +2,13 @@ import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@nestjs/config';
 // import * as rateLimit from 'express-rate-limit';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class SecurityMiddleware implements NestMiddleware {
   constructor(
     private readonly configService: ConfigService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(SecurityMiddleware.name);
   }

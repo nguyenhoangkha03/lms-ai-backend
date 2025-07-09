@@ -8,7 +8,7 @@ import { AllExceptionsFilter } from '@/common/filters/http-exception.filter';
 import { ValidationExceptionFilter } from '@/common/filters/validation-exception.filter';
 import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import { SSLConfig } from '@/config/ssl.config';
 import * as cookieParser from 'cookie-parser';
 import { SanitizeInterceptor } from '@/common/interceptors/sanitize.interceptor';
@@ -18,21 +18,22 @@ async function bootstrap() {
   const httpsOptions = SSLConfig.getHttpsOptions();
   const app = await NestFactory.create(AppModule, { httpsOptions });
 
-  const winstonlogger = app.get(WinstonLoggerService);
-  winstonlogger.setContext('Bootstrap');
-  app.useLogger(winstonlogger);
+  const logger = app.get(WinstonService);
+  logger.setContext('Bootstrap');
+  app.useLogger(logger);
 
-  winstonlogger.log('Application started');
+  logger.log('Application started');
 
   const configService = app.get(ConfigService);
-
-  // Global configuration
   const port = configService.get<number>('app.port');
   const apiPrefix = configService.get<string>('app.apiPrefix');
   const corsOrigins = configService.get<string[]>('app.corsOrigins');
+  const securityHelmet = configService.get<boolean>('security.helmet');
+  const securityCompression = configService.get<boolean>('security.compression');
+  const cookieSecret = configService.get<string>('cookie.secret');
 
   // Security middleware
-  if (configService.get<boolean>('security.helmet')) {
+  if (securityHelmet) {
     app.use(
       helmet({
         // Này trình duyệt, khi hiển thị trang web của tôi, anh chỉ được phép tải và thực thi tài nguyên
@@ -52,15 +53,18 @@ async function bootstrap() {
             frameSrc: ["'none'"], // Cấm hoàn toàn trang web của bạn bị nhúng vào trong các thẻ <iframe> hoặc <frame> trên các trang khác
           },
         },
-        crossOriginEmbedderPolicy: false, // Khi bật (true), nó yêu cầu tất cả các tài nguyên từ domain khác phải có một cơ chế cho phép đặc biệt (gọi là CORP) mới được nhúng vào trang của bạn.
+        crossOriginEmbedderPolicy: false, // Khi bật (true), nó yêu cầu tất cả các tài nguyên từ domain khác phải có một cơ chế cho phép đặc biệt (gọi là COEP) mới được nhúng vào trang của bạn.
       }),
     );
   }
+
   // Dùng thư viện compression (Express middleware) để nén dữ liệu HTTP response (thường là gzip hoặc Brotli).
-  if (configService.get<boolean>('security.compression')) {
+  if (securityCompression) {
     app.use(compression());
   }
-  app.use(cookieParser(configService.get<string>('auth.cookie.secret')));
+
+  // Cookie parser middleware
+  app.use(cookieParser(cookieSecret));
 
   // CORS configuration
   app.enableCors({
@@ -161,7 +165,7 @@ async function bootstrap() {
       customSiteTitle: 'LMS AI API Documentation', // Tùy chỉnh tiêu đề trên tab của trình duyệt.
     });
 
-    winstonlogger.log(
+    logger.log(
       `📚 Swagger documentation: ${httpsOptions ? 'https' : 'http'}://localhost:${port}/${apiPrefix}/docs`,
     );
   }
@@ -169,14 +173,14 @@ async function bootstrap() {
   // Graceful shutdown
   // Khi bạn nhấn Ctrl + C trong terminal
   process.on('SIGTERM', async () => {
-    winstonlogger.log('SIGTERM received, shutting down gracefully');
+    logger.log('SIGTERM received, shutting down gracefully');
     await app.close();
     process.exit(0);
   });
 
   // Khi process bị kill (thường từ hệ điều hành, Docker, hoặc deploy system như Kubernetes)
   process.on('SIGINT', async () => {
-    winstonlogger.log('SIGINT received, shutting down gracefully');
+    logger.log('SIGINT received, shutting down gracefully');
     await app.close();
     process.exit(0);
   });
@@ -184,13 +188,13 @@ async function bootstrap() {
   // Handle uncaught exceptions
   // Lỗi chưa try/catch
   process.on('uncaughtException', error => {
-    winstonlogger.error('Uncaught Exception:' + error.stack);
+    logger.error('Uncaught Exception:' + error.stack);
     process.exit(1);
   });
 
   // Promise bị reject mà không catch
   process.on('unhandledRejection', (reason, promise) => {
-    winstonlogger.error('Unhandled Rejection at' + promise + 'reason:' + reason);
+    logger.error('Unhandled Rejection at' + promise + 'reason:' + reason);
     process.exit(1);
   });
 
@@ -200,9 +204,9 @@ async function bootstrap() {
   server.setTimeout(30000); // 30 seconds
 
   const protocol = httpsOptions ? 'https' : 'http';
-  winstonlogger.log(`🚀 Application is running on: ${protocol}://localhost:${port}/${apiPrefix}`);
-  winstonlogger.log(`🔐 Security features: ${httpsOptions ? 'HTTPS ✅' : 'HTTP ⚠️'}`);
-  winstonlogger.log(`🛡️ Security middleware: Helmet ✅, CORS ✅, Rate Limiting ✅`);
+  logger.log(`🚀 Application is running on: ${protocol}://localhost:${port}/${apiPrefix}`);
+  logger.log(`🔐 Security features: ${httpsOptions ? 'HTTPS ✅' : 'HTTP ⚠️'}`);
+  logger.log(`🛡️ Security middleware: Helmet ✅, CORS ✅, Rate Limiting ✅`);
 }
 
 bootstrap().catch(err => {

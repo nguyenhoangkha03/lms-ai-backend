@@ -2,16 +2,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseConfig } from '@/config/configuration';
-import { DatabaseService } from './database.service';
-import { LoggerModule } from '@/logger/logger.module';
+import { DatabaseService } from './services/database.service';
+import { WinstonModule } from '@/logger/winston.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CustomCacheModule } from '@/cache/cache.module';
 import { RedisModule } from '@/redis/redis.module';
 import { SeedModule } from './seeds/seed.module';
-import { DatabaseOptimizationService } from './database-optimization.service';
-import { DatabaseHealthService } from './database-health.service';
-import { BackupService } from './backup.service';
-import { DatabaseMonitoringService } from './monitoring.service';
+import { DatabaseOptimizationService } from './services/database-optimization.service';
+import { DatabaseHealthService } from './services/database-health.service';
+import { BackupService } from './services/backup.service';
+import { DatabaseMonitoringService } from './services/monitoring.service';
 
 @Module({
   imports: [
@@ -33,15 +33,12 @@ import { DatabaseMonitoringService } from './monitoring.service';
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
 
           // Development settings
-          synchronize: dbConfig?.synchronize, // false in production
+          synchronize: dbConfig?.synchronize,
           logging: dbConfig?.logging,
 
           // Connection pool settings
           extra: {
             connectionLimit: 20,
-            // acquireTimeout: 60000,
-            // timeout: 60000,
-            // reconnect: true,
             charset: 'utf8mb4',
           },
 
@@ -53,7 +50,7 @@ import { DatabaseMonitoringService } from './monitoring.service';
             : false,
 
           // Migration settings
-          migrationsRun: false, // We'll run manually
+          migrationsRun: false,
           migrationsTableName: 'migrations_history',
 
           // Timezone handling
@@ -73,7 +70,7 @@ import { DatabaseMonitoringService } from './monitoring.service';
         };
       },
     }),
-    LoggerModule,
+    WinstonModule,
     ScheduleModule.forRoot(),
     CustomCacheModule,
     RedisModule,

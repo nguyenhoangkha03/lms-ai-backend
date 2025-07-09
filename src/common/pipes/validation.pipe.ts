@@ -7,11 +7,11 @@ import {
 } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { plainToClass } from 'class-transformer';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class ValidationPipe implements PipeTransform<any> {
-  constructor(private readonly logger: WinstonLoggerService) {
+  constructor(private readonly logger: WinstonService) {
     this.logger.setContext(ValidationPipe.name);
   }
 

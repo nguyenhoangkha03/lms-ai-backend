@@ -1,6 +1,6 @@
 import { UserType } from '@/common/enums/user.enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength, IsEnum, IsOptional, Matches } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsEnum, IsOptional } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({
@@ -10,17 +10,17 @@ export class RegisterDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
   email: string;
 
-  @ApiProperty({
-    description: 'Username (unique)',
-    example: 'johndoe123',
-    minLength: 3,
-  })
-  @IsString()
-  @MinLength(3, { message: 'Username must be at least 3 characters long' })
-  @Matches(/^[a-zA-Z0-9_-]+$/, {
-    message: 'Username can only contain letters, numbers, underscores, and hyphens',
-  })
-  username: string;
+  //   @ApiProperty({
+  //     description: 'Username (unique)',
+  //     example: 'johndoe123',
+  //     minLength: 3,
+  //   })
+  //   @IsString()
+  //   @MinLength(3, { message: 'Username must be at least 3 characters long' })
+  //   @Matches(/^[a-zA-Z0-9_-]+$/, {
+  //     message: 'Username can only contain letters, numbers, underscores, and hyphens',
+  //   })
+  //   username: string;
 
   @ApiProperty({
     description: 'Password (must meet security requirements)',

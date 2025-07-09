@@ -11,7 +11,7 @@ import { Enrollment } from './entities/enrollment.entity';
 import { LessonProgress } from './entities/lesson-progress.entity';
 import { CustomCacheModule } from '@/cache/cache.module';
 import { UserModule } from '../user/user.module';
-import { LoggerModule } from '@/logger/logger.module';
+import { WinstonModule } from '@/logger/winston.module';
 
 @Module({
   imports: [
@@ -26,7 +26,7 @@ import { LoggerModule } from '@/logger/logger.module';
     ]),
     CustomCacheModule,
     UserModule,
-    LoggerModule,
+    WinstonModule,
   ],
   controllers: [
     CourseController,

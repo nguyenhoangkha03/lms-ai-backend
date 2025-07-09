@@ -1,8 +1,8 @@
 import { Injectable, LoggerService, Scope } from '@nestjs/common';
 import { Logger as WinstonLogger } from 'winston';
 
-@Injectable({ scope: Scope.TRANSIENT })
-export class WinstonLoggerService implements LoggerService {
+@Injectable({ scope: Scope.TRANSIENT }) // Không sẽ bị ghi đè nếu setContext, tạo riêng mỗi khi inject
+export class WinstonService implements LoggerService {
   private context?: string;
 
   constructor(private readonly winstonLogger: WinstonLogger) {}

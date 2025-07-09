@@ -7,7 +7,7 @@ import { CacheService as CustomCacheService } from '@/cache/cache.service';
 import { createHash, randomBytes } from 'crypto';
 import { add } from 'date-fns';
 import { EmailVerificationToken, PasswordResetToken } from '../interfaces/email.interface';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 import { UserStatus } from '@/common/enums/user.enums';
 
 @Injectable()
@@ -22,7 +22,7 @@ export class EmailVerificationService {
     private readonly userRepository: Repository<User>,
     private readonly cacheService: CustomCacheService,
     private readonly configService: ConfigService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(EmailVerificationService.name);
   }

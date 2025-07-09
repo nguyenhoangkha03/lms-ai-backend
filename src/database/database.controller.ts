@@ -1,9 +1,9 @@
 import { Controller, Get, Post, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { DatabaseHealthService } from './database-health.service';
-import { DatabaseMonitoringService } from './monitoring.service';
-import { BackupService } from './backup.service';
-import { DatabaseOptimizationService } from './database-optimization.service';
+import { DatabaseHealthService } from './services/database-health.service';
+import { DatabaseMonitoringService } from './services/monitoring.service';
+import { BackupService } from './services/backup.service';
+import { DatabaseOptimizationService } from './services/database-optimization.service';
 
 @ApiTags('Database Management')
 @Controller('database')

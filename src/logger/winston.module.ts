@@ -1,16 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { WinstonModule } from 'nest-winston';
+import { WinstonModule as WinstonModuleNest } from 'nest-winston';
 import * as winston from 'winston';
-import { WinstonLoggerService } from './winston-logger.service';
+import { WinstonService } from './winston.service';
 
 @Module({
   imports: [
-    WinstonModule.forRootAsync({
+    WinstonModuleNest.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const logLevel = configService.get<string>('logging.level', 'info');
-        // const logFormat = configService.get<string>('logging.format', 'json');
         const logFilename = configService.get<string>('logging.filename', 'logs/app.log');
         const maxFiles = configService.get<number>('logging.maxFiles', 5);
         const maxSize = configService.get<string>('logging.maxSize', '20m');
@@ -20,8 +19,7 @@ import { WinstonLoggerService } from './winston-logger.service';
           levels: {
             error: 0,
             warn: 1,
-            // log: 2, // NestJS log level
-            info: 2, // Winston info level
+            info: 2,
             debug: 3,
             verbose: 4,
           },
@@ -35,6 +33,7 @@ import { WinstonLoggerService } from './winston-logger.service';
           },
         };
 
+        // các kênh ghi log
         const transports: winston.transport[] = [
           new winston.transports.Console({
             format: winston.format.combine(
@@ -76,13 +75,13 @@ import { WinstonLoggerService } from './winston-logger.service';
   controllers: [],
   providers: [
     {
-      provide: WinstonLoggerService,
+      provide: WinstonService,
       useFactory: (winstonLogger: winston.Logger) => {
-        return new WinstonLoggerService(winstonLogger);
+        return new WinstonService(winstonLogger);
       },
-      inject: ['winston'],
+      inject: ['winston'], // token đại diện cho thực thể logger Winston đã được cấu hình hoàn chỉnh từ WinstonModule.forRootAsync.
     },
   ],
-  exports: [WinstonModule, WinstonLoggerService],
+  exports: [WinstonModuleNest, WinstonService],
 })
-export class LoggerModule {}
+export class WinstonModule {}

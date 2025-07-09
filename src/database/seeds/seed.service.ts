@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { SystemSeeder } from './system.seeder';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class SeedService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly systemSeeder: SystemSeeder,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(SeedService.name);
   }

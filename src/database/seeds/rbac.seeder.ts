@@ -4,11 +4,11 @@ import { BaseSeeder } from './base.seeder';
 import { Role } from '@/modules/user/entities/role.entity';
 import { Permission } from '@/modules/user/entities/permission.entity';
 import { PermissionAction, PermissionResource } from '@/common/enums/user.enums';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class RBACSeeder extends BaseSeeder {
-  constructor(dataSource: DataSource, logger: WinstonLoggerService) {
+  constructor(dataSource: DataSource, logger: WinstonService) {
     super(dataSource, logger);
   }
 

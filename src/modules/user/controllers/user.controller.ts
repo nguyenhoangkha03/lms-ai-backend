@@ -25,35 +25,35 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { UserService } from './services/user.service';
-import { RoleService } from './services/role.service';
-import { PermissionService } from './services/permission.service';
-import { FileUploadService } from './services/file-upload.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Permissions } from '../auth/decorators/permissions.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UserQueryDto } from './dto/user-query.dto';
-import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
-import { UpdateStudentProfileDto } from './dto/update-student-profile.dto';
-import { UpdateTeacherProfileDto } from './dto/update-teacher-profile.dto';
+import { UserService } from '../services/user.service';
+import { RoleService } from '../services/role.service';
+import { PermissionService } from '../services/permission.service';
+import { FileUploadService } from '../services/file-upload.service';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { Permissions } from '../../auth/decorators/permissions.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
+import { UserQueryDto } from '../dto/user-query.dto';
+import { UpdateUserProfileDto } from '../dto/update-user-profile.dto';
+import { UpdateStudentProfileDto } from '../dto/update-student-profile.dto';
+import { UpdateTeacherProfileDto } from '../dto/update-teacher-profile.dto';
 import {
   BulkUpdateStatusDto,
   BulkAssignRolesDto,
   BulkUserIdsDto,
   ImportUsersDto,
-} from './dto/bulk-user-operations.dto';
-import { User } from './entities/user.entity';
+} from '../dto/bulk-user-operations.dto';
+import { User } from '../entities/user.entity';
 import { PermissionAction, PermissionResource, UserType } from '@/common/enums/user.enums';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
-import { SecurityEventInterceptor } from '../auth/interceptors/security-event.interceptor';
-import { Authorize } from '../auth/decorators/authorize.decorator';
-import { OwnerOnly } from '../auth/decorators/owner-only.decorator';
-import { RequireApiKey } from '../auth/decorators/api-key.decorator';
+import { WinstonService } from '@/logger/winston.service';
+import { SecurityEventInterceptor } from '../../auth/interceptors/security-event.interceptor';
+import { Authorize } from '../../auth/decorators/authorize.decorator';
+import { OwnerOnly } from '../../auth/decorators/owner-only.decorator';
+import { RequireApiKey } from '../../auth/decorators/api-key.decorator';
 
 @ApiTags('User Management')
 @Controller('users')
@@ -66,7 +66,7 @@ export class UserController {
     private readonly roleService: RoleService,
     private readonly permissionService: PermissionService,
     private readonly fileUploadService: FileUploadService,
-    private readonly logger: WinstonLoggerService,
+    private readonly logger: WinstonService,
   ) {
     this.logger.setContext(UserController.name);
   }
@@ -393,153 +393,5 @@ export class UserController {
       filename: `users-export-${new Date().toISOString().split('T')[0]}.csv`,
       mimeType: 'text/csv',
     };
-  }
-}
-
-// ==================== ROLE CONTROLLER ====================
-
-@ApiTags('Role Management')
-@Controller('roles')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
-export class RoleController {
-  constructor(
-    private readonly roleService: RoleService,
-    private readonly logger: WinstonLoggerService,
-  ) {
-    this.logger.setContext(RoleController.name);
-  }
-
-  @Post()
-  @UseGuards(RolesGuard)
-  @Roles(UserType.ADMIN)
-  @ApiOperation({ summary: 'Create new role (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Role created successfully' })
-  async create(@Body() createRoleDto: any) {
-    return this.roleService.create(createRoleDto);
-  }
-
-  @Get()
-  @UseGuards(PermissionsGuard)
-  @Permissions('read:role')
-  @ApiOperation({ summary: 'Get all roles' })
-  @ApiResponse({ status: 200, description: 'Roles retrieved successfully' })
-  async findAll() {
-    return this.roleService.findAll();
-  }
-
-  @Get(':id')
-  @UseGuards(PermissionsGuard)
-  @Permissions('read:role')
-  @ApiOperation({ summary: 'Get role by ID' })
-  @ApiParam({ name: 'id', description: 'Role ID' })
-  @ApiResponse({ status: 200, description: 'Role found' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.roleService.findById(id);
-  }
-
-  @Patch(':id')
-  @UseGuards(PermissionsGuard)
-  @Permissions('update:role')
-  @ApiOperation({ summary: 'Update role' })
-  @ApiParam({ name: 'id', description: 'Role ID' })
-  @ApiResponse({ status: 200, description: 'Role updated successfully' })
-  async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateRoleDto: any) {
-    return this.roleService.update(id, updateRoleDto);
-  }
-
-  @Post(':id/permissions')
-  @UseGuards(PermissionsGuard)
-  @Permissions('update:role')
-  @ApiOperation({ summary: 'Assign permissions to role' })
-  @ApiParam({ name: 'id', description: 'Role ID' })
-  @ApiResponse({ status: 200, description: 'Permissions assigned successfully' })
-  async assignPermissions(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body('permissionIds') permissionIds: string[],
-  ) {
-    return this.roleService.assignPermissions(id, permissionIds);
-  }
-
-  @Delete(':id/permissions')
-  @UseGuards(PermissionsGuard)
-  @Permissions('update:role')
-  @ApiOperation({ summary: 'Remove permissions from role' })
-  @ApiParam({ name: 'id', description: 'Role ID' })
-  @ApiResponse({ status: 200, description: 'Permissions removed successfully' })
-  async removePermissions(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body('permissionIds') permissionIds: string[],
-  ) {
-    return this.roleService.removePermissions(id, permissionIds);
-  }
-
-  @Delete(':id')
-  @Authorize({
-    roles: [UserType.ADMIN],
-    permissions: ['delete:user'],
-    rateLimit: { points: 5, duration: 300 }, // 5 deletes per 5 minutes
-  })
-  @UseGuards(RolesGuard)
-  @Roles(UserType.ADMIN)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete role (Admin only)' })
-  @ApiParam({ name: 'id', description: 'Role ID' })
-  @ApiResponse({ status: 204, description: 'Role deleted successfully' })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.roleService.delete(id);
-  }
-}
-
-// ==================== PERMISSION CONTROLLER ====================
-
-@ApiTags('Permission Management')
-@Controller('permissions')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
-export class PermissionController {
-  constructor(
-    private readonly permissionService: PermissionService,
-    private readonly logger: WinstonLoggerService,
-  ) {
-    this.logger.setContext(PermissionController.name);
-  }
-
-  @Post()
-  @UseGuards(RolesGuard)
-  @Roles(UserType.ADMIN)
-  @ApiOperation({ summary: 'Create new permission (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Permission created successfully' })
-  async create(@Body() createPermissionDto: any) {
-    return this.permissionService.create(createPermissionDto);
-  }
-
-  @Get()
-  @UseGuards(PermissionsGuard)
-  @Permissions('read:permission')
-  @ApiOperation({ summary: 'Get all permissions' })
-  @ApiResponse({ status: 200, description: 'Permissions retrieved successfully' })
-  async findAll() {
-    return this.permissionService.findAll();
-  }
-
-  @Get('category/:category')
-  @UseGuards(PermissionsGuard)
-  @Permissions('read:permission')
-  @ApiOperation({ summary: 'Get permissions by category' })
-  @ApiParam({ name: 'category', description: 'Permission category' })
-  @ApiResponse({ status: 200, description: 'Permissions retrieved successfully' })
-  async findByCategory(@Param('category') category: string) {
-    return this.permissionService.findByCategory(category);
-  }
-
-  @Get('resource/:resource')
-  @UseGuards(PermissionsGuard)
-  @Permissions('read:permission')
-  @ApiOperation({ summary: 'Get permissions by resource' })
-  @ApiParam({ name: 'resource', description: 'Permission resource' })
-  @ApiResponse({ status: 200, description: 'Permissions retrieved successfully' })
-  async findByResource(@Param('resource') resource: any) {
-    return this.permissionService.findByResource(resource);
   }
 }

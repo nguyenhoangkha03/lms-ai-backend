@@ -1,11 +1,11 @@
 import { DataSource, ObjectLiteral, Repository } from 'typeorm';
-import { SeederInterface } from './seed.interface';
-import { WinstonLoggerService } from '@/logger/winston-logger.service';
+import { SeederInterface } from '../interfaces/seed.interface';
+import { WinstonService } from '@/logger/winston.service';
 
 export abstract class BaseSeeder implements SeederInterface {
   constructor(
     protected readonly dataSource: DataSource,
-    protected readonly logger: WinstonLoggerService,
+    protected readonly logger: WinstonService,
   ) {
     this.logger.setContext(this.constructor.name);
   }

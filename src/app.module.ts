@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/config/configuration';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { LoggerModule } from '@/logger/logger.module';
+import { WinstonModule } from '@/logger/winston.module';
 import { DatabaseModule } from './database/database.module';
 import { CustomCacheModule } from './cache/cache.module';
 import { RedisModule } from './redis/redis.module';
@@ -43,7 +43,7 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
     }),
 
     // Core modules
-    LoggerModule,
+    WinstonModule,
     DatabaseModule,
     CustomCacheModule,
     RedisModule,
