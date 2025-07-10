@@ -86,7 +86,6 @@ export class AuditLogService {
 
   async createAuditLog(data: CreateAuditLogDto): Promise<AuditLog> {
     try {
-      // Sanitize sensitive data
       const sanitizedData = this.sanitizeAuditData(data);
 
       const auditLog = this.auditLogRepository.create({
@@ -98,10 +97,8 @@ export class AuditLogService {
 
       const savedLog = await this.auditLogRepository.save(auditLog);
 
-      // Trigger security alerts if needed
       await this.checkSecurityAlerts(savedLog);
 
-      // Update statistics
       await this.updateAuditStatistics(savedLog);
 
       return savedLog;

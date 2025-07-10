@@ -12,12 +12,12 @@ import { RATE_LIMIT_KEY } from '../decorators/rate-limit.decorator';
 import { AuditAction, AuditLevel } from '@/common/enums/system.enums';
 
 export interface RateLimitOptions {
-  points: number; // Maximum number of requests
-  duration: number; // Time window in seconds
-  blockDuration?: number; // Block duration in seconds (default = duration)
-  keyGenerator?: string; // Custom key generator method name
-  skipIf?: string; // Condition to skip rate limiting
-  message?: string; // Custom error message
+  points: number; // số lượng yêu cầu tối đa trong khoảng thời gian
+  duration: number; // khoảng thời gian
+  blockDuration?: number; // thời gian bị chặn
+  keyGenerator?: string; // để xác định người dùng duy nhất
+  skipIf?: string; // điều kiện bỏ qua
+  message?: string; // thông báo trả về khi bị rate limit
 }
 
 @Injectable()
@@ -41,14 +41,11 @@ export class RateLimitGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
 
-    // Generate cache key
     const key = await this.generateKey(request, rateLimitOptions);
 
-    // Get current count
     const current = ((await this.cacheService.get(key)) as number) || 0;
     const remaining = Math.max(0, rateLimitOptions.points - current - 1);
 
-    // Set headers
     response.setHeader('X-RateLimit-Limit', rateLimitOptions.points);
     response.setHeader('X-RateLimit-Remaining', remaining);
     response.setHeader(
@@ -70,20 +67,18 @@ export class RateLimitGuard implements CanActivate {
       );
     }
 
-    // Increment counter
     await this.cacheService.set(key, current + 1, rateLimitOptions.duration);
 
     return true;
   }
 
+  // Tạo key: ví dụ rate_limit:POST:/api/v1/users:user:1
   private async generateKey(request: any, options: RateLimitOptions): Promise<string> {
     let identifier: string;
 
     if (options.keyGenerator) {
-      // Custom key generator logic would go here
-      identifier = request.ip; // Fallback
+      identifier = request.ip;
     } else {
-      // Default: IP + User ID if authenticated
       identifier = request.user?.id ? `user:${request.user.id}` : `ip:${request.ip}`;
     }
 
@@ -117,7 +112,7 @@ export class RateLimitGuard implements CanActivate {
         duration: options.duration,
       },
       securityInfo: {
-        riskScore: 60, // Medium risk for rate limit violation
+        riskScore: 60,
         threatIndicators: ['rate_limit_exceeded'],
       },
       tags: ['security', 'rate_limit', 'abuse_prevention'],

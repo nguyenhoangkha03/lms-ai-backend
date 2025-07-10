@@ -318,6 +318,20 @@ export class Course extends BaseEntity {
   accessDuration?: number;
 
   @Column({
+    type: 'datetime',
+    nullable: true,
+    comment: 'Course available from',
+  })
+  availableFrom?: Date;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+    comment: 'Course available until',
+  })
+  availableUntil?: Date;
+
+  @Column({
     type: 'timestamp',
     nullable: true,
     comment: 'Course published date',
@@ -375,7 +389,6 @@ export class Course extends BaseEntity {
   @OneToMany(() => FileUpload, file => file.course)
   files?: FileUpload[];
 
-  // Virtual properties
   get formattedPrice(): string {
     if (this.isFree) return 'Free';
     return `${this.currency} ${this.price.toFixed(2)}`;
@@ -420,7 +433,6 @@ export class Course extends BaseEntity {
     return 'Open';
   }
 
-  // Hooks
   @BeforeInsert()
   @BeforeUpdate()
   updateTimestamp() {

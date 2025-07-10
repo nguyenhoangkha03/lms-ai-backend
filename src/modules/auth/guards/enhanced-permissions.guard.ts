@@ -35,7 +35,7 @@ export class EnhancedPermissionsGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const { user } = request;
+    const { user } = request; // user này do guard khác chạy ra
 
     if (!user) {
       await this.logPermissionCheck(request, requiredPermissions, 'no_user');
@@ -43,20 +43,18 @@ export class EnhancedPermissionsGuard implements CanActivate {
     }
 
     try {
-      // Check cached permissions first
       const cacheKey = `user_permissions:${user.id}`;
       let userPermissions = await this.cacheService.get<Permission[]>(cacheKey);
 
       if (!userPermissions) {
         userPermissions = await this.userService.getUserPermissions(user.id);
-        await this.cacheService.set(cacheKey, userPermissions, 300); // 5 minutes cache
+        await this.cacheService.set(cacheKey, userPermissions, 300);
       }
 
+      // như ['read:user', 'create:user', 'read:post']
       const permissionStrings = userPermissions.map(p => `${p.action}:${p.resource}`);
 
-      // Check if user has any of the required permissions
       const hasPermission = requiredPermissions.some(permission => {
-        // Support wildcard permissions
         if (permission.includes('*')) {
           const [action, resource] = permission.split(':');
           if (action === '*') {

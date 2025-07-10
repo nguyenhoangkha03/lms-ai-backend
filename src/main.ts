@@ -12,7 +12,6 @@ import { WinstonService } from '@/logger/winston.service';
 import { SSLConfig } from '@/config/ssl.config';
 import * as cookieParser from 'cookie-parser';
 import { SanitizeInterceptor } from '@/common/interceptors/sanitize.interceptor';
-import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 async function bootstrap() {
   const httpsOptions = SSLConfig.getHttpsOptions();
@@ -125,8 +124,8 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor(), new SanitizeInterceptor());
 
   // Global guards (JWT auth by default, use @Public() to skip)
-  const jwtAuthGuard = app.get(JwtAuthGuard);
-  app.useGlobalGuards(jwtAuthGuard);
+  //   const jwtAuthGuard = app.get(JwtAuthGuard);
+  //   app.useGlobalGuards(jwtAuthGuard);
 
   // Swagger documentation
   if (process.env.NODE_ENV !== 'production') {

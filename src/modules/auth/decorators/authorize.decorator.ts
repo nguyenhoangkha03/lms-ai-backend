@@ -18,43 +18,37 @@ export interface AuthorizeOptions {
   permissions?: string[];
   resource?: ResourceDefinition;
   rateLimit?: RateLimitOptions;
-  requireAuth?: boolean;
-  apiResponses?: boolean;
+  requireAuth?: boolean; // yêu cầu phái đăng nhập
+  apiResponses?: boolean; // câu trúc api response
 }
 
 export function Authorize(options: AuthorizeOptions = {}) {
   const decorators: (ClassDecorator | MethodDecorator)[] = [];
 
-  // Default to requiring authentication
   if (options.requireAuth !== false) {
     decorators.push(UseGuards(JwtAuthGuard));
   }
 
-  // Add rate limiting if specified
   if (options.rateLimit) {
     decorators.push(RateLimit(options.rateLimit));
     decorators.push(UseGuards(RateLimitGuard));
   }
 
-  // Add role-based authorization
   if (options.roles && options.roles.length > 0) {
     decorators.push(Roles(...options.roles));
     decorators.push(UseGuards(RolesGuard));
   }
 
-  // Add permission-based authorization
   if (options.permissions && options.permissions.length > 0) {
     decorators.push(Permissions(...options.permissions));
     decorators.push(UseGuards(EnhancedPermissionsGuard));
   }
 
-  // Add resource-based authorization
   if (options.resource) {
     decorators.push(Resource(options.resource));
     decorators.push(UseGuards(ResourceGuard));
   }
 
-  // Add API documentation
   if (options.apiResponses !== false) {
     decorators.push(ApiBearerAuth());
     decorators.push(ApiUnauthorizedResponse({ description: 'Unauthorized' }));

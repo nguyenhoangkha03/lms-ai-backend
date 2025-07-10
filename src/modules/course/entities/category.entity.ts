@@ -143,12 +143,10 @@ export class Category extends BaseEntity {
 
   // Virtual properties
   get fullPath(): string {
-    // This will be computed based on materialized path
     return this.slug;
   }
 
   get hasChildren(): boolean {
-    // return this.children && this.children.length > 0;
     return !!this.children?.length;
   }
 
@@ -157,7 +155,6 @@ export class Category extends BaseEntity {
   }
 
   get breadcrumb(): string[] {
-    // Will be implemented to return full category path
     return [this.name];
   }
 }

@@ -8,6 +8,8 @@ import {
   IsArray,
   Min,
   Max,
+  IsUUID,
+  IsDateString,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CourseLevel, CourseStatus, CourseLanguage } from '@/common/enums/course.enums';
@@ -18,7 +20,7 @@ export class CourseQueryDto {
     example: 'uuid-category-id',
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   categoryId?: string;
 
   @ApiPropertyOptional({
@@ -26,7 +28,7 @@ export class CourseQueryDto {
     example: 'uuid-teacher-id',
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   teacherId?: string;
 
   @ApiPropertyOptional({
@@ -84,6 +86,17 @@ export class CourseQueryDto {
   maxPrice?: number;
 
   @ApiPropertyOptional({
+    description: 'Minimum rating filter',
+    example: 4.0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  minRating?: number;
+
+  @ApiPropertyOptional({
     description: 'Filter by language',
     enum: CourseLanguage,
   })
@@ -107,6 +120,31 @@ export class CourseQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter courses created after date',
+    example: '2024-01-01',
+  })
+  @IsOptional()
+  @IsDateString()
+  createdAfter?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter courses updated after date',
+    example: '2024-01-01',
+  })
+  @IsOptional()
+  @IsDateString()
+  updatedAfter?: string;
+
+  @ApiPropertyOptional({
+    description: 'Include only published courses for students',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  publishedOnly?: boolean; // lấy những published course cho student
 
   @ApiPropertyOptional({
     description: 'Page number',
@@ -135,7 +173,16 @@ export class CourseQueryDto {
   @ApiPropertyOptional({
     description: 'Sort field',
     example: 'createdAt',
-    enum: ['createdAt', 'updatedAt', 'title', 'price', 'rating', 'totalEnrollments'],
+    enum: [
+      'createdAt',
+      'updatedAt',
+      'title',
+      'price',
+      'rating',
+      'totalEnrollments',
+      'publishedAt',
+      'featured',
+    ],
   })
   @IsOptional()
   @IsString()
@@ -149,4 +196,40 @@ export class CourseQueryDto {
   @IsOptional()
   @IsEnum(['ASC', 'DESC'])
   sortOrder?: 'ASC' | 'DESC' = 'DESC';
+
+  @ApiPropertyOptional({
+    description: 'Include teacher information',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  includeTeacher?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Include category information',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  includeCategory?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Include sections and lessons',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  includeSections?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Include enrollment statistics',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  includeStats?: boolean = false;
 }

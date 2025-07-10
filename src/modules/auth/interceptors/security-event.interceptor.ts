@@ -32,7 +32,6 @@ export class SecurityEventInterceptor implements NestInterceptor {
     status: 'success' | 'error',
     error?: any,
   ): Promise<void> {
-    // Only log security-relevant endpoints
     const securityEndpoints = [
       '/auth/login',
       '/auth/register',
@@ -47,10 +46,9 @@ export class SecurityEventInterceptor implements NestInterceptor {
     const isSecurityEndpoint = securityEndpoints.some(endpoint => request.url.includes(endpoint));
 
     if (!isSecurityEndpoint && status === 'success') {
-      return; // Skip non-security endpoints for successful operations
+      return;
     }
 
-    // Determine audit action based on HTTP method and endpoint
     let auditAction: AuditAction = AuditAction.READ;
     switch (request.method) {
       case 'POST':
@@ -67,10 +65,8 @@ export class SecurityEventInterceptor implements NestInterceptor {
         break;
     }
 
-    // Calculate risk score
     const riskScore = this.calculateRiskScore(request, status, error);
 
-    // Determine if this requires review
     const requiresReview =
       riskScore > 70 || (error && error.status >= 400) || request.url.includes('admin');
 
@@ -113,22 +109,18 @@ export class SecurityEventInterceptor implements NestInterceptor {
   private calculateRiskScore(request: any, status: string, error?: any): number {
     let score = 0;
 
-    // Base risk factors
     if (status === 'error') score += 30;
-    if (error?.status === 401) score += 20; // Unauthorized
-    if (error?.status === 403) score += 25; // Forbidden
-    if (error?.status >= 500) score += 15; // Server errors
+    if (error?.status === 401) score += 20;
+    if (error?.status === 403) score += 25;
+    if (error?.status >= 500) score += 15;
 
-    // Endpoint-based risk
     if (request.url.includes('admin')) score += 20;
     if (request.url.includes('login')) score += 10;
     if (request.url.includes('password')) score += 15;
 
-    // IP-based risk (simplified)
     if (this.isPrivateIP(request.ip)) score += 0;
-    else score += 10; // External IP
+    else score += 10;
 
-    // User agent risk
     if (!request.headers['user-agent']) score += 20;
     if (request.headers['user-agent']?.includes('bot')) score += 15;
 
@@ -158,7 +150,6 @@ export class SecurityEventInterceptor implements NestInterceptor {
   private sanitizeRequestData(request: any): any {
     const { body, params, query, headers } = request;
 
-    // Remove sensitive headers
     const sanitizedHeaders = { ...headers };
     delete sanitizedHeaders.authorization;
     delete sanitizedHeaders.cookie;
@@ -176,7 +167,6 @@ export class SecurityEventInterceptor implements NestInterceptor {
 
     return {
       statusCode: response.statusCode,
-      // Don't include response body for security
     };
   }
 
@@ -205,38 +195,32 @@ export class SecurityEventInterceptor implements NestInterceptor {
       request.ip,
     ];
 
-    // Simple hash generation (in production, use a proper hash function)
     return Buffer.from(components.join('|')).toString('base64').substring(0, 16);
   }
 
   private detectThreatIndicators(request: any, error?: any): string[] {
     const indicators: string[] = [];
 
-    // SQL injection patterns
     const sqlPatterns = /('|(\")|;|--|\/\*|\*\/|xp_|sp_)/i;
     const requestString = JSON.stringify(request.body || {}) + request.url;
     if (sqlPatterns.test(requestString)) {
       indicators.push('sql_injection_attempt');
     }
 
-    // XSS patterns
     const xssPatterns = /<script|javascript:|onload=|onerror=/i;
     if (xssPatterns.test(requestString)) {
       indicators.push('xss_attempt');
     }
 
-    // Brute force indicators
     if (error?.status === 401 && request.url.includes('login')) {
       indicators.push('failed_login');
     }
 
-    // Suspicious user agents
     const userAgent = request.headers['user-agent'] || '';
     if (!userAgent || userAgent.length < 10) {
       indicators.push('suspicious_user_agent');
     }
 
-    // Rate limiting violations
     if (error?.status === 429) {
       indicators.push('rate_limit_exceeded');
     }

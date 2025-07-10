@@ -9,9 +9,9 @@ import { AuditAction, AuditLevel } from '@/common/enums/system.enums';
 export interface ResourceDefinition {
   resource: PermissionResource;
   action: PermissionAction;
-  ownerField?: string; // Field to check ownership (e.g., 'userId', 'teacherId')
-  allowOwner?: boolean; // Allow resource owner even without permission
-  customCheck?: string; // Method name for custom authorization logic
+  ownerField?: string; // Id của người sở hữu
+  allowOwner?: boolean; // Cho phép chủ thực hiện mà không cần kiểm tra quyền
+  customCheck?: string; // Kiểm tra tùy chỉnh phức tạp hơn
 }
 
 @Injectable()
@@ -33,7 +33,7 @@ export class ResourceGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const { user } = request;
+    const { user } = request; // user này do guard khác chạy ra
 
     if (!user) {
       await this.logAuthorizationAttempt(request, 'no_user', resourceDef);
@@ -41,7 +41,6 @@ export class ResourceGuard implements CanActivate {
     }
 
     try {
-      // Check basic permission
       const hasPermission = await this.userService.hasPermission(
         user.id,
         resourceDef.resource,
@@ -53,7 +52,6 @@ export class ResourceGuard implements CanActivate {
         return true;
       }
 
-      // Check ownership if allowed
       if (resourceDef.allowOwner && resourceDef.ownerField) {
         const resourceId = request.params.id || request.params.resourceId;
         if (await this.checkOwnership(user.id, resourceId, resourceDef)) {
@@ -62,7 +60,6 @@ export class ResourceGuard implements CanActivate {
         }
       }
 
-      // Custom authorization check
       if (resourceDef.customCheck) {
         if (await this.performCustomCheck(resourceDef.customCheck, context, user)) {
           await this.logAuthorizationAttempt(request, 'custom_check_passed', resourceDef);
@@ -86,7 +83,6 @@ export class ResourceGuard implements CanActivate {
     if (!resourceId) return false;
 
     try {
-      // This would be extended to check different resource types
       switch (resourceDef.resource) {
         case PermissionResource.COURSE:
           return await this.checkCourseOwnership(userId, resourceId);
@@ -139,7 +135,7 @@ export class ResourceGuard implements CanActivate {
     await this.auditLogService.createAuditLog({
       userId: request.user?.id,
       sessionId: request.sessionId,
-      action: AuditAction.READ, // Using READ for authorization checks
+      action: AuditAction.READ,
       entityType: resourceDef.resource,
       entityId: request.params.id || request.params.resourceId,
       description,

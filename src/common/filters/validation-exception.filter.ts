@@ -4,6 +4,7 @@ import { Response } from 'express';
 @Catch(BadRequestException) //  (lỗi 400) chính là loại exception mà ValidationPipe của NestJS ném
 export class ValidationExceptionFilter implements ExceptionFilter {
   catch(exception: BadRequestException, host: ArgumentsHost) {
+    console.log('Herrrrrrrrrrrrrrrrrrrrrrr - ValidationExceptionFilter');
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const status = exception.getStatus(); // lấy mã trạng thái (sẽ là 400)
