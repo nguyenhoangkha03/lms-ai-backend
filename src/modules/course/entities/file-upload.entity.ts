@@ -4,22 +4,33 @@ import { FileType, FileRelatedType } from '@/common/enums/course.enums';
 import { User } from '../../user/entities/user.entity';
 import { Course } from './course.entity';
 import { Lesson } from './lesson.entity';
+import { FileAccessLevel, ProcessingStatus } from '@/common/enums/file.enums';
 
 @Entity('file_uploads')
 @Index(['uploaderId'])
 @Index(['fileType'])
 @Index(['relatedType'])
-@Index(['relatedLessonId'])
-@Index(['relatedCourseId'])
+@Index(['lessonId'])
+@Index(['courseId'])
 @Index(['isPublic'])
 @Index(['uploadedAt'])
 export class FileUpload extends BaseEntity {
+  // === CORE FIELDS === //
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'User ID who uploaded the file',
+    nullable: true,
+    comment: 'Lesson this file belongs to',
   })
-  uploaderId: string;
+  lessonId?: string;
+
+  @Column({
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+    comment: 'Course this file belongs to',
+  })
+  courseId?: string;
 
   @Column({
     type: 'varchar',
@@ -31,23 +42,16 @@ export class FileUpload extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Stored filename (usually UUID + extension)',
+    comment: 'Stored filename on disk',
   })
   storedName: string;
 
   @Column({
     type: 'varchar',
     length: 500,
-    comment: 'File storage path',
+    comment: 'Relative file path from upload root',
   })
   filePath: string;
-
-  @Column({
-    type: 'varchar',
-    length: 500,
-    comment: 'Full URL to access the file',
-  })
-  fileUrl: string;
 
   @Column({
     type: 'bigint',
@@ -65,9 +69,224 @@ export class FileUpload extends BaseEntity {
   @Column({
     type: 'enum',
     enum: FileType,
-    comment: 'File type category',
+    comment: 'Category of file type',
   })
   fileType: FileType;
+
+  @Column({
+    type: 'enum',
+    enum: FileAccessLevel,
+    default: FileAccessLevel.ENROLLED_ONLY,
+    comment: 'File access permission level',
+  })
+  accessLevel: FileAccessLevel;
+
+  @Column({
+    type: 'boolean',
+    default: true,
+    comment: 'Whether file is active and accessible',
+  })
+  isActive: boolean;
+
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: 'Whether file is publicly accessible',
+  })
+  isPublic: boolean;
+
+  // === MEDIA SPECIFIC FIELDS === //
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: 'Duration in seconds for video/audio files',
+  })
+  duration?: number;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+    comment: 'Resolution for video/image files (e.g., 1920x1080)',
+  })
+  resolution?: string;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: 'Bitrate for video/audio files',
+  })
+  bitrate?: number;
+
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: 'URL to optimized version of the file',
+  })
+  optimizedPath?: string;
+
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: 'URL to thumbnail image',
+  })
+  thumbnailPath?: string;
+
+  // === PROCESSING STATUS === //
+  @Column({
+    type: 'enum',
+    enum: ProcessingStatus,
+    default: ProcessingStatus.PENDING,
+    comment: 'File processing status',
+  })
+  processingStatus: ProcessingStatus;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: 'Processing error message if failed',
+  })
+  processingError?: string;
+
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Array of processed file versions',
+  })
+  processedVersions?: string[];
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Processing start timestamp',
+  })
+  processingStartedAt?: Date;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Processing completion timestamp',
+  })
+  processingCompletedAt?: Date;
+
+  // === SECURITY & TRACKING === //
+
+  @Column({
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+    comment: 'File checksum for integrity verification',
+  })
+  checksum?: string;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Number of times file has been downloaded',
+  })
+  downloadCount: number;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Number of times file has been viewed/streamed',
+  })
+  viewCount: number;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Last download timestamp',
+  })
+  lastDownloadedAt?: Date;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Last view timestamp',
+  })
+  lastViewedAt?: Date;
+
+  // === CONTENT MODERATION === //
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: 'Whether file has been flagged for review',
+  })
+  isFlagged: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+    comment: 'Moderator who reviewed this file',
+  })
+  moderatedBy?: string;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Moderation timestamp',
+  })
+  moderatedAt?: Date;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: 'Moderation notes or reason',
+  })
+  moderationNotes?: string;
+
+  // === METADATA === //
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'File-specific settings and configuration',
+  })
+  settings?: {
+    allowDownload?: boolean;
+    allowStreaming?: boolean;
+    autoDelete?: boolean;
+    autoDeleteDate?: Date;
+    compressionQuality?: number;
+    watermarkEnabled?: boolean;
+    [key: string]: any;
+  };
+
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Additional file metadata and properties',
+  })
+  metadata?: {
+    description?: string;
+    alt?: string;
+    caption?: string;
+    tags?: string[];
+    exifData?: Record<string, any>;
+    language?: string;
+    transcoded?: boolean;
+    virusScanResult?: 'clean' | 'infected' | 'suspicious' | 'pending';
+    virusScanDate?: Date;
+    [key: string]: any;
+  };
+
+  // UPDATE OLD //
+  @Column({
+    type: 'varchar',
+    length: 36,
+    comment: 'User ID who uploaded the file',
+  })
+  uploaderId: string;
+
+  @Column({
+    type: 'varchar',
+    length: 500,
+    comment: 'Full URL to access the file',
+  })
+  fileUrl: string;
 
   @Column({
     type: 'enum',
@@ -75,29 +294,6 @@ export class FileUpload extends BaseEntity {
     comment: 'What this file is related to',
   })
   relatedType: FileRelatedType;
-
-  @Column({
-    type: 'varchar',
-    length: 36,
-    nullable: true,
-    comment: 'ID of the related lesson entity',
-  })
-  relatedLessonId?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 36,
-    nullable: true,
-    comment: 'ID of the related course entity',
-  })
-  relatedCourseId?: string;
-
-  @Column({
-    type: 'boolean',
-    default: false,
-    comment: 'Is file publicly accessible',
-  })
-  isPublic: boolean;
 
   @Column({
     type: 'boolean',
@@ -115,72 +311,11 @@ export class FileUpload extends BaseEntity {
   extension?: string;
 
   @Column({
-    type: 'varchar',
-    length: 64,
-    nullable: true,
-    comment: 'File hash for duplicate detection',
-  })
-  fileHash?: string;
-
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Image/video metadata',
-  })
-  metadata?: {
-    width?: number;
-    height?: number;
-    duration?: number;
-    fps?: number;
-    codec?: string;
-    bitrate?: number;
-    thumbnail?: string;
-    exif?: Record<string, any>;
-  };
-
-  @Column({
-    type: 'int',
-    default: 0,
-    comment: 'Number of times file was downloaded',
-  })
-  downloadCount: number;
-
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    comment: 'Last time file was accessed',
-  })
-  lastAccessedAt?: Date;
-
-  @Column({
     type: 'timestamp',
     nullable: true,
     comment: 'File expiration date for temporary files',
   })
   expiresAt?: Date;
-
-  @Column({
-    type: 'varchar',
-    length: 255,
-    nullable: true,
-    comment: 'Alt text for images',
-  })
-  altText?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 500,
-    nullable: true,
-    comment: 'File description',
-  })
-  description?: string;
-
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'File tags for organization',
-  })
-  tags?: string[];
 
   @Column({
     type: 'timestamp',
@@ -189,25 +324,26 @@ export class FileUpload extends BaseEntity {
   })
   uploadedAt: Date;
 
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Additional file metadata',
-  })
-  additionalMetadata?: Record<string, any>;
-
   // Relationships
-  @ManyToOne(() => User, user => user.id)
+  @ManyToOne(() => User, user => user.id, { eager: false })
   @JoinColumn({ name: 'uploaderId' })
   uploader: User;
 
-  @ManyToOne(() => Course, course => course.files, { nullable: true })
-  @JoinColumn({ name: 'relatedCourseId' })
+  @ManyToOne(() => Course, course => course.files, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'courseId' })
   course?: Course;
 
-  @ManyToOne(() => Lesson, lesson => lesson.files, { nullable: true })
-  @JoinColumn({ name: 'relatedLessonId' })
+  @ManyToOne(() => Lesson, lesson => lesson.files, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lessonId' })
   lesson?: Lesson;
+
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: 'updatedBy' })
+  updater?: User;
+
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: 'moderatedBy' })
+  moderator?: User;
 
   // Virtual properties
   get formattedFileSize(): string {
@@ -239,8 +375,50 @@ export class FileUpload extends BaseEntity {
     return this.fileType === FileType.DOCUMENT;
   }
 
+  get isProcessed(): boolean {
+    return this.processingStatus === ProcessingStatus.COMPLETED;
+  }
+
   get isExpired(): boolean {
     return !!(this.expiresAt && new Date() > this.expiresAt);
+  }
+
+  get isProcessing(): boolean {
+    return this.processingStatus === ProcessingStatus.PROCESSING;
+  }
+
+  get hasProcessingFailed(): boolean {
+    return this.processingStatus === ProcessingStatus.FAILED;
+  }
+
+  get canBeDownloaded(): boolean {
+    return (
+      this.isActive &&
+      !this.isFlagged &&
+      this.processingStatus !== ProcessingStatus.FAILED &&
+      this.settings?.allowDownload !== false
+    );
+  }
+
+  get canBeStreamed(): boolean {
+    return (
+      this.isActive &&
+      !this.isFlagged &&
+      (this.isVideo || this.isAudio) &&
+      this.processingStatus === ProcessingStatus.COMPLETED &&
+      this.settings?.allowStreaming !== false
+    );
+  }
+
+  get fileExtension(): string {
+    return this.originalName.split('.').pop()?.toLowerCase() || '';
+  }
+
+  get processingDuration(): number | null {
+    if (!this.processingStartedAt) return null;
+
+    const endTime = this.processingCompletedAt || new Date();
+    return Math.round((endTime.getTime() - this.processingStartedAt.getTime()) / 1000);
   }
 
   get canAccess(): boolean {
@@ -269,7 +447,6 @@ export class FileUpload extends BaseEntity {
       }
     }
 
-    // Set file type based on MIME type if not set
     if (!this.fileType && this.mimeType) {
       if (this.mimeType.startsWith('image/')) {
         this.fileType = FileType.IMAGE;

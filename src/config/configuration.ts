@@ -172,7 +172,7 @@ export default (): Configuration => ({
     password: process.env.DATABASE_PASSWORD || '',
     database: process.env.DATABASE_NAME || 'lms_ai_database',
     // synchronize: process.env.NODE_ENV === 'development',
-    synchronize: false,
+    synchronize: true,
     logging: process.env.NODE_ENV === 'development',
     ssl: process.env.DATABASE_SSL === 'true',
   },

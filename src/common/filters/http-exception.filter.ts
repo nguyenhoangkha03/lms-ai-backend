@@ -33,7 +33,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error: status >= 500 ? 'Internal Server Error' : undefined,
     };
 
-    // Log error details
+    // Log error
     this.logger.error(
       `${request.method} ${request.url}`,
       exception instanceof Error ? exception.stack : exception,

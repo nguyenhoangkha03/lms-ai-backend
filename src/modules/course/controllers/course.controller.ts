@@ -13,7 +13,7 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
-import { CourseService } from './services/course.service';
+import { CourseService } from '../services/course.service';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -22,22 +22,22 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { SecurityEventInterceptor } from '../auth/interceptors/security-event.interceptor';
+import { SecurityEventInterceptor } from '../../auth/interceptors/security-event.interceptor';
 import { WinstonService } from '@/logger/winston.service';
-import { Authorize } from '../auth/decorators/authorize.decorator';
-import { CourseQueryDto } from './dto/course-query.dto';
+import { Authorize } from '../../auth/decorators/authorize.decorator';
+import { CourseQueryDto } from '../dto/course-query.dto';
 import { PermissionAction, PermissionResource, UserType } from '@/common/enums/user.enums';
-import { CreateCourseDto } from './dto/create-course.dto';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from '../user/entities/user.entity';
-import { OwnerOnly } from '../auth/decorators/owner-only.decorator';
-import { UpdateCourseDto } from './dto/update-course.dto';
+import { CreateCourseDto } from '../dto/create-course.dto';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { User } from '../../user/entities/user.entity';
+import { OwnerOnly } from '../../auth/decorators/owner-only.decorator';
+import { UpdateCourseDto } from '../dto/update-course.dto';
 import {
   BulkDeleteCoursesDto,
   BulkUpdateCourseCategoryDto,
   BulkUpdateCourseStatusDto,
   BulkUpdateCourseTagsDto,
-} from './dto/bulk-course-operations.dto';
+} from '../dto/bulk-course-operations.dto';
 
 @ApiTags('Course Management')
 @Controller('course')

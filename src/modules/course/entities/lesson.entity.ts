@@ -5,6 +5,8 @@ import { Course } from './course.entity';
 import { CourseSection } from './course-section.entity';
 import { LessonProgress } from './lesson-progress.entity';
 import { FileUpload } from './file-upload.entity';
+import { ContentVersion } from './content-version.entity';
+import { ContentModerationStatus, ContentStatus } from '@/common/enums/content.enums';
 
 @Entity('lessons')
 @Index(['courseId'])
@@ -129,6 +131,44 @@ export class Lesson extends BaseEntity {
   isActive: boolean;
 
   @Column({
+    type: 'enum',
+    enum: ContentStatus,
+    default: ContentStatus.DRAFT,
+    comment: 'Content publication status',
+  })
+  status: ContentStatus;
+
+  @Column({
+    type: 'enum',
+    enum: ContentModerationStatus,
+    default: ContentModerationStatus.PENDING,
+    comment: 'Content moderation status',
+  })
+  moderationStatus: ContentModerationStatus;
+
+  @Column({
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+    comment: 'Moderator who reviewed this content',
+  })
+  moderatedBy?: string;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Moderation timestamp',
+  })
+  moderatedAt?: Date;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: 'Moderation reason/feedback',
+  })
+  moderationReason?: string;
+
+  @Column({
     type: 'int',
     nullable: true,
     comment: 'Estimated completion time in minutes',
@@ -155,6 +195,13 @@ export class Lesson extends BaseEntity {
     comment: 'Lesson availability end date',
   })
   availableUntil?: Date;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Content published timestamp',
+  })
+  publishedAt?: Date;
 
   @Column({
     type: 'json',
@@ -201,19 +248,109 @@ export class Lesson extends BaseEntity {
     timestamps?: { time: number; text: string }[];
   }[];
 
+  // === CONTENT VERSIONING === //
+  @Column({
+    type: 'int',
+    default: 1,
+    comment: 'Current content version number',
+  })
+  currentVersion: number;
+
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: 'Whether content has draft changes',
+  })
+  hasDraftChanges: boolean;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Last content modification timestamp',
+  })
+  lastContentUpdate?: Date;
+
+  // === ANALYTICS & TRACKING === //
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Total views count',
+  })
+  viewCount: number;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Total completions count',
+  })
+  completionCount: number;
+
+  @Column({
+    type: 'decimal',
+    precision: 3,
+    scale: 2,
+    default: 0,
+    comment: 'Average lesson rating',
+  })
+  averageRating: number;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Average time spent in seconds',
+  })
+  averageTimeSpent: number;
+
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+    comment: 'Lesson completion rate percentage',
+  })
+  completionRate: number;
+
+  // === SETTINGS & METADATA === //
   @Column({
     type: 'json',
     nullable: true,
     comment: 'Lesson settings and preferences',
   })
-  settings?: Record<string, any>;
+  settings?: {
+    allowComments?: boolean;
+    showProgress?: boolean;
+    allowDownload?: boolean;
+    autoPlay?: boolean;
+    showTranscript?: boolean;
+    allowSpeedControl?: boolean;
+    maxPlaybackSpeed?: number;
+    watermarkEnabled?: boolean;
+    [key: string]: any;
+  };
 
   @Column({
     type: 'json',
     nullable: true,
     comment: 'Additional lesson metadata',
   })
-  metadata?: Record<string, any>;
+  metadata?: {
+    difficulty?: 'beginner' | 'intermediate' | 'advanced';
+    tags?: string[];
+    language?: string;
+    subtitles?: string[];
+    contentWarnings?: string[];
+    accessibility?: {
+      hasSubtitles?: boolean;
+      hasTranscript?: boolean;
+      hasAudioDescription?: boolean;
+    };
+    seo?: {
+      metaTitle?: string;
+      metaDescription?: string;
+      keywords?: string[];
+    };
+    [key: string]: any;
+  };
 
   // Relationships
   @ManyToOne(() => Course, course => course.id, { onDelete: 'CASCADE' })
@@ -230,24 +367,52 @@ export class Lesson extends BaseEntity {
   @OneToMany(() => FileUpload, file => file.lesson)
   files?: FileUpload[];
 
+  @OneToMany(() => ContentVersion, version => version.lesson)
+  versions?: ContentVersion[];
+
   // Virtual properties
+  get isPublished(): boolean {
+    return this.status === ContentStatus.PUBLISHED;
+  }
+
+  get isModerated(): boolean {
+    return this.moderationStatus === ContentModerationStatus.APPROVED;
+  }
+
+  get canBePublished(): boolean {
+    return (
+      this.moderationStatus === ContentModerationStatus.APPROVED ||
+      this.moderationStatus === ContentModerationStatus.PENDING
+    );
+  }
   get formattedDuration(): string {
-    if (this.lessonType === LessonType.VIDEO && this.videoDuration) {
-      const hours = Math.floor(this.videoDuration / 3600);
-      const minutes = Math.floor((this.videoDuration % 3600) / 60);
-      const seconds = this.videoDuration % 60;
+    if (!this.estimatedDuration) return '0 min';
 
-      if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-      }
-      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const hours = Math.floor(this.estimatedDuration / 60);
+    const minutes = this.estimatedDuration % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  }
+
+  get isAccessible(): boolean {
+    if (!this.isActive || this.status !== ContentStatus.PUBLISHED) {
+      return false;
     }
 
-    if (this.estimatedDuration) {
-      return `${this.estimatedDuration} min`;
+    const now = new Date();
+
+    if (this.availableFrom && now < this.availableFrom) {
+      return false;
     }
 
-    return 'Not specified';
+    if (this.availableUntil && now > this.availableUntil) {
+      return false;
+    }
+
+    return true;
   }
 
   get isAvailable(): boolean {
@@ -279,12 +444,10 @@ export class Lesson extends BaseEntity {
   }
 
   get hasAttachments(): boolean {
-    // return this.attachments && this.attachments.length > 0;
     return !!this.attachments?.length;
   }
 
   get hasTranscript(): boolean {
-    // return this.transcript && this.transcript.length > 0;
     return !!this.transcript?.length;
   }
 }
