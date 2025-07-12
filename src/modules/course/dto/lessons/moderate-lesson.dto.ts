@@ -1,3 +1,4 @@
+import { ContentModerationStatus } from '@/common/enums/content.enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 

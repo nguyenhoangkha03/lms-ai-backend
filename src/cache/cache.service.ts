@@ -133,4 +133,11 @@ export class CacheService {
       await this.setSession(sessionId, sessionData, ttl);
     }
   }
+
+  async deletePattern(pattern: string): Promise<void> {
+    const keys = await this.getKeys(pattern);
+    for (const key of keys) {
+      await this.del(key);
+    }
+  }
 }

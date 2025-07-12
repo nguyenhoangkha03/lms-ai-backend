@@ -48,6 +48,8 @@
     "security:check": "npm run lint && npm run test && npm run security:audit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.844.0",
+    "@aws-sdk/s3-request-presigner": "^3.844.0",
     "@nestjs/bull": "^11.0.2",
     "@nestjs/cache-manager": "^2.3.0",
     "@nestjs/common": "^10.0.0",
@@ -81,6 +83,7 @@
     "mysql2": "^3.14.1",
     "natural": "^8.1.0",
     "nest-winston": "^1.9.4",
+    "nestjs-typeorm-paginate": "^4.1.0",
     "nodemailer": "^7.0.3",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",

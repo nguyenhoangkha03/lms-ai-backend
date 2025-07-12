@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Lesson } from '../entities/lesson.entity';
 import { Repository } from 'typeorm';
@@ -9,6 +14,17 @@ import { LessonProgress } from '../entities/lesson-progress.entity';
 import { WinstonService } from '@/logger/winston.service';
 import { CacheService } from '@/cache/cache.service';
 import { ContentVersion } from '../entities/content-version.entity';
+import { CreateLessonDto } from '../dto/lessons/create-lesson.dto';
+import { BulkUpdateLessonStatusDto } from '../dto/lessons/bulk-update-lesson-status.dto';
+import { BulkDeleteLessonsDto } from '../dto/lessons/bulk-delete-lesson.dto';
+import { ReorderLessonsDto } from '../dto/lessons/reorder-lesson.dto';
+import { ContentModerationStatus, ContentStatus } from '@/common/enums/content.enums';
+import { User } from '@/modules/user/entities/user.entity';
+import { LessonQueryDto } from '../dto/lessons/lesson-query.dto';
+import { PaginationDto } from '@/common/dto/pagination.dto';
+import { UpdateLessonDto } from '../dto/lessons/update-lesson.dto';
+// import { paginate } from 'nestjs-typeorm-paginate';
+import { LessonType } from '@/common/enums/course.enums';
 
 @Injectable()
 export class LessonService {
@@ -107,6 +123,21 @@ export class LessonService {
     return savedLesson;
   }
 
+  async bulkUpdateStatus(
+    _bulkUpdateDto: BulkUpdateLessonStatusDto,
+    _userId: string,
+  ): Promise<void> {
+    // viết sau
+  }
+
+  async bulkDelete(_bulkDeleteDto: BulkDeleteLessonsDto, _userId: string): Promise<void> {
+    // viết sau
+  }
+
+  async reorderLessons(_reorderDto: ReorderLessonsDto, _userId: string): Promise<void> {
+    // viết sau
+  }
+
   async findOne(
     id: string,
     user?: User,
@@ -114,7 +145,7 @@ export class LessonService {
     includeProgress = false,
   ): Promise<Lesson> {
     const cacheKey = `lesson:${id}:${user?.id || 'public'}:${includeContent}:${includeProgress}`;
-    const cached = await this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get<Lesson>(cacheKey);
     if (cached) return cached;
 
     const queryBuilder = this.lessonRepository
@@ -207,7 +238,7 @@ export class LessonService {
     const sortOrder = queryDto.sortOrder || 'ASC';
     queryBuilder.orderBy(`lesson.${sortField}`, sortOrder);
 
-    return paginate(queryBuilder, queryDto);
+    // return paginate<Lesson>(queryBuilder, queryDto);
   }
 
   /**

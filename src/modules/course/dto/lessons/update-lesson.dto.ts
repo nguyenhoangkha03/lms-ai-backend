@@ -1,6 +1,7 @@
 import { ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { CreateLessonDto } from './create-lesson.dto';
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ContentStatus } from '@/common/enums/content.enums';
 
 export class UpdateLessonDto extends PartialType(CreateLessonDto) {
   @ApiPropertyOptional({

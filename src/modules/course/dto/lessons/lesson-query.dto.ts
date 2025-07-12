@@ -1,3 +1,4 @@
+import { ContentStatus } from '@/common/enums/content.enums';
 import { LessonType } from '@/common/enums/course.enums';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';

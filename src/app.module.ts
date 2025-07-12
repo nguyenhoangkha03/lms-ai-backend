@@ -19,6 +19,7 @@ import { CommunicationModule } from './modules/communication/communication.modul
 import { NotificationModule } from './modules/notification/notification.module';
 import { SystemModule } from './modules/system/system.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { FileManagementModule } from './modules/file-management/file-management.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
     NotificationModule,
     SystemModule,
     ChatbotModule,
+    FileManagementModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],

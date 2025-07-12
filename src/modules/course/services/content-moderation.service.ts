@@ -1,4 +1,3 @@
-// src/modules/course/services/content-moderation.service.ts
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectQueue } from '@nestjs/bull';
@@ -40,14 +39,14 @@ export interface ModerationFlag {
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
   confidence: number;
-  location?: string; // Where in content the issue was found
+  location?: string;
 }
 
 @Injectable()
 export class ContentModerationService {
   private readonly aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-  private readonly profanityWords: Set<string>;
-  private readonly spamPatterns: RegExp[];
+  private profanityWords: Set<string>;
+  private spamPatterns: RegExp[];
 
   constructor(
     @InjectRepository(Lesson)
@@ -62,10 +61,6 @@ export class ContentModerationService {
     this.initializeProfanityFilter();
     this.initializeSpamPatterns();
   }
-
-  /**
-   * Queue content for moderation
-   */
   async queueContentModeration(
     contentId: string,
     contentType: 'lesson' | 'file',
@@ -106,7 +101,6 @@ export class ContentModerationService {
       };
     }
 
-    // Add job to moderation queue
     await this.moderationQueue.add('moderate-content', {
       contentId,
       contentType,
@@ -123,9 +117,6 @@ export class ContentModerationService {
     this.logger.log(`Queued content moderation for ${contentType} ${contentId}`);
   }
 
-  /**
-   * Moderate content
-   */
   async moderateContent(job: ModerationJob): Promise<ModerationResult> {
     const { contentId, contentType, contentData, options } = job;
 
@@ -133,10 +124,9 @@ export class ContentModerationService {
       this.logger.log(`Starting moderation for ${contentType} ${contentId}`);
 
       const flags: ModerationFlag[] = [];
-      let totalScore = 100; // Start with perfect score, deduct for issues
+      let totalScore = 100;
 
-      // Text-based checks for lessons
-      if (contentType === 'lesson') {
+      if (contentType === 'lesson' && options) {
         if (options.checkProfanity) {
           const profanityFlags = await this.checkProfanity(contentData);
           flags.push(...profanityFlags);
@@ -164,19 +154,16 @@ export class ContentModerationService {
         }
       }
 
-      // File-based checks
       if (contentType === 'file') {
-        if (options.checkQuality) {
+        if (options?.checkQuality) {
           const fileQualityFlags = await this.checkFileQuality(contentData);
           flags.push(...fileQualityFlags);
           totalScore -= fileQualityFlags.length * 10;
         }
       }
 
-      // Determine moderation status
-      const result = this.calculateModerationResult(totalScore, flags, options.manualReview);
+      const result = this.calculateModerationResult(totalScore, flags, options?.manualReview);
 
-      // Update content with moderation result
       await this.updateContentModerationStatus(contentId, contentType, result);
 
       this.logger.log(`Moderation completed for ${contentType} ${contentId}: ${result.status}`);
@@ -184,7 +171,6 @@ export class ContentModerationService {
     } catch (error) {
       this.logger.error(`Moderation failed for ${contentType} ${contentId}:`, error.message);
 
-      // Mark as requiring manual review on error
       const errorResult: ModerationResult = {
         status: ContentModerationStatus.REQUIRES_CHANGES,
         score: 0,
@@ -205,9 +191,6 @@ export class ContentModerationService {
     }
   }
 
-  /**
-   * Manual moderation by admin
-   */
   async performManualModeration(
     contentId: string,
     contentType: 'lesson' | 'file',
@@ -227,9 +210,6 @@ export class ContentModerationService {
     this.logger.log(`Manual moderation completed for ${contentType} ${contentId}: ${status}`);
   }
 
-  /**
-   * Check for profanity in text content
-   */
   private async checkProfanity(contentData: any): Promise<ModerationFlag[]> {
     const flags: ModerationFlag[] = [];
     const textToCheck = [contentData.title, contentData.description, contentData.content]
@@ -237,7 +217,8 @@ export class ContentModerationService {
       .join(' ')
       .toLowerCase();
 
-    const words = natural.WordTokenizer.tokenize(textToCheck);
+    const tokenizer = new natural.WordTokenizer();
+    const words = tokenizer.tokenize(textToCheck);
     const foundProfanity: string[] = [];
 
     for (const word of words) {
@@ -258,9 +239,6 @@ export class ContentModerationService {
     return flags;
   }
 
-  /**
-   * Check for spam patterns
-   */
   private async checkSpam(contentData: any): Promise<ModerationFlag[]> {
     const flags: ModerationFlag[] = [];
     const textToCheck = [contentData.title, contentData.description, contentData.content]
@@ -279,7 +257,6 @@ export class ContentModerationService {
       }
     }
 
-    // Check for excessive links
     const linkCount = (textToCheck.match(/https?:\/\/[^\s]+/g) || []).length;
     if (linkCount > 5) {
       flags.push({
@@ -290,7 +267,6 @@ export class ContentModerationService {
       });
     }
 
-    // Check for repeated content
     const sentences = textToCheck.split(/[.!?]+/);
     const uniqueSentences = new Set(sentences.map(s => s.trim().toLowerCase()));
     const repetitionRate = 1 - uniqueSentences.size / sentences.length;
@@ -307,13 +283,9 @@ export class ContentModerationService {
     return flags;
   }
 
-  /**
-   * Check content quality
-   */
   private async checkContentQuality(contentData: any): Promise<ModerationFlag[]> {
     const flags: ModerationFlag[] = [];
 
-    // Check title length
     if (!contentData.title || contentData.title.length < 10) {
       flags.push({
         type: 'quality',
@@ -323,7 +295,6 @@ export class ContentModerationService {
       });
     }
 
-    // Check description
     if (!contentData.description || contentData.description.length < 50) {
       flags.push({
         type: 'quality',
@@ -333,7 +304,6 @@ export class ContentModerationService {
       });
     }
 
-    // Check content length for text lessons
     if (contentData.type === 'text' && (!contentData.content || contentData.content.length < 200)) {
       flags.push({
         type: 'quality',
@@ -343,7 +313,6 @@ export class ContentModerationService {
       });
     }
 
-    // Check for proper formatting
     if (contentData.content) {
       const hasHeaders = /<h[1-6]/.test(contentData.content);
       const hasParagraphs =
@@ -362,13 +331,9 @@ export class ContentModerationService {
     return flags;
   }
 
-  /**
-   * Check file quality
-   */
   private async checkFileQuality(contentData: any): Promise<ModerationFlag[]> {
     const flags: ModerationFlag[] = [];
 
-    // Check file name
     if (contentData.fileName.length < 5) {
       flags.push({
         type: 'quality',
@@ -378,7 +343,6 @@ export class ContentModerationService {
       });
     }
 
-    // Check for suspicious file extensions
     const suspiciousExtensions = ['.exe', '.bat', '.cmd', '.scr', '.vbs'];
     const extension = contentData.fileName.toLowerCase().split('.').pop();
 
@@ -394,9 +358,6 @@ export class ContentModerationService {
     return flags;
   }
 
-  /**
-   * Perform AI-based moderation
-   */
   private async performAIModeration(contentData: any): Promise<ModerationFlag[]> {
     try {
       const response = await axios.post(
@@ -442,9 +403,6 @@ export class ContentModerationService {
     }
   }
 
-  /**
-   * Calculate final moderation result
-   */
   private calculateModerationResult(
     score: number,
     flags: ModerationFlag[],
@@ -480,9 +438,6 @@ export class ContentModerationService {
     };
   }
 
-  /**
-   * Generate improvement suggestions based on flags
-   */
   private generateSuggestions(flags: ModerationFlag[]): string[] {
     const suggestions: string[] = [];
 
@@ -515,9 +470,6 @@ export class ContentModerationService {
     return suggestions;
   }
 
-  /**
-   * Update content moderation status
-   */
   private async updateContentModerationStatus(
     contentId: string,
     contentType: 'lesson' | 'file',
@@ -537,28 +489,16 @@ export class ContentModerationService {
           suggestions: result.suggestions,
           timestamp: new Date().toISOString(),
         },
-      },
+      } as any,
     });
   }
 
-  /**
-   * Initialize profanity filter
-   */
   private initializeProfanityFilter(): void {
-    // This would typically load from a comprehensive database
-    const profanityList = [
-      // Add profanity words here - keeping minimal for example
-      'badword1',
-      'badword2',
-      'inappropriate',
-    ];
+    const profanityList = ['badword1', 'badword2', 'inappropriate'];
 
     this.profanityWords = new Set(profanityList);
   }
 
-  /**
-   * Initialize spam patterns
-   */
   private initializeSpamPatterns(): void {
     this.spamPatterns = [
       /buy\s+now/gi,

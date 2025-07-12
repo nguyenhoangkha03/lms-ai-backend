@@ -5,6 +5,7 @@ import { User } from '../../user/entities/user.entity';
 import { Course } from './course.entity';
 import { Lesson } from './lesson.entity';
 import { FileAccessLevel, ProcessingStatus } from '@/common/enums/file.enums';
+import { ModerationFlag } from '../services/content-moderation.service';
 
 @Entity('file_uploads')
 @Index(['uploaderId'])
@@ -51,7 +52,7 @@ export class FileUpload extends BaseEntity {
     length: 500,
     comment: 'Relative file path from upload root',
   })
-  filePath: string;
+  filePath?: string;
 
   @Column({
     type: 'bigint',
@@ -203,6 +204,14 @@ export class FileUpload extends BaseEntity {
   lastDownloadedAt?: Date;
 
   @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: 'URL to download the file',
+  })
+  downloadUrl?: string;
+
+  @Column({
     type: 'timestamp',
     nullable: true,
     comment: 'Last view timestamp',
@@ -271,6 +280,13 @@ export class FileUpload extends BaseEntity {
     virusScanResult?: 'clean' | 'infected' | 'suspicious' | 'pending';
     virusScanDate?: Date;
     [key: string]: any;
+
+    moderationResult?: {
+      score: number;
+      flags: ModerationFlag[];
+      suggestions: string[];
+      timestamp: string;
+    };
   };
 
   // UPDATE OLD //

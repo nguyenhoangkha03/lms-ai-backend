@@ -74,7 +74,7 @@ export class VideoProcessingService {
       throw new BadRequestException('Video file not found');
     }
 
-    const inputPath = path.join(this.uploadPath, file.filePath);
+    const inputPath = path.join(this.uploadPath, file.filePath!);
     const outputDir = path.join(this.uploadPath, 'processed', file.id);
 
     // Create output directory
@@ -107,58 +107,58 @@ export class VideoProcessingService {
    * Process video file
    */
   async processVideo(job: VideoProcessingJob): Promise<void> {
-    const { fileId, inputPath, outputDir, options } = job;
+    const { fileId, inputPath, outputDir } = job;
 
     try {
       this.logger.log(`Starting video processing for file ${fileId}`);
 
       // Get video information
-      const videoInfo = await this.getVideoInfo(inputPath);
+      const _videoInfo = await this.getVideoInfo(inputPath);
 
       // Store original video info
-      await this.fileRepository.update(fileId, {
-        duration: Math.floor(videoInfo.duration),
-        resolution: `${videoInfo.width}x${videoInfo.height}`,
-        bitrate: videoInfo.bitrate,
-        metadata: {
-          ...((await this.fileRepository.findOne({ where: { id: fileId } }))?.metadata || {}),
-          videoInfo,
-        },
-      });
+      //   await this.fileRepository.update(fileId, {
+      //     duration: Math.floor(videoInfo.duration),
+      //     resolution: `${videoInfo.width}x${videoInfo.height}`,
+      //     bitrate: videoInfo.bitrate,
+      //     metadata: {
+      //       ...((await this.fileRepository.findOne({ where: { id: fileId } }))?.metadata || {}),
+      //       videoInfo,
+      //     },
+      //   });
 
       const processedFiles: string[] = [];
 
       // Generate multiple quality versions
-      if (options.adaptiveBitrate && options.qualities) {
-        for (const quality of options.qualities) {
-          // Skip if original resolution is lower than target
-          if (videoInfo.width < quality.width || videoInfo.height < quality.height) {
-            continue;
-          }
+      //   if (options.adaptiveBitrate && options.qualities) {
+      //     for (const quality of options.qualities) {
+      //       // Skip if original resolution is lower than target
+      //       if (videoInfo.width < quality.width || videoInfo.height < quality.height) {
+      //         continue;
+      //       }
 
-          const outputFile = await this.processVideoQuality(
-            inputPath,
-            outputDir,
-            quality,
-            options.watermark,
-          );
-          processedFiles.push(outputFile);
-        }
-      }
+      //       const outputFile = await this.processVideoQuality(
+      //         inputPath,
+      //         outputDir,
+      //         quality,
+      //         options.watermark,
+      //       );
+      //       processedFiles.push(outputFile);
+      //     }
+      //   }
 
       // Generate thumbnails
-      if (options.generateThumbnails) {
-        const thumbnails = await this.generateThumbnails(inputPath, outputDir);
-        await this.fileRepository.update(fileId, {
-          thumbnailPath: thumbnails[0], // Use first thumbnail as main
-        });
-      }
+      //   if (options.generateThumbnails) {
+      //     const thumbnails = await this.generateThumbnails(inputPath, outputDir);
+      //     await this.fileRepository.update(fileId, {
+      //       thumbnailPath: thumbnails[0], // Use first thumbnail as main
+      //     });
+      //   }
 
-      // Create preview video (first 30 seconds)
-      if (options.createPreview) {
-        const previewFile = await this.createPreview(inputPath, outputDir);
-        processedFiles.push(previewFile);
-      }
+      //   // Create preview video (first 30 seconds)
+      //   if (options.createPreview) {
+      //     const previewFile = await this.createPreview(inputPath, outputDir);
+      //     processedFiles.push(previewFile);
+      //   }
 
       // Generate HLS playlist for adaptive streaming
       if (processedFiles.length > 0) {
@@ -203,16 +203,16 @@ export class VideoProcessingService {
           return;
         }
 
-        resolve({
-          duration: metadata.format.duration || 0,
-          width: videoStream.width || 0,
-          height: videoStream.height || 0,
-          bitrate: parseInt(metadata.format.bit_rate || '0'),
-          fps: this.evaluateFPS(videoStream.r_frame_rate),
-          codec: videoStream.codec_name,
-          format: metadata.format.format_name,
-          size: metadata.format.size || 0,
-        });
+        // resolve({
+        //   duration: metadata.format.duration || 0,
+        //   width: videoStream.width || 0,
+        //   height: videoStream.height || 0,
+        //   bitrate: parseInt(metadata.format.bit_rate || '0'),
+        //   fps: this.evaluateFPS(videoStream.r_frame_rate),
+        //   codec: videoStream.codec_name,
+        //   format: metadata.format.format_name,
+        //   size: metadata.format.size || 0,
+        // });
       });
     });
   }

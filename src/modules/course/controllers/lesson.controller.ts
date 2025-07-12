@@ -32,7 +32,7 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { OwnerOnly } from '../../auth/decorators/owner-only.decorator';
 import { User } from '../../user/entities/user.entity';
 import { UserType } from '@/common/enums/user.enums';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { PaginationDto } from '@/common/dto/pagination.dto';
 import { CreateLessonDto } from '../dto/lessons/create-lesson.dto';
 import { UpdateLessonDto } from '../dto/lessons/update-lesson.dto';
 import { LessonQueryDto } from '../dto/lessons/lesson-query.dto';
@@ -56,7 +56,6 @@ export class LessonController {
   }
 
   // === PUBLIC ENDPOINTS === //
-
   @Get('public')
   @Authorize({ requireAuth: false })
   @ApiOperation({ summary: 'Get public preview lessons' })
@@ -78,10 +77,9 @@ export class LessonController {
   }
 
   // === TEACHER ENDPOINTS === //
-
   @Post()
   @Authorize({
-    userTypes: [UserType.TEACHER, UserType.ADMIN],
+    roles: [UserType.TEACHER, UserType.ADMIN],
     permissions: ['create:lesson'],
   })
   @ApiOperation({ summary: 'Create new lesson (Teacher/Admin)' })
@@ -156,7 +154,6 @@ export class LessonController {
   }
 
   // === PUBLISHING WORKFLOW === //
-
   @Post(':id/publish')
   @OwnerOnly({
     entityType: 'Lesson',
@@ -200,7 +197,6 @@ export class LessonController {
   }
 
   // === CONTENT VERSIONING === //
-
   @Get(':id/versions')
   @OwnerOnly({
     entityType: 'Lesson',
@@ -237,7 +233,6 @@ export class LessonController {
   }
 
   // === FILE MANAGEMENT === //
-
   @Post(':id/files')
   @OwnerOnly({
     entityType: 'Lesson',
@@ -290,7 +285,6 @@ export class LessonController {
   }
 
   // === VIDEO MANAGEMENT === //
-
   @Post(':id/video')
   @OwnerOnly({
     entityType: 'Lesson',
@@ -322,10 +316,9 @@ export class LessonController {
   }
 
   // === ADMIN ENDPOINTS === //
-
   @Post('bulk/status')
   @Authorize({
-    userTypes: [UserType.ADMIN],
+    roles: [UserType.ADMIN],
     permissions: ['manage:lesson'],
   })
   @ApiOperation({ summary: 'Bulk update lesson status (Admin only)' })
@@ -340,7 +333,7 @@ export class LessonController {
 
   @Delete('bulk')
   @Authorize({
-    userTypes: [UserType.ADMIN],
+    roles: [UserType.ADMIN],
     permissions: ['manage:lesson'],
   })
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -353,7 +346,7 @@ export class LessonController {
 
   @Post('reorder')
   @Authorize({
-    userTypes: [UserType.TEACHER, UserType.ADMIN],
+    roles: [UserType.TEACHER, UserType.ADMIN],
     permissions: ['update:lesson'],
   })
   @ApiOperation({ summary: 'Reorder lessons (Teacher/Admin)' })
@@ -364,10 +357,9 @@ export class LessonController {
   }
 
   // === MODERATION ENDPOINTS === //
-
   @Post(':id/moderate')
   @Authorize({
-    userTypes: [UserType.ADMIN],
+    roles: [UserType.ADMIN],
     permissions: ['moderate:content'],
   })
   @ApiOperation({ summary: 'Moderate lesson content (Admin only)' })
@@ -384,7 +376,7 @@ export class LessonController {
 
   @Get('moderation/pending')
   @Authorize({
-    userTypes: [UserType.ADMIN],
+    roles: [UserType.ADMIN],
     permissions: ['moderate:content'],
   })
   @ApiOperation({ summary: 'Get lessons pending moderation (Admin only)' })

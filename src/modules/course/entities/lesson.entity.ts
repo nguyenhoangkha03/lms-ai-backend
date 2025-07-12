@@ -7,6 +7,7 @@ import { LessonProgress } from './lesson-progress.entity';
 import { FileUpload } from './file-upload.entity';
 import { ContentVersion } from './content-version.entity';
 import { ContentModerationStatus, ContentStatus } from '@/common/enums/content.enums';
+import { ModerationFlag } from '../services/content-moderation.service';
 
 @Entity('lessons')
 @Index(['courseId'])
@@ -350,6 +351,14 @@ export class Lesson extends BaseEntity {
       keywords?: string[];
     };
     [key: string]: any;
+
+    moderationResult?: {
+      status: ContentModerationStatus;
+      score: number;
+      flags: ModerationFlag[];
+      suggestions: string[];
+      requiresManualReview: boolean;
+    };
   };
 
   // Relationships
