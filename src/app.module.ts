@@ -20,6 +20,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { SystemModule } from './modules/system/system.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { FileManagementModule } from './modules/file-management/file-management.module';
+import { GradingModule } from './modules/grading/grading.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { FileManagementModule } from './modules/file-management/file-management.
     SystemModule,
     ChatbotModule,
     FileManagementModule,
+    GradingModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],

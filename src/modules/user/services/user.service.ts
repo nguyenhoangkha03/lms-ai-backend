@@ -469,9 +469,11 @@ export class UserService {
       { id: In(bulkUpdateDto.userIds) },
       {
         status: bulkUpdateDto.status,
-        metadata: bulkUpdateDto.reason
-          ? ({ statusChangeReason: bulkUpdateDto.reason } as Record<string, any>)
-          : undefined,
+        metadata: JSON.stringify(
+          bulkUpdateDto.reason
+            ? ({ statusChangeReason: bulkUpdateDto.reason } as Record<string, any>)
+            : undefined,
+        ),
       },
     );
 
@@ -739,7 +741,7 @@ export class UserService {
     const user = await this.updateUserStatus(id, UserStatus.SUSPENDED);
 
     if (reason) {
-      user.metadata = { ...user.metadata, suspensionReason: reason };
+      user.metadata = JSON.stringify({ ...JSON.parse(user.metadata!), suspensionReason: reason });
       await this.userRepository.save(user);
     }
 

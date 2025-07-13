@@ -245,11 +245,11 @@ export class User extends BaseEntity {
   preferences?: Record<string, any>;
 
   @Column({
-    type: 'json',
+    type: 'longtext',
     nullable: true,
     comment: 'User metadata',
   })
-  metadata?: Record<string, any>;
+  metadata?: string;
 
   // Relationships
   @OneToOne(() => UserProfile, profile => profile.user, { cascade: true })
