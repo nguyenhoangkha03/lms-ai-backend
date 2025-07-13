@@ -74,6 +74,12 @@ export enum AuditAction {
   ARCHIVE_ASSESSMENT = 'archive_assessment',
   DUPLICATE_ASSESSMENT = 'duplicate_assessment',
   REMOVE_QUESTION = 'remove_question',
+  START_ASSESSMENT = 'start_assessment',
+  SUBMIT_ANSWER = 'submit_answer',
+  SUBMIT_ASSESSMENT = 'submit_assessment',
+  SECURITY_EVENT = 'security_event',
+  PAUSE_ASSESSMENT = 'pause_assessment',
+  RESUME_ASSESSMENT = 'resume_assessment',
 }
 
 export enum AuditLevel {
