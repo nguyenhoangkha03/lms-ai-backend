@@ -4,18 +4,18 @@ import { QuestionType, DifficultyLevel } from '@/common/enums/assessment.enums';
 import { Assessment } from './assessment.entity';
 
 @Entity('questions')
-@Index(['assessmentId'])
-@Index(['questionType'])
-@Index(['difficulty'])
-@Index(['orderIndex'])
+// @Index(['assessmentId', 'orderIndex'])
+@Index(['questionType', 'difficulty'])
 @Index(['tags'])
 export class Question extends BaseEntity {
+  // Core Question Information
   @Column({
     type: 'varchar',
     length: 36,
     comment: 'Assessment ID',
+    nullable: true,
   })
-  assessmentId: string;
+  assessmentId?: string | null;
 
   @Column({
     type: 'text',
@@ -30,25 +30,6 @@ export class Question extends BaseEntity {
     comment: 'Type of question',
   })
   questionType: QuestionType;
-
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Question options for multiple choice questions',
-  })
-  options?: {
-    id: string;
-    text: string;
-    isCorrect?: boolean;
-    explanation?: string;
-  }[];
-
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Correct answer(s) for the question',
-  })
-  correctAnswer?: any;
 
   @Column({
     type: 'text',
@@ -82,13 +63,6 @@ export class Question extends BaseEntity {
   orderIndex: number;
 
   @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Question tags for categorization',
-  })
-  tags?: string[];
-
-  @Column({
     type: 'int',
     nullable: true,
     comment: 'Time limit for this question in seconds',
@@ -102,51 +76,55 @@ export class Question extends BaseEntity {
   })
   hint?: string;
 
+  // Question Configuration
   @Column({
-    type: 'json',
+    type: 'longtext',
     nullable: true,
-    comment: 'Media attachments (images, audio, video)',
+    comment: 'Question options for multiple choice questions',
   })
-  attachments?: {
-    type: 'image' | 'audio' | 'video' | 'document';
-    url: string;
-    filename: string;
-    size?: number;
-    mimeType?: string;
-  }[];
+  options?: string | null;
 
   @Column({
-    type: 'json',
+    type: 'longtext',
+    nullable: true,
+    comment: 'Correct answer(s) for the question',
+  })
+  correctAnswer?: string;
+
+  @Column({
+    type: 'longtext',
+    nullable: true,
+    comment: 'Question tags for categorization',
+  })
+  tags?: string | null;
+
+  @Column({
+    type: 'longtext',
+    nullable: true,
+    comment: 'File attachments (JSON)',
+  })
+  attachments?: string | null;
+
+  @Column({
+    type: 'longtext',
     nullable: true,
     comment: 'Validation rules for answer checking',
   })
-  validationRules?: {
-    caseSensitive?: boolean;
-    exactMatch?: boolean;
-    acceptedAnswers?: string[];
-    minLength?: number;
-    maxLength?: number;
-    pattern?: string;
-  };
+  validationRules?: string;
 
   @Column({
-    type: 'json',
+    type: 'longtext',
     nullable: true,
     comment: 'Analytics data for this question',
   })
-  analytics?: {
-    totalAttempts?: number;
-    correctAttempts?: number;
-    averageTime?: number;
-    difficultyRating?: number;
-  };
+  analytics?: string;
 
   @Column({
-    type: 'json',
+    type: 'longtext',
     nullable: true,
     comment: 'Additional question metadata',
   })
-  metadata?: Record<string, any>;
+  metadata?: string | null;
 
   // Relationships
   @ManyToOne(() => Assessment, assessment => assessment.questions, { onDelete: 'CASCADE' })
@@ -154,6 +132,33 @@ export class Question extends BaseEntity {
   assessment: Assessment;
 
   // Virtual properties
+  get optionsJson() {
+    return this.options ? JSON.parse(this.options) : [];
+  }
+
+  get correctAnswerJson() {
+    return JSON.parse(this.correctAnswer!);
+  }
+
+  get tagsJson() {
+    return this.tags ? JSON.parse(this.tags) : [];
+  }
+
+  get attachmentsJson() {
+    return this.attachments ? JSON.parse(this.attachments) : [];
+  }
+
+  get validationRulesJson() {
+    return this.validationRules ? JSON.parse(this.validationRules) : {};
+  }
+
+  get analyticsJson() {
+    return this.analytics ? JSON.parse(this.analytics) : {};
+  }
+
+  get metadataJson() {
+    return this.metadata ? JSON.parse(this.metadata) : {};
+  }
   get isMultipleChoice(): boolean {
     return this.questionType === QuestionType.MULTIPLE_CHOICE;
   }

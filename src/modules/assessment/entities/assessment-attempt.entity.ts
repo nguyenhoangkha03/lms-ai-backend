@@ -5,14 +5,13 @@ import { Assessment } from './assessment.entity';
 import { User } from '../../user/entities/user.entity';
 
 @Entity('assessment_attempts')
-@Index(['studentId'])
-@Index(['assessmentId'])
 @Index(['attemptNumber'])
 @Index(['status'])
-@Index(['gradingStatus'])
 @Index(['startedAt'])
-@Index(['submittedAt'])
+// @Index(['studentId', 'assessmentId'])
+@Index(['gradingStatus', 'submittedAt'])
 export class AssessmentAttempt extends BaseEntity {
+  // Attempt Information
   @Column({
     type: 'varchar',
     length: 36,
@@ -46,14 +45,6 @@ export class AssessmentAttempt extends BaseEntity {
     comment: 'When the attempt was submitted',
   })
   submittedAt?: Date;
-
-  @Column({
-    type: 'enum',
-    enum: AttemptStatus,
-    default: AttemptStatus.IN_PROGRESS,
-    comment: 'Current status of the attempt',
-  })
-  status: AttemptStatus;
 
   @Column({
     type: 'enum',
@@ -98,21 +89,22 @@ export class AssessmentAttempt extends BaseEntity {
   timeTaken?: number;
 
   @Column({
-    type: 'json',
+    type: 'enum',
+    enum: AttemptStatus,
+    default: AttemptStatus.IN_PROGRESS,
+    comment: 'Current status of the attempt',
+  })
+  status: AttemptStatus;
+
+  @Column({
+    type: 'longtext',
     nullable: true,
     comment: 'Student answers for all questions',
   })
-  answers?: {
-    questionId: string;
-    answer: any;
-    timeSpent?: number;
-    isCorrect?: boolean;
-    points?: number;
-    feedback?: string;
-  }[];
+  answers?: string;
 
   @Column({
-    type: 'text',
+    type: 'longtext',
     nullable: true,
     comment: 'Overall feedback for the attempt',
   })
@@ -134,48 +126,6 @@ export class AssessmentAttempt extends BaseEntity {
   gradedAt?: Date;
 
   @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Proctoring data and flags',
-  })
-  proctoringData?: {
-    faceDetectionLogs?: any[];
-    tabSwitchCount?: number;
-    copyPasteAttempts?: number;
-    suspiciousActivities?: any[];
-    browserInfo?: any;
-    ipAddress?: string;
-    location?: any;
-  };
-
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Session tracking data',
-  })
-  sessionData?: {
-    sessionId?: string;
-    deviceFingerprint?: string;
-    userAgent?: string;
-    screenResolution?: string;
-    timezone?: string;
-    autoSaveCount?: number;
-  };
-
-  @Column({
-    type: 'json',
-    nullable: true,
-    comment: 'Learning analytics data',
-  })
-  analyticsData?: {
-    questionOrder?: string[];
-    timePerQuestion?: { [questionId: string]: number };
-    revisitedQuestions?: string[];
-    flaggedQuestions?: string[];
-    confidenceScores?: { [questionId: string]: number };
-  };
-
-  @Column({
     type: 'boolean',
     default: false,
     comment: 'Whether this attempt is flagged for review',
@@ -190,11 +140,32 @@ export class AssessmentAttempt extends BaseEntity {
   flagReason?: string;
 
   @Column({
-    type: 'json',
+    type: 'longtext',
+    nullable: true,
+    comment: 'Proctoring data and flags',
+  })
+  proctoringData?: string;
+
+  @Column({
+    type: 'longtext',
+    nullable: true,
+    comment: 'Session tracking data',
+  })
+  sessionData?: string;
+
+  @Column({
+    type: 'longtext',
+    nullable: true,
+    comment: 'Learning analytics data',
+  })
+  analyticsData?: string;
+
+  @Column({
+    type: 'longtext',
     nullable: true,
     comment: 'Additional attempt metadata',
   })
-  metadata?: Record<string, any>;
+  metadata?: string;
 
   // Relationships
   @ManyToOne(() => User, user => user.id)
@@ -209,7 +180,37 @@ export class AssessmentAttempt extends BaseEntity {
   @JoinColumn({ name: 'gradedBy' })
   grader?: User;
 
+  // Parse JSON fields
+  get answersJson() {
+    return this.answers ? JSON.parse(this.answers) : {};
+  }
+
+  get feedbackJson() {
+    return this.feedback ? JSON.parse(this.feedback) : {};
+  }
+
+  get proctoringDataJson() {
+    return this.proctoringData ? JSON.parse(this.proctoringData) : {};
+  }
+
+  get sessionDataJson() {
+    return this.sessionData ? JSON.parse(this.sessionData) : {};
+  }
+
+  get analyticsDataJson() {
+    return this.analyticsData ? JSON.parse(this.analyticsData) : {};
+  }
+
+  get metadataJson() {
+    return this.metadata ? JSON.parse(this.metadata) : {};
+  }
+
   // Virtual properties
+  get duration(): number | null {
+    if (!this.submittedAt) return null;
+    return Math.floor((this.submittedAt.getTime() - this.startedAt.getTime()) / 1000);
+  }
+
   get isCompleted(): boolean {
     return this.status === AttemptStatus.SUBMITTED;
   }

@@ -592,8 +592,8 @@ export class CDNIntegrationService {
    * Get CDN configuration
    */
   getCDNConfig(): Omit<CDNConfig, 'apiKey' | 'secretKey'> {
-    // const { apiKey, secretKey, ...publicConfig } = this.cdnConfig;
-    // return publicConfig;
+    const { apiKey: _, secretKey: __, ...publicConfig } = this.cdnConfig;
+    return publicConfig;
   }
 
   /**

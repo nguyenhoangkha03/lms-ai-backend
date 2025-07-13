@@ -8,13 +8,10 @@ import { Question } from './question.entity';
 import { AssessmentAttempt } from './assessment-attempt.entity';
 
 @Entity('assessments')
-@Index(['courseId'])
-@Index(['lessonId'])
-@Index(['teacherId'])
-@Index(['assessmentType'])
-@Index(['status'])
-@Index(['availableFrom'])
-@Index(['availableUntil'])
+// @Index(['courseId', 'status'])
+// @Index(['teacherId', 'assessmentType'])
+// @Index(['lessonId'])
+@Index(['availableFrom', 'availableUntil'])
 export class Assessment extends BaseEntity {
   @Column({
     type: 'varchar',
@@ -108,6 +105,7 @@ export class Assessment extends BaseEntity {
   })
   totalPoints?: number;
 
+  // Randomization Settings
   @Column({
     type: 'boolean',
     default: false,
@@ -122,6 +120,7 @@ export class Assessment extends BaseEntity {
   })
   randomizeAnswers: boolean;
 
+  // Display Settings
   @Column({
     type: 'boolean',
     default: true,
@@ -150,6 +149,7 @@ export class Assessment extends BaseEntity {
   })
   isProctored: boolean;
 
+  // Scheduling
   @Column({
     type: 'timestamp',
     nullable: true,
@@ -164,6 +164,7 @@ export class Assessment extends BaseEntity {
   })
   availableUntil?: Date;
 
+  // Grading Configuration
   @Column({
     type: 'enum',
     enum: GradingMethod,
@@ -181,41 +182,45 @@ export class Assessment extends BaseEntity {
   })
   weight: number;
 
+  // Advanced Settings
   @Column({
-    type: 'json',
+    type: 'longtext',
     nullable: true,
     comment: 'Assessment configuration settings',
   })
-  settings?: {
-    allowBackward?: boolean;
-    oneQuestionPerPage?: boolean;
-    showProgressBar?: boolean;
-    lockdownBrowser?: boolean;
-    webcamRequired?: boolean;
-    autoSave?: boolean;
-    saveInterval?: number;
-  };
+  //   settings?: {
+  //     allowBackward?: boolean;
+  //     oneQuestionPerPage?: boolean;
+  //     showProgressBar?: boolean;
+  //     lockdownBrowser?: boolean;
+  //     webcamRequired?: boolean;
+  //     autoSave?: boolean;
+  //     saveInterval?: number;
+  //   };
+  settings?: string;
 
   @Column({
-    type: 'json',
+    type: 'longtext',
     nullable: true,
     comment: 'Anti-cheating configuration',
   })
-  antiCheatSettings?: {
-    preventCopyPaste?: boolean;
-    preventRightClick?: boolean;
-    preventTabSwitch?: boolean;
-    blockExternalTools?: boolean;
-    requireFullscreen?: boolean;
-    detectMultipleFaces?: boolean;
-  };
+  //   antiCheatSettings?: {
+  //     preventCopyPaste?: boolean;
+  //     preventRightClick?: boolean;
+  //     preventTabSwitch?: boolean;
+  //     blockExternalTools?: boolean;
+  //     requireFullscreen?: boolean;
+  //     detectMultipleFaces?: boolean;
+  //   };
+  antiCheatSettings?: string;
 
   @Column({
-    type: 'json',
+    type: 'longtext',
     nullable: true,
     comment: 'Additional metadata for assessment',
   })
-  metadata?: Record<string, any>;
+  //   metadata?: Record<string, any>;
+  metadata?: string;
 
   // Relationships
   @ManyToOne(() => Course, course => course.id, { onDelete: 'CASCADE' })
@@ -237,6 +242,10 @@ export class Assessment extends BaseEntity {
   attempts?: AssessmentAttempt[];
 
   // Virtual properties
+  get questionsCount(): number {
+    return this.questions?.length || 0;
+  }
+
   get isActive(): boolean {
     const now = new Date();
     const isPublished = this.status === AssessmentStatus.PUBLISHED;
@@ -246,10 +255,30 @@ export class Assessment extends BaseEntity {
     return isPublished && isAvailable && notExpired;
   }
 
+  get isAvailable(): boolean {
+    const now = new Date();
+    if (this.availableFrom && now < this.availableFrom) return false;
+    if (this.availableUntil && now > this.availableUntil) return false;
+    return this.isActive;
+  }
+
   get duration(): string {
     if (!this.timeLimit) return 'Unlimited';
     const hours = Math.floor(this.timeLimit / 60);
     const minutes = this.timeLimit % 60;
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  }
+
+  // Parse JSON fields
+  get settingsJson() {
+    return this.settings ? JSON.parse(this.settings) : {};
+  }
+
+  get antiCheatSettingsJson() {
+    return this.antiCheatSettings ? JSON.parse(this.antiCheatSettings) : {};
+  }
+
+  get metadataJson() {
+    return this.metadata ? JSON.parse(this.metadata) : {};
   }
 }

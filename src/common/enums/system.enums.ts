@@ -66,6 +66,14 @@ export enum AuditAction {
   EMAIL_VERIFIED = 'email_verified',
   EMAIL_VERIFICATION_RESENT = 'email_verification_resent',
   SESSION_TERMINATED = 'session_terminated',
+  CREATE_ASSESSMENT = 'create_assessment',
+  UPDATE_ASSESSMENT = 'update_assessment',
+  DELETE_ASSESSMENT = 'delete_assessment',
+  CONFIGURE_ASSESSMENT = 'configure_assessment',
+  PUBLISH_ASSESSMENT = 'publish_assessment',
+  ARCHIVE_ASSESSMENT = 'archive_assessment',
+  DUPLICATE_ASSESSMENT = 'duplicate_assessment',
+  REMOVE_QUESTION = 'remove_question',
 }
 
 export enum AuditLevel {
