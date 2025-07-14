@@ -30,6 +30,10 @@ import { AuthModule } from '../auth/auth.module';
 
 // Processors (for background jobs)
 // import { AnalyticsProcessor } from './processors/analytics.processor';
+import { AnalyticsProcessingService } from './services/analytics-processing.service';
+import { AnalyticsProcessingController } from './controllers/analytics-processing.controller';
+import { ComparativeAnalyticsService } from './services/comparative-analytics.service';
+import { PredictiveModelingService } from './services/predictive-modeling.service';
 
 @Module({
   imports: [
@@ -47,13 +51,16 @@ import { AuthModule } from '../auth/auth.module';
     RedisModule,
     AuthModule,
   ],
-  controllers: [AnalyticsController, DataCollectionController],
+  controllers: [AnalyticsController, DataCollectionController, AnalyticsProcessingController],
   providers: [
     DataCollectionService,
     RealTimeStreamingService,
     BehaviorAnalyticsService,
     AnalyticsGateway,
     AnalyticsEventsListener,
+    AnalyticsProcessingService,
+    ComparativeAnalyticsService,
+    PredictiveModelingService,
     // AnalyticsProcessor,
   ],
   exports: [
