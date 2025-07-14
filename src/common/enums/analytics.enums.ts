@@ -23,6 +23,10 @@ export enum ActivityType {
   HELP_REQUEST = 'help_request',
   COURSE_COMPLETE = 'course_complete',
   CERTIFICATE_EARN = 'certificate_earn',
+  ASSESSMENT_START = 'assessment_start',
+  FORUM_POST = 'forum_post',
+  CONTENT_READ = 'content_read',
+  QUIZ_ATTEMPT = 'quiz_attempt',
 }
 
 export enum DeviceType {
@@ -56,4 +60,9 @@ export enum LearningPatternType {
   FOCUSED = 'focused',
   SOCIAL_LEARNER = 'social_learner',
   INDEPENDENT = 'independent',
+  CRAMMING = 'cramming',
+  PROCRASTINATION = 'procrastination',
+  DETAIL_ORIENTED = 'detail_oriented',
+  STRUGGLING = 'struggling',
+  SOCIAL = 'social',
 }

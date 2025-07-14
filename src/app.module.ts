@@ -21,6 +21,7 @@ import { SystemModule } from './modules/system/system.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { FileManagementModule } from './modules/file-management/file-management.module';
 import { GradingModule } from './modules/grading/grading.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
@@ -42,6 +43,13 @@ import { GradingModule } from './modules/grading/grading.module';
           },
         ],
       }),
+    }),
+
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT!) || 6379,
+      },
     }),
 
     // Core modules
