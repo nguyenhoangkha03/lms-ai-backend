@@ -33,6 +33,7 @@ export enum EnrollmentStatus {
   PAUSED = 'paused',
   SUSPENDED = 'suspended',
   EXPIRED = 'expired',
+  ACTIVE = 'active',
 }
 
 export enum PaymentStatus {
