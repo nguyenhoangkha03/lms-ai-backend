@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AiController } from './ai.controller';
-import { AiService } from './ai.service';
+import { AiService } from './services/ai.service';
 
 describe('AiController', () => {
   let controller: AiController;

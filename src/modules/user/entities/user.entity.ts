@@ -18,6 +18,7 @@ import { TeacherProfile } from './teacher-profile.entity';
 import { UserSocial } from './user-social.entity';
 import { Role } from './role.entity';
 import { Permission } from './permission.entity';
+import { NotificationPreference } from '@/modules/notification/entities/notification-preference.entity';
 
 @Entity('users')
 @Index(['userType', 'status'])
@@ -279,6 +280,9 @@ export class User extends BaseEntity {
     inverseJoinColumn: { name: 'permission_id', referencedColumnName: 'id' },
   })
   permissions?: Permission[];
+
+  @OneToMany(() => NotificationPreference, pref => pref.user)
+  notificationPreferences?: NotificationPreference[];
 
   // Virtual properties
   get fullName(): string {

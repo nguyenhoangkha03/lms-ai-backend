@@ -14,6 +14,7 @@ export enum NotificationType {
   ANNOUNCEMENT = 'announcement',
   FRIEND_REQUEST = 'friend_request',
   FORUM_REPLY = 'forum_reply',
+  CHAT_MESSAGE = 'chat_message',
 }
 
 export enum NotificationPriority {

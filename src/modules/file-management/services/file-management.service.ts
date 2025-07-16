@@ -182,59 +182,49 @@ export class FileManagementService {
     });
   }
 
-  /**
-   * Upload file with comprehensive validation and processing
-   */
   async uploadFile(
     file: Express.Multer.File,
     uploadDto: UploadFileDto,
-    uploader: User,
+    uploaderId: string,
   ): Promise<FileUpload> {
-    this.logger.log(`Uploading file: ${file.originalname} by user ${uploader.id}`);
+    this.logger.log(`Uploading file: ${file.originalname} by user ${uploaderId}`);
 
-    // Validate file
     await this.validateFile(file, uploadDto.fileType);
 
-    // Check for malicious content
     await this.performSecurityChecks(file);
 
-    // Generate unique file key
     const fileKey = this.fileStorageService.generateFileKey(
       this.getStorageCategory(uploadDto.fileType),
       file.originalname,
-      uploader.id,
+      uploaderId,
     );
 
-    // Calculate file hash for deduplication
     const fileHash = this.fileStorageService.calculateFileHash(file.buffer);
 
-    // Check for existing file with same hash
-    const existingFile = await this.findByHash(fileHash, uploader.id);
+    const existingFile = await this.findByHash(fileHash, uploaderId);
     if (existingFile && uploadDto.allowDuplicates !== true) {
       this.logger.log(`Duplicate file detected: ${fileHash}`);
       return existingFile;
     }
 
-    // Upload to storage
     const _storageFile = await this.fileStorageService.uploadFile(file, fileKey, {
       acl: uploadDto.accessLevel === FileAccessLevel.PUBLIC ? 'public-read' : 'private',
       metadata: {
         originalName: file.originalname,
-        uploaderId: uploader.id,
+        uploaderId: uploaderId,
         fileType: uploadDto.fileType,
         ...uploadDto.metadata,
       },
       contentType: file.mimetype,
       tags: {
-        userId: uploader.id,
+        userId: uploaderId,
         fileType: uploadDto.fileType,
         environment: process.env.NODE_ENV || 'development',
       },
     });
 
-    // Create database record
     const fileUpload = this.fileRepository.create({
-      uploaderId: uploader.id,
+      uploaderId: uploaderId,
       originalName: file.originalname,
       storedName: path.basename(fileKey),
       filePath: fileKey,
@@ -257,11 +247,9 @@ export class FileManagementService {
 
     const savedFile = await this.fileRepository.save(fileUpload);
 
-    // Queue for additional processing if needed
     await this.queueFileProcessing(savedFile, file);
 
-    // Clear relevant caches
-    await this.clearFileCache(uploader.id, uploadDto.lessonId, uploadDto.courseId);
+    await this.clearFileCache(uploaderId, uploadDto.lessonId, uploadDto.courseId);
 
     this.logger.log(`File uploaded successfully: ${savedFile.id}`);
     return savedFile;

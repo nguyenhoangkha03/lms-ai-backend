@@ -105,6 +105,13 @@ export class ChatRoom extends BaseEntity {
   messageCount: number;
 
   @Column({
+    type: 'text',
+    nullable: true,
+    comment: 'Last message content in the room',
+  })
+  lastMessage?: string;
+
+  @Column({
     type: 'timestamp',
     nullable: true,
     comment: 'Last message timestamp',
@@ -118,6 +125,13 @@ export class ChatRoom extends BaseEntity {
     comment: 'ID of last message sender',
   })
   lastMessageBy?: string;
+
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    comment: 'Timestamp of last activity in room',
+  })
+  lastActivityAt: Date;
 
   @Column({
     type: 'varchar',

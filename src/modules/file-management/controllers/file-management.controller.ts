@@ -1,4 +1,3 @@
-// src/modules/file-management/controllers/file-management.controller.ts
 import {
   Body,
   Controller,
@@ -188,13 +187,12 @@ export class FileManagementController {
       return { message: 'No file provided' };
     }
 
-    // Extract client information
     uploadDto.ipAddress = req.ip;
     uploadDto.userAgent = req.get('User-Agent');
 
     this.logger.log(`File upload request: ${file.originalname} by ${user.id}`);
 
-    return this.fileManagementService.uploadFile(file, uploadDto, user);
+    return this.fileManagementService.uploadFile(file, uploadDto, user.id);
   }
 
   @Post('upload/multiple')
