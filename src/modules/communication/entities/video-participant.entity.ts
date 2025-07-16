@@ -112,7 +112,7 @@ export class VideoParticipant extends BaseEntity {
     nullable: true,
     comment: 'Current breakout room ID',
   })
-  breakoutRoomId?: string;
+  breakoutRoomId?: string | null;
 
   @Column({
     type: 'varchar',

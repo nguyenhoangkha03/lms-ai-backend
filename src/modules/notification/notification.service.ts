@@ -7,4 +7,9 @@ export class NotificationService {
     // Implementation for creating a notification
     console.log('Notification created:', data);
   }
+
+  async scheduleNotification(data: any) {
+    // Implementation for scheduling a notification
+    console.log('Notification scheduled:', data);
+  }
 }

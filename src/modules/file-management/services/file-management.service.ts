@@ -709,33 +709,21 @@ export class FileManagementService {
     };
   }
 
-  /**
-   * Check if file type supports streaming
-   */
   private supportsStreaming(fileType: FileType): boolean {
     return [FileType.VIDEO, FileType.AUDIO].includes(fileType);
   }
 
-  /**
-   * Increment file view count
-   */
   private async incrementViewCount(fileId: string): Promise<void> {
     await this.fileRepository.increment({ id: fileId }, 'viewCount', 1);
     await this.fileRepository.update(fileId, { lastViewedAt: new Date() });
   }
 
-  /**
-   * Find file by hash for deduplication
-   */
   private async findByHash(hash: string, uploaderId: string): Promise<FileUpload | null> {
     return this.fileRepository.findOne({
       where: { checksum: hash, uploaderId, isActive: true },
     });
   }
 
-  /**
-   * Get storage category for file type
-   */
   private getStorageCategory(fileType: FileType): string {
     const categories = {
       [FileType.IMAGE]: 'images',
@@ -749,9 +737,6 @@ export class FileManagementService {
     return categories[fileType] || 'misc';
   }
 
-  /**
-   * Filter file data based on user permissions
-   */
   private filterFileData(file: FileUpload, user?: User): FileUpload {
     // Remove sensitive information for non-owners
     if (!user || (file.uploaderId !== user.id && !this.isAdmin(user))) {
@@ -763,9 +748,6 @@ export class FileManagementService {
     return file;
   }
 
-  /**
-   * Clear file-related cache
-   */
   private async clearFileCache(
     uploaderId?: string,
     lessonId?: string,
@@ -783,17 +765,11 @@ export class FileManagementService {
     }
   }
 
-  /**
-   * Check if user is admin
-   */
   private isAdmin(user: User): boolean {
     // Implementation depends on your role system
     return !!(user.userType === 'admin' || user.roles?.some(role => role.name === 'admin'));
   }
 
-  /**
-   * Get file statistics
-   */
   async getFileStatistics(userId?: string): Promise<any> {
     const queryBuilder = this.fileRepository
       .createQueryBuilder('file')
@@ -829,5 +805,72 @@ export class FileManagementService {
         return acc;
       }, {}),
     };
+  }
+
+  async uploadBuffer(
+    buffer: Buffer,
+    fileName: string,
+    mimeType: string,
+    uploaderId: string,
+    options: {
+      courseId?: string;
+      lessonId?: string;
+      sessionId?: string;
+      accessLevel?: FileAccessLevel;
+      metadata?: Record<string, any>;
+    } = {},
+  ) {
+    const mockFile: Express.Multer.File = {
+      fieldname: 'file',
+      originalname: fileName,
+      encoding: '7bit',
+      mimetype: mimeType,
+      size: buffer.length,
+      buffer: buffer,
+      destination: '',
+      filename: fileName,
+      path: '',
+      stream: null as any,
+    };
+
+    const uploadDto: UploadFileDto = {
+      fileType: this.getFileTypeFromMimeType(mimeType),
+      accessLevel: options.accessLevel || FileAccessLevel.PRIVATE,
+      allowDuplicates: true,
+      courseId: options.courseId,
+      lessonId: options.lessonId,
+      metadata: {
+        sessionId: options.sessionId,
+        uploadType: 'video_recording',
+        processedAt: new Date(),
+        ...options.metadata,
+      },
+    };
+
+    return await this.uploadFile(mockFile, uploadDto, uploaderId);
+  }
+
+  private getFileTypeFromMimeType(mimeType: string): FileType {
+    if (mimeType.startsWith('video/')) {
+      return FileType.VIDEO;
+    } else if (mimeType.startsWith('audio/')) {
+      return FileType.AUDIO;
+    } else if (mimeType.startsWith('image/')) {
+      return FileType.IMAGE;
+    } else if (
+      mimeType.includes('pdf') ||
+      mimeType.includes('document') ||
+      mimeType.includes('text')
+    ) {
+      return FileType.DOCUMENT;
+    } else if (
+      mimeType.includes('zip') ||
+      mimeType.includes('rar') ||
+      mimeType.includes('compressed')
+    ) {
+      return FileType.ARCHIVE;
+    }
+
+    return FileType.OTHER;
   }
 }

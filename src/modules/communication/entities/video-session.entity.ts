@@ -175,7 +175,7 @@ export class VideoSession extends BaseEntity {
     nullable: true,
     comment: 'Recording URL',
   })
-  recordingUrl?: string;
+  recordingUrl?: string | undefined;
 
   @Column({
     type: 'int',

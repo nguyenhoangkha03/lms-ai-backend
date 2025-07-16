@@ -20,7 +20,7 @@ import { VideoParticipant } from './entities/video-participant.entity';
 import { ChatController } from './controllers/chat.controller';
 import { ChatRoomController } from './controllers/chat-room.controller';
 import { ChatModerationController } from './controllers/chat-moderation.controller';
-import { CommunicationController } from './controllers/communication.controller';
+import { VideoSessionController } from './controllers/video-session.controller';
 
 // Services
 import { ChatService } from './services/chat.service';
@@ -29,9 +29,15 @@ import { ChatMessageService } from './services/chat-message.service';
 import { ChatModerationService } from './services/chat-moderation.service';
 import { ChatFileService } from './services/chat-file.service';
 import { ChatNotificationService } from './services/chat-notification.service';
-import { CommunicationService } from './services/communication.service';
 import { UserService } from '../user/services/user.service';
 import { NotificationService } from '../notification/notification.service';
+import { WebRTCService } from './services/webrtc.service';
+import { ZoomIntegrationService } from './services/zoom-integration.service';
+import { VideoSessionService } from './services/video-session.service';
+import { VideoRecordingService } from './services/video-recording.service';
+import { AttendanceTrackingService } from './services/attendance-tracking.service';
+import { BreakoutRoomService } from './services/breakout-room.service';
+import { VideoAnalyticsService } from './services/video-analytics.service';
 
 // Gateways
 import { ChatGateway } from './gateways/chat.gateway';
@@ -52,10 +58,16 @@ import { NotificationModule } from '../notification/notification.module';
 import { AuthModule } from '../auth/auth.module';
 import { CustomCacheModule } from '@/cache/cache.module';
 import { WinstonModule } from '@/logger/winston.module';
+import { HttpModule } from '@nestjs/axios';
+import { VideoRecordingProcessor } from './processors/video-recording.processor';
+import { VideoAnalyticsProcessor } from './processors/video-analytics.processor';
+import { VideoSessionAccessGuard } from './guards/video-session-access.guard';
+import { VideoGateway } from './gateways/video.gateway';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
+      // Chat Entities
       ChatRoom,
       ChatParticipant,
       ChatMessage,
@@ -63,6 +75,7 @@ import { WinstonModule } from '@/logger/winston.module';
       ChatFile,
       ChatMessageReaction,
       ChatModeration,
+      // Video Entities
       VideoSession,
       VideoParticipant,
     ]),
@@ -70,12 +83,18 @@ import { WinstonModule } from '@/logger/winston.module';
       { name: 'chat-message' },
       { name: 'chat-moderation' },
       { name: 'chat-notification' },
+      { name: 'video-recording' },
+      { name: 'video-analytics' },
+      { name: 'video-notification' },
     ),
     MulterModule.register({
-      dest: './uploads/chat',
+      dest: './uploads',
       limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB
+        fileSize: 50 * 1024 * 1024,
       },
+    }),
+    HttpModule.register({
+      timeout: 30000,
     }),
     JwtModule.register({}),
     CacheModule.register({
@@ -90,27 +109,53 @@ import { WinstonModule } from '@/logger/winston.module';
     WinstonModule,
   ],
   controllers: [
-    CommunicationController,
+    // Chat Controllers
     ChatController,
     ChatRoomController,
     ChatModerationController,
+    VideoSessionController,
   ],
   providers: [
-    CommunicationService,
+    // Others
+    NotificationService,
+    UserService,
+    // Chat Services
+    ChatService,
+    ChatRoomService,
     ChatMessageService,
     ChatModerationService,
     ChatFileService,
-    ChatService,
-    ChatRoomService,
     ChatNotificationService,
-    NotificationService,
-    UserService,
+    // Video Services
+    VideoSessionService,
+    ZoomIntegrationService,
+    WebRTCService,
+    VideoRecordingService,
+    BreakoutRoomService,
+    AttendanceTrackingService,
+    VideoAnalyticsService,
+    // Gateways
     ChatGateway,
+    VideoGateway,
+    // Processors
     ChatMessageProcessor,
     ChatModerationProcessor,
+    VideoRecordingProcessor,
+    VideoAnalyticsProcessor,
+    // Guards
     ChatRoomAccessGuard,
     ChatModerationGuard,
+    VideoSessionAccessGuard,
   ],
-  exports: [TypeOrmModule, ChatService, ChatRoomService, ChatMessageService, ChatGateway],
+  exports: [
+    TypeOrmModule,
+    ChatService,
+    ChatRoomService,
+    ChatMessageService,
+    ChatGateway,
+    VideoSessionService,
+    VideoGateway,
+    AttendanceTrackingService,
+  ],
 })
 export class CommunicationModule {}
