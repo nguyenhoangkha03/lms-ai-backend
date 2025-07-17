@@ -22,6 +22,7 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { FileManagementModule } from './modules/file-management/file-management.module';
 import { GradingModule } from './modules/grading/grading.module';
 import { BullModule } from '@nestjs/bull';
+import { ForumModule } from './modules/forum/forum.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { BullModule } from '@nestjs/bull';
     ChatbotModule,
     FileManagementModule,
     GradingModule,
+    ForumModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],

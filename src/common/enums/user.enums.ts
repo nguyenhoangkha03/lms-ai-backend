@@ -4,6 +4,18 @@ export enum UserType {
   ADMIN = 'admin',
 }
 
+export enum UserRole {
+  SUPER_ADMIN = 'super_admin',
+  ADMIN = 'admin',
+  MANAGER = 'manager',
+  INSTRUCTOR = 'instructor',
+  TEACHER = 'teacher',
+  MODERATOR = 'moderator',
+  STUDENT = 'student',
+  GUEST = 'guest',
+  VIEWER = 'viewer',
+}
+
 export enum UserStatus {
   PENDING = 'pending',
   ACTIVE = 'active',
