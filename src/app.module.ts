@@ -23,6 +23,7 @@ import { FileManagementModule } from './modules/file-management/file-management.
 import { GradingModule } from './modules/grading/grading.module';
 import { BullModule } from '@nestjs/bull';
 import { ForumModule } from './modules/forum/forum.module';
+import { CollaborativeLearningModule } from './modules/collaborative-learning/collaborative-learning.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { ForumModule } from './modules/forum/forum.module';
     FileManagementModule,
     GradingModule,
     ForumModule,
+    CollaborativeLearningModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
