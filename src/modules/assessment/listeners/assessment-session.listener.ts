@@ -3,16 +3,17 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WinstonService } from '@/logger/winston.service';
-import { NotificationService } from '@/modules/notification/notification.service';
+import { NotificationService } from '@/modules/notification/services/notification.service';
 import { AssessmentSession } from '../entities/assessment-session.entity';
 import { User } from '@/modules/user/entities/user.entity';
 import { Assessment } from '../entities/assessment.entity';
+import { NotificationPriority, NotificationType } from '@/common/enums/notification.enums';
 
 @Injectable()
 export class AssessmentSessionListener {
   constructor(
     @InjectRepository(AssessmentSession)
-    private readonly sessionRepository: Repository<AssessmentSession>,
+    private readonly _sessionRepository: Repository<AssessmentSession>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(Assessment)
@@ -39,7 +40,7 @@ export class AssessmentSessionListener {
         userId: assessment.teacher.id,
         title: 'Assessment Started',
         message: `A student has started the assessment: ${assessment.title}`,
-        type: 'assessment_started',
+        type: NotificationType.ASSESSMENT_STARTED,
         data: {
           sessionId,
           studentId,
@@ -73,7 +74,7 @@ export class AssessmentSessionListener {
         userId: studentId,
         title: 'Assessment Completed',
         message: `You have successfully completed: ${assessment.title}`,
-        type: 'assessment_completed',
+        type: NotificationType.ASSESSMENT_COMPLETED,
         data: {
           assessmentId,
           assessmentTitle: assessment.title,
@@ -87,7 +88,7 @@ export class AssessmentSessionListener {
           userId: assessment.teacher.id,
           title: 'Assessment Submission',
           message: `${student.firstName} ${student.lastName} has completed: ${assessment.title}`,
-          type: 'assessment_submitted',
+          type: NotificationType.ASSESSMENT_SUBMITTED,
           data: {
             sessionId,
             studentId,
@@ -126,8 +127,8 @@ export class AssessmentSessionListener {
         userId: assessment.teacher.id,
         title: 'Security Violation Detected',
         message: `Security violation (${eventType}) detected for ${student.firstName} ${student.lastName} in assessment: ${assessment.title}`,
-        type: 'security_violation',
-        priority: shouldTerminate ? 'high' : 'medium',
+        type: NotificationType.SECURITY_VIOLATION,
+        priority: shouldTerminate ? NotificationPriority.HIGH : NotificationPriority.MEDIUM,
         data: {
           sessionId,
           studentId,
@@ -145,8 +146,8 @@ export class AssessmentSessionListener {
           userId: studentId,
           title: 'Assessment Session Terminated',
           message: `Your assessment session has been terminated due to security violations.`,
-          type: 'session_terminated',
-          priority: 'high',
+          type: NotificationType.ASSESSMENT_TERMINATED,
+          priority: NotificationPriority.HIGH,
           data: {
             assessmentId,
             assessmentTitle: assessment.title,
@@ -181,8 +182,9 @@ export class AssessmentSessionListener {
         userId: studentId,
         title,
         message,
-        type: 'time_warning',
-        priority: warningType === 'critical' ? 'high' : 'medium',
+        type: NotificationType.TIME_WARNING,
+        priority:
+          warningType === 'critical' ? NotificationPriority.HIGH : NotificationPriority.MEDIUM,
         data: {
           sessionId,
           assessmentId,
@@ -219,8 +221,8 @@ export class AssessmentSessionListener {
         userId: studentId,
         title: 'Assessment Session Expired',
         message,
-        type: 'session_expired',
-        priority: 'medium',
+        type: NotificationType.SESSION_EXPIRED,
+        priority: NotificationPriority.HIGH,
         data: {
           sessionId,
           assessmentId,

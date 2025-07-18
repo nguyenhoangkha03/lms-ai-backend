@@ -30,7 +30,7 @@ import { ChatModerationService } from './services/chat-moderation.service';
 import { ChatFileService } from './services/chat-file.service';
 import { ChatNotificationService } from './services/chat-notification.service';
 import { UserService } from '../user/services/user.service';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationService } from '../notification/services/notification.service';
 import { WebRTCService } from './services/webrtc.service';
 import { ZoomIntegrationService } from './services/zoom-integration.service';
 import { VideoSessionService } from './services/video-session.service';

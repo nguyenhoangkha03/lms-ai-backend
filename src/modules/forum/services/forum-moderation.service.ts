@@ -7,8 +7,9 @@ import { CreateForumReportDto, UpdateForumReportDto } from '../dto/forum-report.
 import { BulkModerationDto } from '../dto/forum-moderation.dto';
 import { CacheService } from '@/cache/cache.service';
 import { WinstonService } from '@/logger/winston.service';
-import { NotificationService } from '@/modules/notification/notification.service';
+import { NotificationService } from '@/modules/notification/services/notification.service';
 import { ForumPostStatus } from '@/common/enums/forum.enums';
+import { NotificationCategory, NotificationType } from '@/common/enums/notification.enums';
 
 @Injectable()
 export class ForumModerationService {
@@ -150,7 +151,8 @@ export class ForumModerationService {
       // Notify reporter about the decision
       await this.notificationService.create({
         userId: report.reporterId,
-        type: 'report_handled',
+        category: NotificationCategory.FORUM_REPORT,
+        type: NotificationType.REPORT_HANDLED,
         title: 'Report Update',
         message: `Your report has been ${updateDto.status}`,
         data: {

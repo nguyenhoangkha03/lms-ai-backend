@@ -2,7 +2,7 @@ import { Processor, Process } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { VideoRecordingService } from '../services/video-recording.service';
-import { NotificationService } from '../../notification/notification.service';
+import { NotificationService } from '../../notification/services/notification.service';
 import { VideoProvider } from '@/common/enums/communication.enums';
 
 @Processor('video-recording')

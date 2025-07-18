@@ -6,7 +6,7 @@ import { VideoParticipant } from '../entities/video-participant.entity';
 import { ZoomIntegrationService } from './zoom-integration.service';
 import { WebRTCService } from './webrtc.service';
 import { AttendanceTrackingService } from './attendance-tracking.service';
-import { NotificationService } from '../../notification/notification.service';
+import { NotificationService } from '../../notification/services/notification.service';
 import { CacheService } from '@/cache/cache.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -22,6 +22,7 @@ import {
   JoinSessionDto,
   ScheduleSessionDto as _,
 } from '../dto/video-session.dto';
+import { NotificationCategory, NotificationType } from '@/common/enums/notification.enums';
 
 @Injectable()
 export class VideoSessionService {
@@ -623,7 +624,8 @@ export class VideoSessionService {
         // Schedule notifications for 24 hours, 1 hour, and 15 minutes before
         await this.notificationService.scheduleNotification({
           userId: participant.userId,
-          type: 'video_session_reminder',
+          type: NotificationType.VIDEO_SESSION_REMINDER,
+          category: NotificationCategory.VIDEO_SESSION,
           title: `Upcoming session: ${session.title}`,
           message: `Your video session starts in 24 hours`,
           scheduledFor: new Date(session.scheduledStart.getTime() - 24 * 60 * 60 * 1000),
@@ -639,7 +641,8 @@ export class VideoSessionService {
     for (const participant of participants) {
       await this.notificationService.createNotification({
         userId: participant.userId,
-        type: `video_session_${eventType}`,
+        category: NotificationCategory.VIDEO_SESSION,
+        type: NotificationType.VIDEO_SESSION_REMINDER,
         title: `Session ${eventType.replace('_', ' ')}`,
         message: `The video session has ${eventType.replace('_', ' ')}`,
         data: { sessionId },

@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatParticipant } from '../entities/chat-participant.entity';
-import { NotificationService } from '../../notification/notification.service';
+import { NotificationService } from '../../notification/services/notification.service';
 import { UserService } from '../../user/services/user.service';
-import { NotificationType } from '@/common/enums/notification.enums';
+import { NotificationCategory, NotificationType } from '@/common/enums/notification.enums';
 
 @Injectable()
 export class ChatNotificationService {
@@ -29,7 +29,8 @@ export class ChatNotificationService {
       for (const userId of mentionedUserIds) {
         await this.notificationService.createNotification({
           userId,
-          type: 'chat_mention',
+          type: NotificationType.CHAT_MENTION,
+          category: NotificationCategory.CHAT,
           title: `${sender.firstName} ${sender.lastName} mentioned you`,
           message: content.substring(0, 100),
           data: {
@@ -66,7 +67,8 @@ export class ChatNotificationService {
       for (const userId of userIds) {
         await this.notificationService.createNotification({
           userId,
-          type: 'chat_everyone',
+          type: NotificationType.CHAT_EVERYONE,
+          category: NotificationCategory.CHAT,
           title: `${sender.firstName} ${sender.lastName} sent a message to everyone`,
           message: content.substring(0, 100),
           data: {
@@ -112,7 +114,8 @@ export class ChatNotificationService {
         if (chatPref?.pushEnabled) {
           await this.notificationService.createNotification({
             userId: participant.userId,
-            type: 'chat_message',
+            type: NotificationType.CHAT_MESSAGE,
+            category: NotificationCategory.CHAT,
             title: `New message in chat`,
             message: content.substring(0, 100),
             data: {
