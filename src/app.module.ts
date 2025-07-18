@@ -24,6 +24,7 @@ import { GradingModule } from './modules/grading/grading.module';
 import { BullModule } from '@nestjs/bull';
 import { ForumModule } from './modules/forum/forum.module';
 import { CollaborativeLearningModule } from './modules/collaborative-learning/collaborative-learning.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { CollaborativeLearningModule } from './modules/collaborative-learning/co
     GradingModule,
     ForumModule,
     CollaborativeLearningModule,
+    RealtimeModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
