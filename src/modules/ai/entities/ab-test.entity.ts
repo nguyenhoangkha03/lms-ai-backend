@@ -78,6 +78,13 @@ export class ABTest extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
+    comment: 'Target audience',
+  })
+  targetAudience?: string;
+
+  @Column({
+    type: 'json',
+    nullable: true,
     comment: 'Test configuration and parameters',
   })
   configuration?: {

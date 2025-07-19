@@ -14,6 +14,13 @@ export class ModelPrediction extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
+    comment: 'Reference to model used',
+  })
+  modelId: string;
+
+  @Column({
+    type: 'varchar',
+    length: 36,
     comment: 'Reference to model version used',
   })
   modelVersionId: string;
@@ -121,6 +128,10 @@ export class ModelPrediction extends BaseEntity {
   metadata?: Record<string, any>;
 
   // Relationships
+  @ManyToOne(() => ModelVersion, version => version.predictions)
+  @JoinColumn({ name: 'modelId' })
+  model: ModelVersion;
+
   @ManyToOne(() => ModelVersion, version => version.predictions)
   @JoinColumn({ name: 'modelVersionId' })
   modelVersion: ModelVersion;

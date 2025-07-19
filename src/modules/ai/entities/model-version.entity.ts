@@ -25,6 +25,14 @@ export class ModelVersion extends BaseEntity {
   version: string;
 
   @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    comment: 'ID of the training job in the background queue',
+  })
+  jobId?: string;
+
+  @Column({
     type: 'text',
     nullable: true,
     comment: 'Version description and changes',

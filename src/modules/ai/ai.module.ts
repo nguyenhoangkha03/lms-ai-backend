@@ -1,12 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
-// import { ScheduleModule } from '@nestjs/schedule';
-import { AnalyticsModule } from '../analytics/analytics.module';
-import { CourseModule } from '../course/course.module';
-import { AssessmentModule } from '../assessment/assessment.module';
-import { UserModule } from '../user/user.module';
-import { AuthModule } from '../auth/auth.module';
+import { ScheduleModule } from '@nestjs/schedule';
 import { HttpModule } from '@nestjs/axios';
 
 // Entities
@@ -16,43 +11,43 @@ import { ModelVersion } from './entities/model-version.entity';
 import { ModelPrediction } from './entities/model-prediction.entity';
 import { ABTest } from './entities/ab-test.entity';
 import { ABTestResult } from './entities/ab-test-result.entity';
-// import { LearningActivity } from '../analytics/entities/learning-activity.entity';
-// import { LearningAnalytics } from '../analytics/entities/learning-analytics.entity';
-// import { LearningSession } from '../analytics/entities/learning-session.entity';
-// import { Course } from '../course/entities/course.entity';
-// import { Lesson } from '../course/entities/lesson.entity';
-// import { Assessment } from '../assessment/entities/assessment.entity';
-// import { User } from '../user/entities/user.entity';
-// import { Enrollment } from '../course/entities/enrollment.entity';
+
+// Controllers
+import { AiController } from './controllers/ai.controller';
+import { RecommendationController } from './controllers/recommendation.controller';
+import { MlModelController } from './controllers/ml-model.controller';
+import { ModelPredictionController } from './controllers/model-prediction.controller';
+import { AbTestController } from './controllers/ab-test.controller';
 
 // Services
 import { AiService } from './services/ai.service';
 import { RecommendationService } from './services/recommendation.service';
 import { ContentSimilarityService } from './services/content-similarity.service';
 import { CollaborativeFilteringService } from './services/collaborative-filtering.service';
-import { RecommendationCronService } from './services/recommendation-cron.service';
 import { LearningPathService } from './services/learning-path.service';
 import { DifficultyAdjustmentService } from './services/difficulty-adjustment.service';
-// import { PythonAiServiceService } from './services/python-ai-service.service';
+import { PythonAiServiceService } from './services/python-ai-service.service';
+import { MlModelService } from './services/ml-model.service';
+import { ModelPredictionService } from './services/model-prediction.service';
+import { AbTestService } from './services/ab-test.service';
+import { ModelMonitoringService } from './services/model-monitoring.service';
 
-// Controllers
-import { AiController } from './ai.controller';
-import { RecommendationController } from './controllers/recommendation.controller';
-// import { MlModelController } from './controllers/ml-model.controller';
-// import { ModelPredictionController } from './controllers/model-prediction.controller';
-// import { AbTestController } from './controllers/ab-test.controller';
-// import { ModelServingController } from './controllers/model-serving.controller';
-// import { ModelRegistryController } from './controllers/model-registry.controller';
+// Cron Services
+import { RecommendationCronService } from './services/recommendation-cron.service';
+import { ModelMonitoringCronService } from './services/model-monitoring-cron.service';
 
 // Processors
-// import { RecommendationProcessor } from './processors/recommendation.processor';
+import { RecommendationProcessor } from './processors/recommendation.processor';
+import { ModelTrainingProcessor } from './processors/model-training.processor';
+import { ModelMonitoringProcessor } from './processors/model-monitoring.processor';
 
-// Common modules
-import { CustomCacheModule as CacheModule } from '@/cache/cache.module';
-import { ScheduleModule } from '@nestjs/schedule';
-// import { MlModelService } from './services/ml-model.service';
-import { ModelPredictionService } from './services/model-prediction.service';
-// import { ModelMonitoringCronService } from './services/model-monitoring-cron.service';
+// External modules
+import { UserModule } from '../user/user.module';
+import { CourseModule } from '../course/course.module';
+import { AssessmentModule } from '../assessment/assessment.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
+import { AuthModule } from '../auth/auth.module';
+import { CustomCacheModule } from '../../cache/cache.module';
 
 @Module({
   imports: [
@@ -64,16 +59,6 @@ import { ModelPredictionService } from './services/model-prediction.service';
       ABTest,
       ABTestResult,
     ]),
-    CacheModule,
-    AnalyticsModule,
-    CourseModule,
-    AssessmentModule,
-    UserModule,
-    AuthModule,
-    HttpModule.register({
-      timeout: 30000,
-      maxRedirects: 5,
-    }),
     BullModule.registerQueue(
       {
         name: 'recommendation',
@@ -112,42 +97,61 @@ import { ModelPredictionService } from './services/model-prediction.service';
         },
       },
     ),
+    HttpModule.register({
+      timeout: 30000,
+      maxRedirects: 5,
+    }),
     ScheduleModule.forRoot(),
+    CustomCacheModule,
+    forwardRef(() => UserModule),
+    forwardRef(() => CourseModule),
+    forwardRef(() => AssessmentModule),
+    forwardRef(() => AnalyticsModule),
+    AuthModule,
   ],
   controllers: [
     AiController,
     RecommendationController,
-    // MlModelController,
-    // ModelPredictionController,
-    // AbTestController,
-    // ModelServingController,
-    // ModelRegistryController,
+    MlModelController,
+    ModelPredictionController,
+    AbTestController,
   ],
   providers: [
+    // Core Services
     AiService,
     RecommendationService,
     ContentSimilarityService,
     CollaborativeFilteringService,
-    RecommendationCronService,
     LearningPathService,
     DifficultyAdjustmentService,
-    // MlModelService,
+    PythonAiServiceService,
+    MlModelService,
     ModelPredictionService,
-    // ModelMonitoringCronService,
-    // PythonAiServiceService,
+    AbTestService,
+    ModelMonitoringService,
+
+    // Cron Services
+    RecommendationCronService,
+    ModelMonitoringCronService,
+
+    // Processors
+    RecommendationProcessor,
+    ModelTrainingProcessor,
+    ModelMonitoringProcessor,
   ],
   exports: [
     TypeOrmModule,
-    // AIService,
+    AiService,
     RecommendationService,
     ContentSimilarityService,
     CollaborativeFilteringService,
-    // PythonAIServiceService,
-    // MLModelService,
-    // ModelPredictionService,
-    // ABTestService,
-    // ModelServingService,
-    // ModelRegistryService,
+    LearningPathService,
+    DifficultyAdjustmentService,
+    PythonAiServiceService,
+    MlModelService,
+    ModelPredictionService,
+    AbTestService,
+    ModelMonitoringService,
   ],
 })
 export class AiModule {}

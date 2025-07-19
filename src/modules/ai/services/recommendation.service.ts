@@ -1353,4 +1353,147 @@ export class RecommendationService {
       performance,
     };
   }
+
+  async updateUserInteractionData(
+    userId: string,
+    interactionData: {
+      contentId?: string;
+      contentType?: string;
+      action: string;
+      rating?: number;
+      duration?: number;
+      timestamp?: Date;
+      metadata?: any;
+    },
+  ): Promise<void> {
+    try {
+      this.logger.log(`Updating user interaction data for user: ${userId}`);
+
+      // Store interaction in cache for batch processing
+      const cacheKey = `user_interactions:${userId}`;
+      const existingInteractions = (await this.cacheService.get<any[]>(cacheKey)) || [];
+
+      const newInteraction = {
+        ...interactionData,
+        timestamp: interactionData.timestamp || new Date(),
+        userId,
+      };
+
+      existingInteractions.push(newInteraction);
+
+      // Keep only last 100 interactions in cache
+      if (existingInteractions.length > 100) {
+        existingInteractions.splice(0, existingInteractions.length - 100);
+      }
+
+      await this.cacheService.set(cacheKey, existingInteractions, 86400); // 24 hours
+
+      // If user has enough interactions, trigger recommendation update
+      if (existingInteractions.length % 10 === 0) {
+        await this.triggerRecommendationUpdate(userId, interactionData);
+      }
+
+      this.logger.log(`Updated interaction data for user ${userId}`);
+    } catch (error) {
+      this.logger.error(`Failed to update user interaction data: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async triggerRecommendationUpdate(userId: string, interactionData: any): Promise<void> {
+    try {
+      this.logger.log(`Triggering recommendation update for user: ${userId}`);
+
+      // Update collaborative filtering data
+      await this.updateCollaborativeFilteringData(userId, interactionData);
+
+      // Regenerate personalized recommendations if significant interaction
+      if (this.isSignificantInteraction(interactionData)) {
+        await this.generatePersonalizedLearningPath(userId);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to trigger recommendation update: ${error.message}`);
+    }
+  }
+
+  private async updateCollaborativeFilteringData(
+    userId: string,
+    interactionData: any,
+  ): Promise<void> {
+    try {
+      // Update the collaborative filtering model with new interaction data
+      const updateData = {
+        userId,
+        contentId: interactionData.contentId,
+        rating: this.inferRatingFromInteraction(interactionData),
+        timestamp: new Date(),
+      };
+
+      // Store in collaborative filtering cache
+      const cfCacheKey = `cf_interactions:${userId}`;
+      const cfInteractions = (await this.cacheService.get<any[]>(cfCacheKey)) || [];
+      cfInteractions.push(updateData);
+
+      // Keep only recent interactions for CF
+      if (cfInteractions.length > 50) {
+        cfInteractions.splice(0, cfInteractions.length - 50);
+      }
+
+      await this.cacheService.set(cfCacheKey, cfInteractions, 86400);
+    } catch (error) {
+      this.logger.warn(`Failed to update collaborative filtering data: ${error.message}`);
+    }
+  }
+
+  private isSignificantInteraction(interactionData: any): boolean {
+    const significantActions = ['complete', 'like', 'favorite', 'dislike', 'bookmark'];
+    return (
+      significantActions.includes(interactionData.action) ||
+      (interactionData.duration && interactionData.duration > 300)
+    ); // 5+ minutes
+  }
+
+  private inferRatingFromInteraction(interactionData: any): number {
+    // Infer implicit rating from interaction data
+    if (interactionData.rating) {
+      return interactionData.rating;
+    }
+
+    // Infer from action type and duration
+    let rating = 3; // Default neutral rating
+
+    switch (interactionData.action) {
+      case 'complete':
+      case 'like':
+      case 'favorite':
+        rating = 5;
+        break;
+      case 'partial_complete':
+      case 'bookmark':
+        rating = 4;
+        break;
+      case 'view':
+      case 'start':
+        rating = 3;
+        break;
+      case 'skip':
+        rating = 2;
+        break;
+      case 'dislike':
+      case 'report':
+        rating = 1;
+        break;
+    }
+
+    // Adjust rating based on duration if available
+    if (interactionData.duration) {
+      const durationMinutes = interactionData.duration / 60;
+      if (durationMinutes > 30) rating = Math.min(rating + 1, 5);
+      else if (durationMinutes < 2) rating = Math.max(rating - 1, 1);
+    }
+
+    return rating;
+  }
+
+  async cleanupOldRecommendations(): Promise<void> {}
 }

@@ -1,107 +1,183 @@
-// import {
-//   Controller,
-//   Post,
-//   Get,
-//   Put,
-//   Delete,
-//   Body,
-//   Param,
-//   Query,
-//   UseGuards,
-//   HttpCode,
-//   HttpStatus,
-// } from '@nestjs/common';
-// import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-// import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
-// import { RolesGuard } from '@/modules/auth/guards/roles.guard';
-// import { Roles } from '@/modules/auth/decorators/roles.decorator';
-// import { Role } from '@/common/enums/role.enum';
-// import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
-// import { UserPayload } from '@/modules/auth/interfaces/user-payload.interface';
-// import { ABTestService } from '../services/ab-test.service';
-// import { CreateABTestDto, ABTestResultDto } from '../dto/ml-model.dto';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  HttpStatus,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { UserPayload } from '@/common/interfaces/user-payload.interface';
+import { AbTestService } from '../services/ab-test.service';
+import { CreateABTestDto } from '../dto/ab-test.dto';
 
-// @ApiTags('A/B Testing')
-// @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard)
-// @Controller('ai/ab-tests')
-// export class ABTestController {
-//   constructor(private readonly abTestService: ABTestService) {}
+@ApiTags('A/B Testing')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('ai/ab-tests')
+export class AbTestController {
+  constructor(private readonly abTestService: AbTestService) {}
 
-//   @Post()
-//   @UseGuards(RolesGuard)
-//   @Roles(Role.ADMIN, Role.TEACHER)
-//   @ApiOperation({ summary: 'Create new A/B test' })
-//   @ApiResponse({ status: 201, description: 'A/B test created successfully' })
-//   async createTest(@CurrentUser() user: UserPayload, @Body() createTestDto: CreateABTestDto) {
-//     return this.abTestService.create({
-//       ...createTestDto,
-//       createdBy: user.sub,
-//     });
-//   }
+  @Post()
+  @Roles('admin', 'data_scientist')
+  @ApiOperation({ summary: 'Create a new A/B test' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'A/B test created successfully',
+  })
+  async createABTest(
+    @Body()
+    createTestDto: {
+      name: string;
+      description: string;
+      controlModelId: string;
+      treatmentModelId: string;
+      trafficSplit: number;
+      successMetrics: string[];
+      duration: number;
+      targetAudience?: any;
+    } & CreateABTestDto,
+    @CurrentUser() _user: UserPayload,
+  ) {
+    const test = await this.abTestService.createABTest(createTestDto);
 
-//   @Get()
-//   @ApiOperation({ summary: 'Get all A/B tests' })
-//   @ApiResponse({ status: 200, description: 'A/B tests retrieved successfully' })
-//   async getTests(@Query('status') status?: string, @Query('modelId') modelId?: string) {
-//     return this.abTestService.findAll({ status, modelId });
-//   }
+    return {
+      success: true,
+      message: 'A/B test created successfully',
+      data: test,
+    };
+  }
 
-//   @Get(':id')
-//   @ApiOperation({ summary: 'Get A/B test by ID' })
-//   @ApiParam({ name: 'id', description: 'A/B test ID' })
-//   @ApiResponse({ status: 200, description: 'A/B test retrieved successfully' })
-//   async getTest(@Param('id') id: string) {
-//     return this.abTestService.findById(id);
-//   }
+  @Post(':id/start')
+  @Roles('admin', 'data_scientist')
+  @ApiOperation({ summary: 'Start an A/B test' })
+  @ApiParam({ name: 'id', description: 'A/B test ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'A/B test started successfully',
+  })
+  async startABTest(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() _user: UserPayload) {
+    const test = await this.abTestService.startABTest(id);
 
-//   @Put(':id/start')
-//   @UseGuards(RolesGuard)
-//   @Roles(Role.ADMIN, Role.TEACHER)
-//   @ApiOperation({ summary: 'Start A/B test' })
-//   @ApiParam({ name: 'id', description: 'A/B test ID' })
-//   @ApiResponse({ status: 200, description: 'A/B test started successfully' })
-//   async startTest(@Param('id') id: string) {
-//     return this.abTestService.startTest(id);
-//   }
+    return {
+      success: true,
+      message: 'A/B test started successfully',
+      data: test,
+    };
+  }
 
-//   @Put(':id/stop')
-//   @UseGuards(RolesGuard)
-//   @Roles(Role.ADMIN, Role.TEACHER)
-//   @ApiOperation({ summary: 'Stop A/B test' })
-//   @ApiParam({ name: 'id', description: 'A/B test ID' })
-//   @ApiResponse({ status: 200, description: 'A/B test stopped successfully' })
-//   async stopTest(@Param('id') id: string) {
-//     return this.abTestService.stopTest(id);
-//   }
+  @Post(':id/stop')
+  @Roles('admin', 'data_scientist')
+  @ApiOperation({ summary: 'Stop an A/B test' })
+  @ApiParam({ name: 'id', description: 'A/B test ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'A/B test stopped successfully',
+  })
+  async stopABTest(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() _user: UserPayload,
+    @Body('reason') reason?: string,
+  ) {
+    const test = await this.abTestService.stopABTest(id, reason);
 
-//   @Post(':id/results')
-//   @ApiOperation({ summary: 'Record A/B test result' })
-//   @ApiParam({ name: 'id', description: 'A/B test ID' })
-//   @ApiResponse({ status: 201, description: 'Result recorded successfully' })
-//   async recordResult(@Param('id') id: string, @Body() resultDto: ABTestResultDto) {
-//     return this.abTestService.recordResult({
-//       ...resultDto,
-//       testId: id,
-//     });
-//   }
+    return {
+      success: true,
+      message: 'A/B test stopped successfully',
+      data: test,
+    };
+  }
 
-//   @Get(':id/analysis')
-//   @ApiOperation({ summary: 'Get A/B test statistical analysis' })
-//   @ApiParam({ name: 'id', description: 'A/B test ID' })
-//   @ApiResponse({ status: 200, description: 'Analysis retrieved successfully' })
-//   async getAnalysis(@Param('id') id: string) {
-//     return this.abTestService.getStatisticalAnalysis(id);
-//   }
+  @Post(':id/results')
+  @Roles('admin', 'data_scientist', 'instructor')
+  @ApiOperation({ summary: 'Record A/B test result' })
+  @ApiParam({ name: 'id', description: 'A/B test ID' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Test result recorded successfully',
+  })
+  async recordResult(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body()
+    resultDto: {
+      userId: string;
+      modelVariant: 'control' | 'test';
+      metrics: Record<string, number>;
+      metadata?: any;
+    },
+    @CurrentUser() _user: UserPayload,
+  ) {
+    const result = await this.abTestService.recordABTestResult(
+      id,
+      resultDto.userId,
+      resultDto.modelVariant,
+      resultDto.metrics,
+      resultDto.metadata,
+    );
 
-//   @Delete(':id')
-//   @UseGuards(RolesGuard)
-//   @Roles(Role.ADMIN)
-//   @ApiOperation({ summary: 'Delete A/B test' })
-//   @ApiParam({ name: 'id', description: 'A/B test ID' })
-//   @ApiResponse({ status: 204, description: 'A/B test deleted successfully' })
-//   @HttpCode(HttpStatus.NO_CONTENT)
-//   async deleteTest(@Param('id') id: string) {
-//     return this.abTestService.delete(id);
-//   }
-// }
+    return {
+      success: true,
+      message: 'Test result recorded successfully',
+      data: result,
+    };
+  }
+
+  @Get(':id/results')
+  @Roles('admin', 'data_scientist', 'instructor')
+  @ApiOperation({ summary: 'Get A/B test results and analysis' })
+  @ApiParam({ name: 'id', description: 'A/B test ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'A/B test results retrieved successfully',
+  })
+  async getABTestResults(@Param('id', ParseUUIDPipe) id: string) {
+    const results = await this.abTestService.getABTestResults(id);
+
+    return {
+      success: true,
+      data: results,
+    };
+  }
+
+  @Get()
+  @Roles('admin', 'data_scientist', 'instructor')
+  @ApiOperation({ summary: 'Get all A/B tests' })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'A/B tests retrieved successfully',
+  })
+  async getABTests(
+    @Query('status') _status?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    // Implementation would get A/B tests with pagination and filtering
+    return {
+      success: true,
+      data: [],
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        pages: 0,
+      },
+    };
+  }
+}

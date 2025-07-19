@@ -20,6 +20,8 @@ import { Category } from './category.entity';
 import { CourseSection } from './course-section.entity';
 import { Enrollment } from './enrollment.entity';
 import { FileUpload } from './file-upload.entity';
+import { TutoringSession } from '@/modules/intelligent-tutoring/entities/tutoring-session.entity';
+import { AdaptiveContent } from '@/modules/intelligent-tutoring/entities/adaptive-content.entity';
 
 @Entity('courses')
 @Index(['teacherId'])
@@ -388,6 +390,14 @@ export class Course extends BaseEntity {
 
   @OneToMany(() => FileUpload, file => file.course)
   files?: FileUpload[];
+
+  @OneToMany(() => TutoringSession, session => session.course)
+  tutoringSessions: TutoringSession[];
+
+  @OneToMany(() => AdaptiveContent, content => content.course, {
+    cascade: true,
+  })
+  adaptiveContent: AdaptiveContent[];
 
   get formattedPrice(): string {
     if (this.isFree) return 'Free';

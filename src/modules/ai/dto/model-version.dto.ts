@@ -10,6 +10,10 @@ export class CreateModelVersionDto {
   @IsString()
   version: string;
 
+  @ApiProperty({ description: 'User who initiated training' })
+  @IsString()
+  createdBy: string;
+
   @ApiPropertyOptional({ description: 'Version description and changes' })
   @IsOptional()
   @IsString()

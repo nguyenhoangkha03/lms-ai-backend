@@ -25,7 +25,7 @@ import { BullModule } from '@nestjs/bull';
 import { ForumModule } from './modules/forum/forum.module';
 import { CollaborativeLearningModule } from './modules/collaborative-learning/collaborative-learning.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
-
+import { IntelligentTutoringModule } from './modules/intelligent-tutoring/intelligent-tutoring.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -77,6 +77,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
     ForumModule,
     CollaborativeLearningModule,
     RealtimeModule,
+    IntelligentTutoringModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],

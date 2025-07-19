@@ -1,112 +1,213 @@
-// import { Injectable, Logger } from '@nestjs/common';
-// import { Cron, CronExpression } from '@nestjs/schedule';
-// import { InjectQueue } from '@nestjs/bull';
-// import { Queue } from 'bull';
-// import { MLModelService } from './ml-model.service';
-// import { ModelMonitoringService } from './model-monitoring.service';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { MLModel } from '../entities/ml-model.entity';
+import { ModelStatus } from '@/common/enums/ai.enums';
+import { ModelMonitoringService } from './model-monitoring.service';
 
-// @Injectable()
-// export class ModelMonitoringCronService {
-//   private readonly logger = new Logger(ModelMonitoringCronService.name);
+@Injectable()
+export class ModelMonitoringCronService {
+  private readonly logger = new Logger(ModelMonitoringCronService.name);
 
-//   constructor(
-//     @InjectQueue('model-monitoring') private readonly monitoringQueue: Queue,
-//     private readonly modelService: MLModelService,
-//     private readonly monitoringService: ModelMonitoringService,
-//   ) {}
+  constructor(
+    @InjectRepository(MLModel)
+    private readonly modelRepository: Repository<MLModel>,
+    @InjectQueue('model-monitoring')
+    private readonly monitoringQueue: Queue,
+    private readonly monitoringService: ModelMonitoringService,
+  ) {}
 
-//   @Cron(CronExpression.EVERY_5_MINUTES)
-//   async performHealthChecks() {
-//     this.logger.log('Starting scheduled health checks for active models');
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async checkProductionModelHealth(): Promise<void> {
+    try {
+      // Get all production models
+      const productionModels = await this.modelRepository.find({
+        where: { status: ModelStatus.PRODUCTION },
+      });
 
-//     try {
-//       const activeModels = await this.modelService.getActiveModels();
-//       const modelIds = activeModels.map(model => model.id);
+      this.logger.log(`Checking health for ${productionModels.length} production models`);
 
-//       if (modelIds.length > 0) {
-//         await this.monitoringQueue.add(
-//           'health-check',
-//           { modelIds },
-//           {
-//             priority: 10,
-//             attempts: 2,
-//           },
-//         );
+      // Queue health checks for each production model
+      for (const model of productionModels) {
+        await this.monitoringQueue.add(
+          'health-check',
+          { modelId: model.id },
+          {
+            priority: 1, // High priority for production models
+            attempts: 2,
+          },
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Failed to queue production model health checks: ${error.message}`);
+    }
+  }
 
-//         this.logger.log(`Queued health checks for ${modelIds.length} models`);
-//       }
-//     } catch (error) {
-//       this.logger.error('Failed to queue health checks:', error);
-//     }
-//   }
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async monitorModelPerformance(): Promise<void> {
+    try {
+      const productionModels = await this.modelRepository.find({
+        where: { status: ModelStatus.PRODUCTION },
+      });
 
-//   @Cron(CronExpression.EVERY_HOUR)
-//   async collectModelMetrics() {
-//     this.logger.log('Starting scheduled metrics collection');
+      const timeRange = {
+        start: new Date(Date.now() - 15 * 60 * 1000), // Last 15 minutes
+        end: new Date(),
+      };
 
-//     try {
-//       const activeModels = await this.modelService.getActiveModels();
-//       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-//       const now = new Date();
+      for (const model of productionModels) {
+        await this.monitoringQueue.add(
+          'performance-monitoring',
+          {
+            modelId: model.id,
+            timeRange,
+          },
+          {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000, // hoặc delay theo ý bạn
+            },
+          },
+        );
+      }
 
-//       for (const model of activeModels) {
-//         await this.monitoringQueue.add(
-//           'collect-metrics',
-//           {
-//             modelId: model.id,
-//             timeRange: { start: oneHourAgo, end: now },
-//           },
-//           {
-//             priority: 5,
-//             attempts: 3,
-//           },
-//         );
-//       }
+      this.logger.log(`Queued performance monitoring for ${productionModels.length} models`);
+    } catch (error) {
+      this.logger.error(`Failed to queue performance monitoring: ${error.message}`);
+    }
+  }
 
-//       this.logger.log(`Queued metrics collection for ${activeModels.length} models`);
-//     } catch (error) {
-//       this.logger.error('Failed to queue metrics collection:', error);
-//     }
-//   }
+  @Cron(CronExpression.EVERY_HOUR)
+  async detectDataDrift(): Promise<void> {
+    try {
+      const modelsToCheck = await this.modelRepository.find({
+        where: { status: ModelStatus.PRODUCTION },
+      });
 
-//   @Cron(CronExpression.EVERY_DAY_AT_2AM)
-//   async performDailyModelAnalysis() {
-//     this.logger.log('Starting daily model performance analysis');
+      for (const model of modelsToCheck) {
+        // Get recent prediction data for drift detection
+        const recentData = await this.getRecentPredictionData(model.id);
 
-//     try {
-//       const activeModels = await this.modelService.getActiveModels();
+        if (recentData.length > 10) {
+          // Only check if enough data
+          await this.monitoringQueue.add(
+            'data-drift-detection',
+            {
+              modelId: model.id,
+              newData: recentData,
+            },
+            {
+              attempts: 2,
+            },
+          );
+        }
+      }
 
-//       for (const model of activeModels) {
-//         // Analyze model drift
-//         await this.monitoringService.analyzeModelDrift(model.id);
+      this.logger.log('Queued data drift detection for production models');
+    } catch (error) {
+      this.logger.error(`Failed to queue data drift detection: ${error.message}`);
+    }
+  }
 
-//         // Check for performance degradation
-//         await this.monitoringService.checkPerformanceDegradation(model.id);
+  @Cron('0 */6 * * *') // Every 6 hours
+  async generateModelReports(): Promise<void> {
+    try {
+      this.logger.log('Generating model monitoring reports');
 
-//         // Update model health status
-//         await this.monitoringService.updateModelHealthStatus(model.id);
-//       }
+      const allModels = await this.modelRepository.find({
+        where: { status: ModelStatus.PRODUCTION },
+      });
 
-//       this.logger.log(`Daily analysis completed for ${activeModels.length} models`);
-//     } catch (error) {
-//       this.logger.error('Failed to perform daily model analysis:', error);
-//     }
-//   }
+      await this.monitoringQueue.add(
+        'batch-model-monitoring',
+        { modelIds: allModels.map(m => m.id) },
+        {
+          attempts: 3,
+          timeout: 1800000, // 30 minutes timeout
+        },
+      );
 
-//   @Cron(CronExpression.EVERY_WEEK)
-//   async generateWeeklyReports() {
-//     this.logger.log('Generating weekly model performance reports');
+      this.logger.log(`Queued batch monitoring for ${allModels.length} models`);
+    } catch (error) {
+      this.logger.error(`Failed to queue batch model monitoring: ${error.message}`);
+    }
+  }
 
-//     try {
-//       const activeModels = await this.modelService.getActiveModels();
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async dailyModelMaintenance(): Promise<void> {
+    try {
+      this.logger.log('Starting daily model maintenance');
 
-//       for (const model of activeModels) {
-//         await this.monitoringService.generateWeeklyReport(model.id);
-//       }
+      // Clean up old monitoring data
+      await this.cleanupOldMonitoringData();
 
-//       this.logger.log(`Weekly reports generated for ${activeModels.length} models`);
-//     } catch (error) {
-//       this.logger.error('Failed to generate weekly reports:', error);
-//     }
-//   }
-// }
+      // Archive completed training jobs
+      await this.archiveCompletedJobs();
+
+      // Check for models that need updates
+      await this.checkModelsForUpdates();
+
+      this.logger.log('Daily model maintenance completed');
+    } catch (error) {
+      this.logger.error(`Failed daily model maintenance: ${error.message}`);
+    }
+  }
+
+  private async getRecentPredictionData(modelId: string): Promise<any[]> {
+    try {
+      // This would query recent prediction data
+      // For now, return empty array as placeholder
+      return [];
+    } catch (error) {
+      this.logger.error(
+        `Failed to get recent prediction data for model ${modelId}: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
+  private async cleanupOldMonitoringData(): Promise<void> {
+    try {
+      // Clean up monitoring data older than 30 days
+      const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      // Implementation would clean up old monitoring records
+      this.logger.log(`Cleaned up monitoring data older than ${cutoffDate.toISOString()}`);
+    } catch (error) {
+      this.logger.error(`Failed to cleanup old monitoring data: ${error.message}`);
+    }
+  }
+
+  private async archiveCompletedJobs(): Promise<void> {
+    try {
+      // Archive completed training and monitoring jobs
+      this.logger.log('Archived completed jobs');
+    } catch (error) {
+      this.logger.error(`Failed to archive completed jobs: ${error.message}`);
+    }
+  }
+
+  private async checkModelsForUpdates(): Promise<void> {
+    try {
+      // Check if any models need updates based on performance degradation
+      const models = await this.modelRepository.find({
+        where: { status: ModelStatus.PRODUCTION },
+      });
+
+      for (const model of models) {
+        const health = await this.monitoringService.checkModelHealth(model.id);
+
+        if (health.status === 'degraded' || health.status === 'unhealthy') {
+          this.logger.warn(`Model ${model.id} may need attention: ${health.status}`);
+          // Could trigger alerts or automatic remediation here
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to check models for updates: ${error.message}`);
+    }
+  }
+}

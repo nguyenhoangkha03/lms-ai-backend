@@ -52,6 +52,11 @@ export class CreateMLModelDto {
 }
 
 export class UpdateMLModelDto {
+  @ApiProperty({ description: 'Model name identifier' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @ApiPropertyOptional({ description: 'Human-readable display name' })
   @IsOptional()
   @IsString()
@@ -97,11 +102,11 @@ export class UpdateMLModelDto {
 export class ModelDeploymentDto {
   @ApiProperty({ description: 'Model ID to deploy' })
   @IsString()
-  modelId: string;
+  modelId?: string;
 
   @ApiProperty({ description: 'Model version to deploy' })
   @IsString()
-  version: string;
+  version?: string;
 
   @ApiProperty({ enum: DeploymentEnvironment, description: 'Target environment' })
   @IsEnum(DeploymentEnvironment)

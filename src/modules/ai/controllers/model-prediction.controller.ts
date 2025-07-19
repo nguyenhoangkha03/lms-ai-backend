@@ -1,132 +1,174 @@
-// import { Controller, Post, Get, Body, Param, Query, UseGuards } from '@nestjs/common';
-// import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-// import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
-// import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
-// import { UserPayload } from '@/modules/auth/interfaces/user-payload.interface';
-// import { PythonAIServiceService } from '../services/python-ai-service.service';
-// import { ModelPredictionService } from '../services/model-prediction.service';
-// import {
-//   CreatePredictionDto,
-//   BatchPredictionDto,
-//   ModelExplanationRequestDto,
-//   PredictionResponseDto,
-// } from '../dto/ml-model.dto';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  HttpStatus,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { UserPayload } from '@/common/interfaces/user-payload.interface';
+import { ModelPredictionService } from '../services/model-prediction.service';
 
-// @ApiTags('Model Predictions')
-// @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard)
-// @Controller('ai/predictions')
-// export class ModelPredictionController {
-//   constructor(
-//     private readonly pythonAIService: PythonAIServiceService,
-//     private readonly predictionService: ModelPredictionService,
-//   ) {}
+@ApiTags('Model Predictions')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('ai/predictions')
+export class ModelPredictionController {
+  constructor(private readonly predictionService: ModelPredictionService) {}
 
-//   @Post()
-//   @ApiOperation({ summary: 'Make single prediction' })
-//   @ApiResponse({
-//     status: 201,
-//     description: 'Prediction completed successfully',
-//     type: PredictionResponseDto,
-//   })
-//   async predict(
-//     @CurrentUser() user: UserPayload,
-//     @Body() predictionDto: CreatePredictionDto,
-//   ): Promise<PredictionResponseDto> {
-//     // Set user ID if not provided
-//     if (!predictionDto.userId && user.role === 'student') {
-//       predictionDto.userId = user.sub;
-//     }
+  @Post()
+  @Roles('student', 'instructor', 'admin')
+  @ApiOperation({ summary: 'Make a prediction using a trained model' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Prediction made successfully',
+  })
+  async makePrediction(
+    @Body()
+    predictionDto: {
+      modelId: string;
+      inputData: any;
+      predictionType: string;
+      context?: any;
+    },
+    @CurrentUser() user: UserPayload,
+  ) {
+    const prediction = await this.predictionService.makePrediction(
+      predictionDto.modelId,
+      predictionDto.inputData,
+      predictionDto.predictionType,
+      user.sub,
+      predictionDto.context,
+    );
 
-//     return this.pythonAIService.predict(predictionDto);
-//   }
+    return {
+      success: true,
+      message: 'Prediction made successfully',
+      data: prediction,
+    };
+  }
 
-//   @Post('batch')
-//   @ApiOperation({ summary: 'Make batch predictions' })
-//   @ApiResponse({
-//     status: 201,
-//     description: 'Batch predictions completed successfully',
-//     type: [PredictionResponseDto],
-//   })
-//   async batchPredict(
-//     @Body() batchPredictionDto: BatchPredictionDto,
-//   ): Promise<PredictionResponseDto[]> {
-//     return this.pythonAIService.batchPredict(batchPredictionDto);
-//   }
+  @Get()
+  @Roles('student', 'instructor', 'admin')
+  @ApiOperation({ summary: 'Get user predictions history' })
+  @ApiQuery({ name: 'modelId', required: false, type: String })
+  @ApiQuery({ name: 'predictionType', required: false, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Predictions retrieved successfully',
+  })
+  async getUserPredictions(
+    @CurrentUser() user: UserPayload,
+    @Query('modelId') modelId?: string,
+    @Query('predictionType') predictionType?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const predictions = await this.predictionService.getUserPredictions(
+      user.sub,
+      { modelId, predictionType },
+      { page, limit },
+    );
 
-//   @Post('bulk')
-//   @ApiOperation({ summary: 'Process multiple prediction requests' })
-//   @ApiResponse({
-//     status: 201,
-//     description: 'Bulk predictions processed',
-//     type: [PredictionResponseDto],
-//   })
-//   async bulkPredict(@Body() requests: CreatePredictionDto[]): Promise<PredictionResponseDto[]> {
-//     return this.pythonAIService.bulkPredict(requests);
-//   }
+    return {
+      success: true,
+      data: predictions.predictions,
+      pagination: {
+        page,
+        limit,
+        total: predictions.total,
+        pages: Math.ceil(predictions.total / limit),
+      },
+    };
+  }
 
-//   @Get()
-//   @ApiOperation({ summary: 'Get user predictions history' })
-//   @ApiResponse({ status: 200, description: 'Predictions retrieved successfully' })
-//   async getPredictions(
-//     @CurrentUser() user: UserPayload,
-//     @Query('modelId') modelId?: string,
-//     @Query('type') type?: string,
-//     @Query('limit') limit?: number,
-//     @Query('offset') offset?: number,
-//   ) {
-//     return this.predictionService.getUserPredictions(user.sub, {
-//       modelId,
-//       type,
-//       limit: limit || 20,
-//       offset: offset || 0,
-//     });
-//   }
+  @Get(':id')
+  @Roles('student', 'instructor', 'admin')
+  @ApiOperation({ summary: 'Get prediction by ID' })
+  @ApiParam({ name: 'id', description: 'Prediction ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Prediction retrieved successfully',
+  })
+  async getPredictionById(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() _user: UserPayload,
+  ) {
+    const prediction = await this.predictionService.getPredictionById(id);
 
-//   @Get(':id')
-//   @ApiOperation({ summary: 'Get prediction by ID' })
-//   @ApiParam({ name: 'id', description: 'Prediction ID' })
-//   @ApiResponse({ status: 200, description: 'Prediction retrieved successfully' })
-//   async getPrediction(@Param('id') id: string) {
-//     return this.predictionService.findById(id);
-//   }
+    return {
+      success: true,
+      data: prediction,
+    };
+  }
 
-//   @Post(':id/explain')
-//   @ApiOperation({ summary: 'Explain prediction' })
-//   @ApiParam({ name: 'id', description: 'Prediction ID' })
-//   @ApiResponse({ status: 200, description: 'Explanation generated successfully' })
-//   async explainPrediction(
-//     @Param('id') id: string,
-//     @Body() explanationDto: ModelExplanationRequestDto,
-//   ) {
-//     const prediction = await this.predictionService.findById(id);
-//     if (!prediction) {
-//       throw new Error('Prediction not found');
-//     }
+  @Post('batch')
+  @Roles('instructor', 'admin')
+  @ApiOperation({ summary: 'Make batch predictions' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Batch predictions started successfully',
+  })
+  async makeBatchPredictions(
+    @Body()
+    batchDto: {
+      modelId: string;
+      inputDataList: any[];
+      predictionType: string;
+      context?: any;
+    },
+    @CurrentUser() user: UserPayload,
+  ) {
+    const batchJob = await this.predictionService.makeBatchPredictions(
+      batchDto.modelId,
+      batchDto.inputDataList,
+      batchDto.predictionType,
+      user.sub,
+      batchDto.context,
+    );
 
-//     return this.pythonAIService.explainPrediction({
-//       ...explanationDto,
-//       modelId: prediction.modelVersion.model.id,
-//       inputData: prediction.inputData,
-//     });
-//   }
+    return {
+      success: true,
+      message: 'Batch predictions started successfully',
+      data: {
+        batchId: batchJob.id,
+        status: batchJob.status,
+        totalPredictions: batchDto.inputDataList.length,
+      },
+    };
+  }
 
-//   @Get('analytics/performance')
-//   @ApiOperation({ summary: 'Get prediction performance analytics' })
-//   @ApiResponse({ status: 200, description: 'Analytics retrieved successfully' })
-//   async getPredictionAnalytics(
-//     @Query('modelId') modelId?: string,
-//     @Query('start') start?: string,
-//     @Query('end') end?: string,
-//   ) {
-//     const timeRange =
-//       start && end
-//         ? {
-//             start: new Date(start),
-//             end: new Date(end),
-//           }
-//         : undefined;
+  @Get('batch/:batchId/status')
+  @Roles('instructor', 'admin')
+  @ApiOperation({ summary: 'Get batch prediction status' })
+  @ApiParam({ name: 'batchId', description: 'Batch ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Batch status retrieved successfully',
+  })
+  async getBatchStatus(@Param('batchId') batchId: string, @CurrentUser() _user: UserPayload) {
+    const status = await this.predictionService.getBatchPredictionStatus(batchId);
 
-//     return this.predictionService.getPerformanceAnalytics(modelId, timeRange);
-//   }
-// }
+    return {
+      success: true,
+      data: status,
+    };
+  }
+}

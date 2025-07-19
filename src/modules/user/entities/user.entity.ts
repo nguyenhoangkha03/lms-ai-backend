@@ -19,6 +19,8 @@ import { UserSocial } from './user-social.entity';
 import { Role } from './role.entity';
 import { Permission } from './permission.entity';
 import { NotificationPreference } from '@/modules/notification/entities/notification-preference.entity';
+import { TutoringSession } from '@/modules/intelligent-tutoring/entities/tutoring-session.entity';
+import { LearningStyleProfile } from '@/modules/intelligent-tutoring/entities/learning-style-profile.entity';
 
 @Entity('users')
 @Index(['userType', 'status'])
@@ -283,6 +285,16 @@ export class User extends BaseEntity {
 
   @OneToMany(() => NotificationPreference, pref => pref.user)
   notificationPreferences?: NotificationPreference[];
+
+  @OneToMany(() => TutoringSession, session => session.student, {
+    cascade: true,
+  })
+  tutoringSessions: TutoringSession[];
+
+  @OneToOne(() => LearningStyleProfile, profile => profile.user, {
+    cascade: true,
+  })
+  learningStyleProfile: LearningStyleProfile;
 
   // Virtual properties
   get fullName(): string {

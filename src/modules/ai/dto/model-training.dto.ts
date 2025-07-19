@@ -6,9 +6,28 @@ export class ModelTrainingDto {
   @IsString()
   modelId: string;
 
+  @ApiPropertyOptional({ description: 'Model version to train' })
+  @IsOptional()
+  @IsString()
+  version?: string;
+
+  @ApiPropertyOptional({ description: 'Training description and changes' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({ description: 'User who trained the model' })
+  @IsString()
+  trainedBy: string;
+
+  @ApiPropertyOptional({ description: 'User who initiated training' })
+  @IsOptional()
+  @IsString()
+  createdBy?: string;
+
   @ApiProperty({ description: 'Training dataset configuration' })
   @IsObject()
-  datasetConfig: {
+  datasetConfig?: {
     datasetName: string;
     dataSource: string;
     features: string[];

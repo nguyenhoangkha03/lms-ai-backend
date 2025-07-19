@@ -5,336 +5,199 @@ import { Queue } from 'bull';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { AIRecommendation } from '../entities/ai-recommendation.entity';
-import { RecommendationStatus } from '@/common/enums/ai.enums';
-// import { UserType } from '@/common/enums/user.enums';
+import { RecommendationService } from './recommendation.service';
 
 @Injectable()
 export class RecommendationCronService {
   private readonly logger = new Logger(RecommendationCronService.name);
 
   constructor(
-    @InjectQueue('recommendation') private readonly recommendationQueue: Queue,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(AIRecommendation)
-    private readonly recommendationRepository: Repository<AIRecommendation>,
+    @InjectQueue('recommendation')
+    private readonly recommendationQueue: Queue,
+    private readonly recommendationService: RecommendationService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
-  async generateDailyRecommendations() {
-    this.logger.log('Starting daily recommendation generation');
-
+  async generateDailyRecommendations(): Promise<void> {
     try {
-      // Get active users who haven't received recommendations in the last 24 hours
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
+      this.logger.log('Starting daily recommendation generation');
 
-      const usersNeedingRecommendations = await this.userRepository
+      // Get active users from last 30 days
+      const activeUsers = await this.userRepository
         .createQueryBuilder('user')
-        .leftJoin('user.recommendations', 'rec', 'rec.createdAt > :yesterday', { yesterday })
-        .where('user.isActive = :isActive', { isActive: true })
-        .andWhere('user.role = :role', { role: 'student' })
-        .andWhere('rec.id IS NULL') // Users without recent recommendations
-        .select(['user.id'])
+        .where('user.lastLoginAt > :date', {
+          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        })
+        .andWhere('user.isActive = :isActive', { isActive: true })
         .getMany();
 
-      if (usersNeedingRecommendations.length === 0) {
-        this.logger.log('No users need daily recommendations');
-        return;
+      this.logger.log(`Found ${activeUsers.length} active users for recommendation generation`);
+
+      // Queue recommendation generation for each user
+      for (const user of activeUsers) {
+        await this.recommendationQueue.add(
+          'generate-personalized-recommendations',
+          { userId: user.id },
+          {
+            delay: Math.random() * 60000, // Random delay up to 1 minute
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000, // hoặc delay theo ý bạn
+            },
+          },
+        );
       }
 
-      // Queue bulk recommendation generation
-      await this.recommendationQueue.add(
-        'bulk-generate',
-        {
-          userIds: usersNeedingRecommendations.map(u => u.id),
-          types: ['learning_path', 'content'],
-          forceRegenerate: false,
-        },
-        {
-          priority: 5,
-          attempts: 3,
-          backoff: 1,
-        },
-      );
-
-      this.logger.log(
-        `Queued daily recommendations for ${usersNeedingRecommendations.length} users`,
-      );
+      this.logger.log('Daily recommendation generation jobs queued successfully');
     } catch (error) {
-      this.logger.error('Failed to queue daily recommendations:', error);
-    }
-  }
-
-  @Cron(CronExpression.EVERY_6_HOURS)
-  async updateActiveRecommendations() {
-    this.logger.log('Updating active recommendations');
-
-    try {
-      // Mark expired recommendations
-      const now = new Date();
-      const expiredCount = await this.recommendationRepository
-        .createQueryBuilder()
-        .update(AIRecommendation)
-        .set({ status: RecommendationStatus.EXPIRED })
-        .where('expiresAt < :now', { now })
-        .andWhere('status IN (:...statuses)', {
-          statuses: [RecommendationStatus.PENDING, RecommendationStatus.ACTIVE],
-        })
-        .execute();
-
-      this.logger.log(`Marked ${expiredCount.affected} recommendations as expired`);
-
-      // Activate pending recommendations that should be shown now
-      const activatedCount = await this.recommendationRepository
-        .createQueryBuilder()
-        .update(AIRecommendation)
-        .set({ status: RecommendationStatus.ACTIVE })
-        .where('status = :status', { status: RecommendationStatus.PENDING })
-        .andWhere('(expiresAt IS NULL OR expiresAt > :now)', { now })
-        .andWhere('createdAt <= :activationTime', {
-          activationTime: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-        })
-        .execute();
-
-      this.logger.log(`Activated ${activatedCount.affected} pending recommendations`);
-    } catch (error) {
-      this.logger.error('Failed to update active recommendations:', error);
-    }
-  }
-
-  @Cron(CronExpression.EVERY_WEEK)
-  async cleanupOldRecommendations() {
-    this.logger.log('Starting weekly recommendation cleanup');
-
-    try {
-      await this.recommendationQueue.add(
-        'cleanup-expired',
-        {
-          olderThanDays: 30,
-          status: ['expired', 'dismissed'],
-        },
-        {
-          priority: 1,
-          attempts: 2,
-        },
-      );
-
-      this.logger.log('Queued weekly recommendation cleanup');
-    } catch (error) {
-      this.logger.error('Failed to queue recommendation cleanup:', error);
+      this.logger.error(`Failed to generate daily recommendations: ${error.message}`);
     }
   }
 
   @Cron(CronExpression.EVERY_HOUR)
-  async generatePerformanceBasedRecommendations() {
-    this.logger.log('Checking for performance-based recommendation triggers');
-
+  async updateActiveUserRecommendations(): Promise<void> {
     try {
-      // Find users with recent poor performance who might need difficulty adjustments
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      this.logger.log('Updating recommendations for currently active users');
 
-      // This is a simplified query - in practice, you'd analyze assessment scores
-      const strugglingUsers = await this.userRepository
+      // Get users active in the last hour
+      const recentlyActiveUsers = await this.userRepository
         .createQueryBuilder('user')
-        .innerJoin('user.assessmentAttempts', 'attempt')
-        .where('user.isActive = :isActive', { isActive: true })
-        .andWhere('attempt.createdAt > :sevenDaysAgo', { sevenDaysAgo })
-        .andWhere('attempt.score < :threshold', { threshold: 60 })
-        .groupBy('user.id')
-        .having('COUNT(attempt.id) >= :minAttempts', { minAttempts: 3 })
-        .select(['user.id'])
+        .where('user.lastActivityAt > :date', {
+          date: new Date(Date.now() - 60 * 60 * 1000),
+        })
+        .andWhere('user.isActive = :isActive', { isActive: true })
+        .take(100) // Limit to 100 users per hour to avoid overload
         .getMany();
 
-      if (strugglingUsers.length > 0) {
-        // Queue difficulty adjustment recommendations for struggling users
-        for (const user of strugglingUsers) {
-          await this.recommendationQueue.add(
-            'user-recommendations',
-            {
-              userId: user.id,
-              type: 'difficulty',
+      this.logger.log(
+        `Updating recommendations for ${recentlyActiveUsers.length} recently active users`,
+      );
+
+      // Update recommendations for recently active users
+      for (const user of recentlyActiveUsers) {
+        await this.recommendationQueue.add(
+          'generate-personalized-recommendations',
+          { userId: user.id, priority: 'high' },
+          {
+            priority: 1, // High priority for active users
+            attempts: 2,
+          },
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Failed to update active user recommendations: ${error.message}`);
+    }
+  }
+
+  @Cron('0 */6 * * *') // Every 6 hours
+  async updateCollaborativeFilteringModel(): Promise<void> {
+    try {
+      this.logger.log('Updating collaborative filtering model');
+
+      // Get recent user interactions
+      const recentInteractions = await this.getRecentInteractions();
+
+      if (recentInteractions.length > 100) {
+        // Only update if significant new data
+        await this.recommendationQueue.add(
+          'update-collaborative-filtering',
+          {
+            interactions: recentInteractions,
+            updateType: 'incremental',
+          },
+          {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000, // hoặc delay theo ý bạn
             },
-            {
-              priority: 8, // High priority for struggling users
-              attempts: 2,
-            },
-          );
-        }
+          },
+        );
 
         this.logger.log(
-          `Queued difficulty adjustments for ${strugglingUsers.length} struggling users`,
+          `Queued collaborative filtering update with ${recentInteractions.length} interactions`,
+        );
+      } else {
+        this.logger.log('Insufficient new interactions for model update');
+      }
+    } catch (error) {
+      this.logger.error(`Failed to update collaborative filtering model: ${error.message}`);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_WEEK)
+  async weeklyRecommendationCleanup(): Promise<void> {
+    try {
+      this.logger.log('Starting weekly recommendation cleanup');
+
+      // Clean up old recommendations
+      await this.recommendationService.cleanupOldRecommendations();
+
+      // Regenerate recommendations for users who haven't been active
+      const inactiveUsers = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.lastLoginAt BETWEEN :start AND :end', {
+          start: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 2 weeks ago
+          end: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
+        })
+        .andWhere('user.isActive = :isActive', { isActive: true })
+        .take(500) // Limit weekly batch
+        .getMany();
+
+      for (const user of inactiveUsers) {
+        await this.recommendationQueue.add(
+          'generate-personalized-recommendations',
+          { userId: user.id, type: 'reengagement' },
+          {
+            delay: Math.random() * 3600000, // Random delay up to 1 hour
+            attempts: 2,
+          },
         );
       }
 
-      // Find high-performing users who might be ready for more challenges
-      const excellentUsers = await this.userRepository
-        .createQueryBuilder('user')
-        .innerJoin('user.assessmentAttempts', 'attempt')
-        .where('user.isActive = :isActive', { isActive: true })
-        .andWhere('attempt.createdAt > :sevenDaysAgo', { sevenDaysAgo })
-        .andWhere('attempt.score >= :threshold', { threshold: 85 })
-        .groupBy('user.id')
-        .having('COUNT(attempt.id) >= :minAttempts', { minAttempts: 3 })
-        .andHaving('AVG(attempt.score) >= :avgThreshold', { avgThreshold: 85 })
-        .select(['user.id'])
-        .getMany();
-
-      if (excellentUsers.length > 0) {
-        // Queue advanced content recommendations for excellent users
-        for (const user of excellentUsers) {
-          await this.recommendationQueue.add(
-            'user-recommendations',
-            {
-              userId: user.id,
-              type: 'content',
-              options: { difficultyLevel: 'advanced' },
-            },
-            {
-              priority: 6,
-              attempts: 2,
-            },
-          );
-        }
-
-        this.logger.log(`Queued advanced content for ${excellentUsers.length} excellent users`);
-      }
+      this.logger.log(
+        `Weekly cleanup completed. Regenerating recommendations for ${inactiveUsers.length} inactive users`,
+      );
     } catch (error) {
-      this.logger.error('Failed to generate performance-based recommendations:', error);
+      this.logger.error(`Failed weekly recommendation cleanup: ${error.message}`);
     }
   }
 
-  @Cron('0 0 1 * *') // First day of every month
-  async generateMonthlyLearningPaths() {
-    this.logger.log('Generating monthly learning path updates');
-
+  @Cron('0 0 1 * *') // Monthly on the 1st at midnight
+  async monthlyModelRetraining(): Promise<void> {
     try {
-      // Get all active students
-      const activeStudents = await this.userRepository.find({
-        where: {
-          isActive: true,
-        },
-        select: ['id'],
-      });
+      this.logger.log('Starting monthly model retraining');
 
-      if (activeStudents.length === 0) {
-        this.logger.log('No active students found for monthly learning paths');
-        return;
-      }
-
-      // Queue learning path generation for all active students
+      // Trigger full model retraining with accumulated data
       await this.recommendationQueue.add(
-        'bulk-generate',
+        'retrain-recommendation-models',
         {
-          userIds: activeStudents.map(s => s.id),
-          types: ['learning_path', 'schedule'],
-          forceRegenerate: true,
+          modelTypes: ['collaborative_filtering', 'content_based', 'hybrid'],
+          retrainingType: 'full',
         },
         {
-          priority: 3,
-          attempts: 3,
-          backoff: 1,
+          attempts: 1,
+          timeout: 3600000, // 1 hour timeout
         },
       );
 
-      this.logger.log(`Queued monthly learning path updates for ${activeStudents.length} students`);
+      this.logger.log('Monthly model retraining job queued');
     } catch (error) {
-      this.logger.error('Failed to generate monthly learning paths:', error);
+      this.logger.error(`Failed to queue monthly model retraining: ${error.message}`);
     }
   }
 
-  @Cron('0 */4 * * *') // Every 4 hours
-  async generateAdaptiveRecommendations() {
-    this.logger.log('Generating adaptive recommendations based on recent activity');
-
+  private async getRecentInteractions(): Promise<any[]> {
     try {
-      // Find users with recent activity but no recent recommendations
-      const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-      const activeUsers = await this.userRepository
-        .createQueryBuilder('user')
-        .innerJoin('user.learningActivities', 'activity', 'activity.timestamp > :fourHoursAgo', {
-          fourHoursAgo,
-        })
-        .leftJoin('user.recommendations', 'rec', 'rec.createdAt > :oneDayAgo', { oneDayAgo })
-        .where('user.isActive = :isActive', { isActive: true })
-        .andWhere('rec.id IS NULL')
-        .select(['user.id'])
-        .groupBy('user.id')
-        .having('COUNT(activity.id) >= :minActivities', { minActivities: 5 })
-        .getMany();
-
-      if (activeUsers.length > 0) {
-        // Queue adaptive recommendations for recently active users
-        for (const user of activeUsers) {
-          await this.recommendationQueue.add(
-            'user-recommendations',
-            {
-              userId: user.id,
-              type: 'all',
-            },
-            {
-              priority: 7,
-              attempts: 2,
-            },
-          );
-        }
-
-        this.logger.log(`Queued adaptive recommendations for ${activeUsers.length} active users`);
-      }
+      // This would query recent user interactions from the analytics module
+      // For now, return empty array as placeholder
+      return [];
     } catch (error) {
-      this.logger.error('Failed to generate adaptive recommendations:', error);
-    }
-  }
-
-  async triggerImmediateRecommendations(userId: string, trigger: string) {
-    this.logger.log(`Triggering immediate recommendations for user ${userId} due to: ${trigger}`);
-
-    try {
-      let recommendationType: string;
-      let priority = 5;
-
-      switch (trigger) {
-        case 'course_completed':
-          recommendationType = 'content';
-          priority = 9;
-          break;
-        case 'assessment_failed':
-          recommendationType = 'difficulty';
-          priority = 10;
-          break;
-        case 'long_inactivity':
-          recommendationType = 'schedule';
-          priority = 8;
-          break;
-        case 'new_enrollment':
-          recommendationType = 'learning_path';
-          priority = 9;
-          break;
-        default:
-          recommendationType = 'all';
-          priority = 6;
-      }
-
-      await this.recommendationQueue.add(
-        'user-recommendations',
-        {
-          userId,
-          type: recommendationType,
-          options: { trigger },
-        },
-        {
-          priority,
-          attempts: 2,
-        },
-      );
-
-      this.logger.log(`Queued immediate ${recommendationType} recommendations for user ${userId}`);
-    } catch (error) {
-      this.logger.error(`Failed to trigger immediate recommendations for user ${userId}:`, error);
+      this.logger.error(`Failed to get recent interactions: ${error.message}`);
+      return [];
     }
   }
 }

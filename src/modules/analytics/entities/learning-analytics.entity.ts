@@ -48,6 +48,28 @@ export class LearningAnalytics extends BaseEntity {
   @Column({
     type: 'int',
     default: 0,
+    comment: 'Number of assessments taken',
+  })
+  assessmentsTaken: number;
+
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    comment: 'Average assessment score percentage',
+  })
+  averageScore: number;
+
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Skill progress',
+  })
+  skillProgress: Record<string, number>;
+
+  @Column({
+    type: 'int',
+    default: 0,
     comment: 'Number of quizzes attempted',
   })
   quizzesAttempted: number;

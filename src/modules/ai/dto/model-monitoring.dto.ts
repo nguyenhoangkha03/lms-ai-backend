@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsObject, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class ModelHealthCheckDto {
   @ApiProperty({ description: 'Model ID to check' })
@@ -10,6 +10,23 @@ export class ModelHealthCheckDto {
   @IsOptional()
   @IsString()
   version?: string;
+
+  @ApiProperty({ description: 'Health check status' })
+  @IsString()
+  status: string;
+
+  @ApiProperty({ description: 'Health check timestamp' })
+  @IsString()
+  timestamp: Date;
+
+  @ApiProperty({ description: 'Health check result' })
+  @IsBoolean()
+  healthy: boolean;
+
+  @ApiPropertyOptional({ description: 'Health check message' })
+  @IsOptional()
+  @IsString()
+  message?: string;
 
   @ApiPropertyOptional({ description: 'Health check configuration' })
   @IsOptional()

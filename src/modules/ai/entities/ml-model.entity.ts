@@ -1,4 +1,3 @@
-// src/modules/ai/entities/ml-model.entity.ts
 import { Entity, Column, Index, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from '@/common/entities/base.entity';
 import { ModelType, ModelStatus, ModelFramework } from '@/common/enums/ai.enums';

@@ -7,7 +7,33 @@ import { ContentSimilarityService } from './content-similarity.service';
 import { Course } from '../../course/entities/course.entity';
 import { Lesson } from '../../course/entities/lesson.entity';
 import { Enrollment } from '../../course/entities/enrollment.entity';
+import { DifficultyLevel, LearningStyleType } from '@/common/enums/tutoring.enums';
 // import { RecommendationType, Priority } from '@/common/enums/ai.enums';
+
+// export interface LearningPathNode {
+//   id: string;
+//   type: 'course' | 'lesson' | 'assessment';
+//   title: string;
+//   prerequisites: string[];
+//   estimatedDuration: number;
+//   difficultyLevel: string;
+//   skills: string[];
+//   order: number;
+//   isOptional: boolean;
+// }
+
+// export interface LearningPath {
+//   userId: string;
+//   nodes: LearningPathNode[];
+//   totalDuration: number;
+//   totalNodes: number;
+//   estimatedCompletionDate: Date;
+//   pathMetadata: {
+//     goals: string[];
+//     focusAreas: string[];
+//     adaptationRules: string[];
+//   };
+// }
 
 export interface LearningPathNode {
   id: string;
@@ -19,6 +45,14 @@ export interface LearningPathNode {
   skills: string[];
   order: number;
   isOptional: boolean;
+  adaptationRules?: string[];
+  personalizedMetadata?: {
+    relevanceScore: number;
+    difficultyMatch: number;
+    timeAllocation: number;
+    priorityLevel: 'high' | 'medium' | 'low';
+    reasonForInclusion: string;
+  };
 }
 
 export interface LearningPath {
@@ -31,7 +65,66 @@ export interface LearningPath {
     goals: string[];
     focusAreas: string[];
     adaptationRules: string[];
+    personalizationFactors?: {
+      learningStyle: string;
+      preferredPace: string;
+      skillLevel: string;
+      timeConstraints: any;
+      motivationalFactors: string[];
+    };
   };
+}
+
+export interface PersonalizedPathOptions {
+  courseId?: string;
+  difficultyPreference?: DifficultyLevel;
+  learningStyle?: LearningStyleType;
+  timeConstraints: {
+    dailyHours: number;
+    targetDays: number;
+    preferredSchedule?: string[];
+    flexibilityLevel?: 'strict' | 'moderate' | 'flexible';
+  };
+  learningGoals?: string[];
+  preferences?: {
+    difficultyProgression?: 'gradual' | 'steep' | 'adaptive';
+    contentTypes?: string[];
+    learningStyle?: 'visual' | 'auditory' | 'kinesthetic' | 'reading' | 'mixed';
+    interactionLevel?: 'low' | 'medium' | 'high';
+  };
+  constraints?: {
+    skipCompleted?: boolean;
+    includeOptional?: boolean;
+    maxConcurrentCourses?: number;
+    prioritizeWeakAreas?: boolean;
+  };
+  optimization?: {
+    algorithm?: 'performance_based' | 'time_optimal' | 'engagement_focused' | 'balanced';
+    considerPeerData?: boolean;
+    adaptiveAdjustments?: boolean;
+  };
+}
+
+export interface PersonalizedLearningPath extends LearningPath {
+  personalizationMetrics: {
+    relevanceScore: number;
+    difficultyAlignment: number;
+    timeOptimization: number;
+    engagementPrediction: number;
+    successProbability: number;
+  };
+  adaptationSchedule: Array<{
+    checkpointNode: string;
+    evaluationCriteria: string[];
+    possibleAdjustments: string[];
+    triggerConditions: string[];
+  }>;
+  alternativePaths: Array<{
+    pathId: string;
+    scenario: string;
+    nodes: string[];
+    reasoning: string;
+  }>;
 }
 
 @Injectable()
@@ -403,5 +496,106 @@ export class LearningPathService {
           masteredSkills.some(mastered => skill.toLowerCase().includes(mastered.toLowerCase())),
         ),
     );
+  }
+
+  async generatePersonalizedPath(userId: string, _options: PersonalizedPathOptions): Promise<void> {
+    this.logger.log(`Generating personalized learning path for user: ${userId}`);
+
+    // try {
+    //   // Step 1: Gather comprehensive user data
+    //   const userProfile = await this.buildComprehensiveUserProfile(userId);
+
+    //   // Step 2: Analyze student performance using Python AI service
+    //   const performanceAnalysis = await this.analyzeUserPerformanceData(userId);
+
+    //   // Step 3: Get available content based on goals and constraints
+    //   const availableContent = await this.getRelevantContentForGoals(
+    //     options.learningGoals,
+    //     userProfile,
+    //     options.constraints,
+    //   );
+
+    //   // Step 4: Use AI to optimize content selection and sequencing
+    //   const aiOptimizedPath = await this.generateAIOptimizedSequence(
+    //     userId,
+    //     availableContent,
+    //     userProfile,
+    //     performanceAnalysis,
+    //     options,
+    //   );
+
+    //   // Step 5: Build personalized learning path nodes
+    //   const personalizedNodes = await this.createPersonalizedPathNodes(
+    //     aiOptimizedPath,
+    //     userProfile,
+    //     performanceAnalysis,
+    //     options,
+    //   );
+
+    //   // Step 6: Calculate personalization metrics
+    //   const personalizationMetrics = this.calculatePersonalizationMetrics(
+    //     personalizedNodes,
+    //     userProfile,
+    //     performanceAnalysis,
+    //   );
+
+    //   // Step 7: Generate adaptation schedule
+    //   const adaptationSchedule = this.generateAdaptationSchedule(
+    //     personalizedNodes,
+    //     userProfile,
+    //     options,
+    //   );
+
+    //   // Step 8: Create alternative paths for different scenarios
+    //   const alternativePaths = await this.generateAlternativePaths(
+    //     userId,
+    //     personalizedNodes,
+    //     userProfile,
+    //     options,
+    //   );
+
+    //   const totalDuration = personalizedNodes.reduce(
+    //     (sum, node) => sum + node.estimatedDuration,
+    //     0,
+    //   );
+
+    //   const estimatedCompletionDate = this.calculatePersonalizedCompletionDate(
+    //     totalDuration,
+    //     options.timeConstraints,
+    //     userProfile,
+    //   );
+
+    //   return {
+    //     userId,
+    //     nodes: personalizedNodes,
+    //     totalDuration,
+    //     totalNodes: personalizedNodes.length,
+    //     estimatedCompletionDate,
+    //     pathMetadata: {
+    //       goals: options.learningGoals,
+    //       focusAreas: this.extractPersonalizedFocusAreas(personalizedNodes, performanceAnalysis),
+    //       adaptationRules: this.generatePersonalizedAdaptationRules(
+    //         userProfile,
+    //         performanceAnalysis,
+    //       ),
+    //       personalizationFactors: {
+    //         learningStyle: userProfile.learningStyle,
+    //         preferredPace: userProfile.pace,
+    //         skillLevel: userProfile.overallSkillLevel,
+    //         timeConstraints: options.timeConstraints,
+    //         motivationalFactors:
+    //           performanceAnalysis.motivationalFactors?.motivationalTriggers || [],
+    //       },
+    //     },
+    //     personalizationMetrics,
+    //     adaptationSchedule,
+    //     alternativePaths,
+    //   };
+    // } catch (error) {
+    //   this.logger.error(`Failed to generate personalized path: ${error.message}`);
+
+    //   // Fallback to basic path generation
+    //   return this.generateFallbackPersonalizedPath(userId, options);
+    // }
   }
 }

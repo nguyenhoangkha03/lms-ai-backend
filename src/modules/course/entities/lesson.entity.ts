@@ -8,6 +8,8 @@ import { FileUpload } from './file-upload.entity';
 import { ContentVersion } from './content-version.entity';
 import { ContentModerationStatus, ContentStatus } from '@/common/enums/content.enums';
 import { ModerationFlag } from '../services/content-moderation.service';
+import { TutoringSession } from '@/modules/intelligent-tutoring/entities/tutoring-session.entity';
+import { AdaptiveContent } from '@/modules/intelligent-tutoring/entities/adaptive-content.entity';
 
 @Entity('lessons')
 @Index(['courseId'])
@@ -378,6 +380,14 @@ export class Lesson extends BaseEntity {
 
   @OneToMany(() => ContentVersion, version => version.lesson)
   versions?: ContentVersion[];
+
+  @OneToMany(() => TutoringSession, session => session.lesson)
+  tutoringSessions: TutoringSession[];
+
+  @OneToMany(() => AdaptiveContent, content => content.lesson, {
+    cascade: true,
+  })
+  adaptiveContent: AdaptiveContent[];
 
   // Virtual properties
   get isPublished(): boolean {
