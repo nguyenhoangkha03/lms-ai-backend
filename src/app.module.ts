@@ -26,6 +26,7 @@ import { ForumModule } from './modules/forum/forum.module';
 import { CollaborativeLearningModule } from './modules/collaborative-learning/collaborative-learning.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { IntelligentTutoringModule } from './modules/intelligent-tutoring/intelligent-tutoring.module';
+import { ContentAnalysisModule } from './modules/content-analysis/content-analysis.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -78,6 +79,7 @@ import { IntelligentTutoringModule } from './modules/intelligent-tutoring/intell
     CollaborativeLearningModule,
     RealtimeModule,
     IntelligentTutoringModule,
+    ContentAnalysisModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
