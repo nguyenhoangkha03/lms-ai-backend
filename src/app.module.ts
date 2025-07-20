@@ -28,6 +28,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
 import { IntelligentTutoringModule } from './modules/intelligent-tutoring/intelligent-tutoring.module';
 import { ContentAnalysisModule } from './modules/content-analysis/content-analysis.module';
 import { PredictiveAnalyticsModule } from './modules/predictive-analytics/predictive-analytics.module';
+import { CachingModule } from './modules/caching/caching.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -82,6 +83,7 @@ import { PredictiveAnalyticsModule } from './modules/predictive-analytics/predic
     IntelligentTutoringModule,
     ContentAnalysisModule,
     PredictiveAnalyticsModule,
+    CachingModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
