@@ -11,6 +11,7 @@ export enum RecommendationType {
   TUTOR_SESSION = 'tutor_session',
   BREAK_SUGGESTION = 'break_suggestion',
   DIFFICULTY_ADJUSTMENT = 'difficulty_adjustment',
+  PREDICTION_DROPOUT_RISK = 'prediction_dropout_risk',
 }
 
 export enum RecommendationStatus {

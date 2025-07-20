@@ -61,7 +61,6 @@ import { PredictiveModelingService } from './services/predictive-modeling.servic
     AnalyticsProcessingService,
     ComparativeAnalyticsService,
     PredictiveModelingService,
-    // AnalyticsProcessor,
   ],
   exports: [
     TypeOrmModule,

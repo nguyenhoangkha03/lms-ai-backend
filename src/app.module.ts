@@ -27,6 +27,7 @@ import { CollaborativeLearningModule } from './modules/collaborative-learning/co
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { IntelligentTutoringModule } from './modules/intelligent-tutoring/intelligent-tutoring.module';
 import { ContentAnalysisModule } from './modules/content-analysis/content-analysis.module';
+import { PredictiveAnalyticsModule } from './modules/predictive-analytics/predictive-analytics.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -80,6 +81,7 @@ import { ContentAnalysisModule } from './modules/content-analysis/content-analys
     RealtimeModule,
     IntelligentTutoringModule,
     ContentAnalysisModule,
+    PredictiveAnalyticsModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
