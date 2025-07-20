@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/config/configuration';
+import performanceConfig from '@/config/performance.config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { WinstonModule } from '@/logger/winston.module';
 import { DatabaseModule } from './database/database.module';
@@ -29,10 +30,14 @@ import { IntelligentTutoringModule } from './modules/intelligent-tutoring/intell
 import { ContentAnalysisModule } from './modules/content-analysis/content-analysis.module';
 import { PredictiveAnalyticsModule } from './modules/predictive-analytics/predictive-analytics.module';
 import { CachingModule } from './modules/caching/caching.module';
+import { PerformanceModule } from './modules/performance/performance.module';
+import { PerformanceMonitoringMiddleware } from './modules/performance/middleware/performance-monitoring.middleware';
+import { CompressionMiddleware } from './common/middleware/compression.middleware';
+import { ResponseOptimizationMiddleware } from './common/middleware/response-optimization.middleware';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      load: [configuration], // truyền vào hàm trả về đối tượng, không truyền thẳng đối tượng vì sẽ load trước
+      load: [configuration, performanceConfig], // truyền vào hàm trả về đối tượng, không truyền thẳng đối tượng vì sẽ load trước
       isGlobal: true, // các module khác sử dụng k cần import
       cache: true, //sẽ chỉ chạy hàm configuration và đọc các tệp .env một lần duy nhất khi ứng dụng khởi động. Kết quả sẽ được lưu vào bộ nhớ đệm (cache).
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
@@ -84,8 +89,16 @@ import { CachingModule } from './modules/caching/caching.module';
     ContentAnalysisModule,
     PredictiveAnalyticsModule,
     CachingModule,
+    PerformanceModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
 })
-export class AppModule {}
+// export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(PerformanceMonitoringMiddleware, CompressionMiddleware, ResponseOptimizationMiddleware)
+      .forRoutes('*');
+  }
+}

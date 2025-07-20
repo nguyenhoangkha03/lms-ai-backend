@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -43,6 +43,7 @@ import { CACHE_OPTIMIZATION_QUEUE, CACHE_WARMUP_QUEUE } from './queues/queue.con
 // Other module
 import { AuthModule } from '../auth/auth.module';
 
+@Global()
 @Module({
   imports: [
     ConfigModule,

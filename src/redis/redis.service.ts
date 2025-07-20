@@ -212,4 +212,109 @@ export class RedisService {
 
     return current > limit;
   }
+
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    try {
+      return await this.redis.sadd(key, ...members);
+    } catch (error) {
+      this.logger.error(`Redis SADD error for key ${key}:`, error.message);
+      return 0;
+    }
+  }
+
+  multi() {
+    return this.redis.multi();
+  }
+
+  async eval(script: string, numKeys: number, ...args: (string | number)[]): Promise<any> {
+    try {
+      return await this.redis.eval(script, numKeys, ...args);
+    } catch (error) {
+      this.logger.error('Redis EVAL error:', error.message);
+      throw error;
+    }
+  }
+
+  async zrem(key: string, ...members: string[]): Promise<number> {
+    try {
+      return await this.redis.zrem(key, ...members);
+    } catch (error) {
+      this.logger.error(`Redis ZREM error for key ${key}:`, error.message);
+      return 0;
+    }
+  }
+
+  async hsetMany(key: string, data: Record<string, string | number>): Promise<void> {
+    try {
+      const entries = Object.entries(data).flat(); // Flatten to [key1, val1, key2, val2]
+      await this.redis.hset(key, ...entries);
+    } catch (error) {
+      this.logger.error(`Redis HSET error for key ${key}:`, error.message);
+      throw error;
+    }
+  }
+
+  async zadd(key: string, score: number, member: string): Promise<number> {
+    try {
+      return await this.redis.zadd(key, score, member);
+    } catch (error) {
+      this.logger.error(`Redis ZADD error for key ${key}:`, error.message);
+      return 0;
+    }
+  }
+
+  async zremrangebyscore(key: string, min: number, max: number): Promise<number> {
+    try {
+      return await this.redis.zremrangebyscore(key, min, max);
+    } catch (error) {
+      this.logger.error(`Redis ZREMRANGEBYSCORE error for key ${key}:`, error.message);
+      return 0;
+    }
+  }
+
+  async zcard(key: string): Promise<number> {
+    try {
+      return await this.redis.zcard(key);
+    } catch (error) {
+      this.logger.error(`Redis ZCARD error for key ${key}:`, error.message);
+      return 0;
+    }
+  }
+
+  async zcount(key: string, min: number, max: number): Promise<number> {
+    try {
+      return await this.redis.zcount(key, min, max);
+    } catch (error) {
+      this.logger.error(`Redis ZCOUNT error for key ${key}:`, error.message);
+      return 0;
+    }
+  }
+
+  async sismember(key: string, member: string): Promise<boolean> {
+    try {
+      const result = await this.redis.sismember(key, member);
+      return result === 1;
+    } catch (error) {
+      this.logger.error(`Redis SISMEMBER error for key ${key}:`, error.message);
+      return false;
+    }
+  }
+
+  async hincrby(key: string, field: string, increment: number): Promise<number> {
+    try {
+      return await this.redis.hincrby(key, field, increment);
+    } catch (error) {
+      this.logger.error(`Redis HINCRBY error for key ${key}, field ${field}:`, error.message);
+      return 0;
+    }
+  }
+
+  async zrangebyscore(key: string, min: number, max: number): Promise<string[]> {
+    try {
+      return await this.redis.zrangebyscore(key, min, max);
+    } catch (error) {
+      this.logger.error(`Redis ZRANGEBYSCORE error for key ${key}:`, error.message);
+      return [];
+    }
+  }
 }
