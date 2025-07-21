@@ -317,4 +317,12 @@ export class RedisService {
       return [];
     }
   }
+
+  async ltrim(key: string, start: number, end: number): Promise<void> {
+    try {
+      await this.redis.ltrim(key, start, end);
+    } catch (error) {
+      this.logger.error(`Redis LTRIM error for key ${key}:`, error.message);
+    }
+  }
 }

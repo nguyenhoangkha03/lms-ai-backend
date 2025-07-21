@@ -34,6 +34,7 @@ import { PerformanceModule } from './modules/performance/performance.module';
 import { PerformanceMonitoringMiddleware } from './modules/performance/middleware/performance-monitoring.middleware';
 import { CompressionMiddleware } from './common/middleware/compression.middleware';
 import { ResponseOptimizationMiddleware } from './common/middleware/response-optimization.middleware';
+import { SecurityModule } from './modules/security/security.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -90,6 +91,7 @@ import { ResponseOptimizationMiddleware } from './common/middleware/response-opt
     PredictiveAnalyticsModule,
     CachingModule,
     PerformanceModule,
+    SecurityModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],
