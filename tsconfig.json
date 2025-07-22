@@ -23,6 +23,7 @@
       "@/config/*": ["src/config/*"],
       "@/modules/*": ["src/modules/*"],
       "@/database/*": ["src/database/*"]
-    },
-  }
+    }
+  },
+  "include": ["src/**/*"]
 }

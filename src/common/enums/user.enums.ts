@@ -14,6 +14,7 @@ export enum UserRole {
   STUDENT = 'student',
   GUEST = 'guest',
   VIEWER = 'viewer',
+  COMPLIANCE_OFFICER = 'compliance_officer',
 }
 
 export enum UserStatus {

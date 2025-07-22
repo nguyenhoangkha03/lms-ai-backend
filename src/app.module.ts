@@ -4,6 +4,8 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/config/configuration';
 import performanceConfig from '@/config/performance.config';
+import privacyConfig from '@/config/privacy.config';
+import securityConfig from '@/config/security.config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { WinstonModule } from '@/logger/winston.module';
 import { DatabaseModule } from './database/database.module';
@@ -35,14 +37,18 @@ import { PerformanceMonitoringMiddleware } from './modules/performance/middlewar
 import { CompressionMiddleware } from './common/middleware/compression.middleware';
 import { ResponseOptimizationMiddleware } from './common/middleware/response-optimization.middleware';
 import { SecurityModule } from './modules/security/security.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      load: [configuration, performanceConfig], // truyền vào hàm trả về đối tượng, không truyền thẳng đối tượng vì sẽ load trước
+      load: [configuration, performanceConfig, privacyConfig, securityConfig], // truyền vào hàm trả về đối tượng, không truyền thẳng đối tượng vì sẽ load trước
       isGlobal: true, // các module khác sử dụng k cần import
       cache: true, //sẽ chỉ chạy hàm configuration và đọc các tệp .env một lần duy nhất khi ứng dụng khởi động. Kết quả sẽ được lưu vào bộ nhớ đệm (cache).
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
     }),
+
+    ScheduleModule.forRoot(),
 
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
@@ -92,6 +98,7 @@ import { SecurityModule } from './modules/security/security.module';
     CachingModule,
     PerformanceModule,
     SecurityModule,
+    PrivacyModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],

@@ -8,6 +8,7 @@ import {
   JoinTable,
   BeforeInsert,
   BeforeUpdate,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { BaseEntity } from '@/common/entities/base.entity';
@@ -21,12 +22,18 @@ import { Permission } from './permission.entity';
 import { NotificationPreference } from '@/modules/notification/entities/notification-preference.entity';
 import { TutoringSession } from '@/modules/intelligent-tutoring/entities/tutoring-session.entity';
 import { LearningStyleProfile } from '@/modules/intelligent-tutoring/entities/learning-style-profile.entity';
+import { DataProtectionRequest } from '@/modules/privacy/entities/data-protection-request.entity';
+import { ConsentRecord } from '@/modules/privacy/entities/consent-record.entity';
+import { PrivacySettings } from '@/modules/privacy/entities/privacy-settings.entity';
 
 @Entity('users')
 @Index(['userType', 'status'])
 @Index(['createdAt'])
 @Index(['lastLoginAt'])
 export class User extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
   @Column({
     type: 'varchar',
     length: 255,
@@ -295,6 +302,15 @@ export class User extends BaseEntity {
     cascade: true,
   })
   learningStyleProfile: LearningStyleProfile;
+
+  @OneToMany(() => DataProtectionRequest, request => request.user)
+  dataProtectionRequests: DataProtectionRequest[];
+
+  @OneToMany(() => ConsentRecord, consent => consent.user)
+  consentRecords: ConsentRecord[];
+
+  @OneToOne(() => PrivacySettings, settings => settings.user)
+  privacySettings: PrivacySettings;
 
   // Virtual properties
   get fullName(): string {

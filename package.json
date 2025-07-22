@@ -69,6 +69,7 @@
     "@nestjs/websockets": "^10.4.19",
     "@sendgrid/mail": "^8.1.5",
     "@types/cache-manager": "^5.0.0",
+    "archiver": "^7.0.1",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
