@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import { AllExceptionsFilter } from '@/common/filters/http-exception.filter';
@@ -12,10 +12,23 @@ import { WinstonService } from '@/logger/winston.service';
 import { SSLConfig } from '@/config/ssl.config';
 import * as cookieParser from 'cookie-parser';
 import { SanitizeInterceptor } from '@/common/interceptors/sanitize.interceptor';
+// Add new
+import cluster from 'cluster';
+import os from 'os';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
   const httpsOptions = SSLConfig.getHttpsOptions();
-  const app = await NestFactory.create(AppModule, { httpsOptions });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    httpsOptions,
+    bufferLogs: true,
+  });
+  //   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+  //     httpsOptions,
+  //     logger: WinstonModule.createLogger(),
+  //     bufferLogs: true,
+  //   });
 
   const logger = app.get(WinstonService);
   logger.setContext('Bootstrap');
@@ -31,45 +44,58 @@ async function bootstrap() {
   const securityCompression = configService.get<boolean>('security.compression');
   const cookieSecret = configService.get<string>('cookie.secret');
 
-  // Security middleware
   if (securityHelmet) {
     app.use(
       helmet({
-        // Này trình duyệt, khi hiển thị trang web của tôi, anh chỉ được phép tải và thực thi tài nguyên
-        // từ những nguồn mà tôi đã phê duyệt trong danh sách này.
-        // Bất kỳ thứ gì không có trong danh sách, hãy chặn lại và báo cáo cho tôi."
         contentSecurityPolicy: {
-          // Các Chỉ Thị Cụ Thể
           directives: {
-            defaultSrc: ["'self'"], // chỉ cho phép tài nguyên từ chính domain của trang web này
-            scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline Cho phép thực thi mã JavaScript hoặc CSS được viết trực tiếp trong file HTML
-            styleSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline Cho phép thực thi mã JavaScript hoặc CSS được viết trực tiếp trong file HTML
-            imgSrc: ["'self'", 'data:', 'https:'], // Cho phép tải tài nguyên từ data: URI, Cho phép tải tài nguyên từ bất kỳ domain nào sử dụng giao thức HTTPS.
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
             connectSrc: ["'self'"],
             fontSrc: ["'self'"],
-            objectSrc: ["'none'"], // Cấm hoàn toàn việc nhúng các plugin cũ và không an toàn như Flash, Silverlight.
+            objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
-            frameSrc: ["'none'"], // Cấm hoàn toàn trang web của bạn bị nhúng vào trong các thẻ <iframe> hoặc <frame> trên các trang khác
+            frameSrc: ["'none'"],
           },
         },
-        crossOriginEmbedderPolicy: false, // Khi bật (true), nó yêu cầu tất cả các tài nguyên từ domain khác phải có một cơ chế cho phép đặc biệt (gọi là COEP) mới được nhúng vào trang của bạn.
+        crossOriginEmbedderPolicy: false,
+        hsts: {
+          maxAge: 31536000,
+          includeSubDomains: true,
+          preload: true,
+        },
       }),
     );
   }
 
   // Dùng thư viện compression (Express middleware) để nén dữ liệu HTTP response (thường là gzip hoặc Brotli).
   if (securityCompression) {
-    app.use(compression());
+    app.use(
+      compression({
+        filter: (req, res) => {
+          if (req.headers['x-no-compression']) {
+            return false;
+          }
+          return compression.filter(req, res);
+        },
+        level: 6,
+        threshold: 1024,
+      }),
+    );
   }
 
-  // Cookie parser middleware
+  app.set('trust proxy', 1);
+
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/static/',
+  });
+
   app.use(cookieParser(cookieSecret));
 
-  // CORS configuration
   app.enableCors({
-    // origin domain của người đang muốn nhập cảnh (ví dụ: https://my-frontend.com). Giá trị này có thể là undefined!
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
 
       if (corsOrigins!.includes('*') || corsOrigins!.includes(origin)) {
@@ -78,30 +104,27 @@ async function bootstrap() {
 
       return callback(new Error('Not allowed by CORS'), false);
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Việc bao gồm 'OPTIONS' là bắt buộc để các "cuộc gọi thăm dò" (preflight requests) có thể hoạt động.
-    // "du khách" gửi hành lý (request), họ được phép đính kèm những loại "giấy tờ" (header) nào.
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
-      'Content-Type', // Cần thiết khi frontend gửi dữ liệu JSON (application/json)
-      'Authorization', // Cực kỳ quan trọng. Nếu không có header này, frontend sẽ không thể gửi JWT token hay bất kỳ thông tin xác thực nào khác
-      'X-Requested-With', // Dùng để chỉ ra request này được gửi bởi JavaScript (AJAX) chứ không phải form truyền thống.
-      'X-Access-Token', // Header tùy chỉnh (custom) bạn tạo ra để gửi token hoặc dữ liệu xác thực
-      'Cache-Control', // Điều khiển cách trình duyệt cache response (hoặc yêu cầu server phản hồi dữ liệu mới)
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-Access-Token',
+      'Cache-Control',
     ],
-    credentials: true, // "Credentials" ở đây có thể là cookie hoặc HTTP authentication headers (như Authorization).
-    optionsSuccessStatus: 200, // Tùy chọn này liên quan đến "cuộc gọi thăm dò" (preflight request) sử dụng phương thức OPTIONS.
+    credentials: true,
+    optionsSuccessStatus: 200,
   });
 
-  // Global prefix
   app.setGlobalPrefix(apiPrefix!);
 
-  // Global pipes
   app.useGlobalPipes(
     new ValidationPipe({
-      transform: true, //  (ví dụ chuỗi số "123" thành số 123), hãy tự động làm điều đó.
-      whitelist: true, // loại bỏ những thuộc tính không có trong dto
-      forbidNonWhitelisted: true, // Nếu phát hiện có thành phần thừa, không chỉ loại bỏ mà hãy từ chối toàn bộ lô hàng ngay lập tức (báo lỗi)
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
       transformOptions: {
-        enableImplicitConversion: true, // Nếu anh thấy một giá trị là chuỗi, nhưng trong bản thiết kế (type hint ở controller) nó được khai báo là number hoặc boolean, hãy tự động và ngầm định chuyển đổi nó sang kiểu dữ liệu đúng.
+        enableImplicitConversion: true,
       },
       exceptionFactory: errors => {
         const errorMessages = {};
@@ -117,10 +140,8 @@ async function bootstrap() {
     }),
   );
 
-  // Global filters
   app.useGlobalFilters(new ValidationExceptionFilter(), new AllExceptionsFilter());
 
-  // Global interceptors
   app.useGlobalInterceptors(new LoggingInterceptor(), new SanitizeInterceptor());
 
   // Global guards (JWT auth by default, use @Public() to skip)
@@ -169,23 +190,7 @@ async function bootstrap() {
     );
   }
 
-  // Graceful shutdown
-  // Khi bạn nhấn Ctrl + C trong terminal
-  process.on('SIGTERM', async () => {
-    logger.log('SIGTERM received, shutting down gracefully');
-    await app.close();
-    process.exit(0);
-  });
-
-  // Khi process bị kill (thường từ hệ điều hành, Docker, hoặc deploy system như Kubernetes)
-  process.on('SIGINT', async () => {
-    logger.log('SIGINT received, shutting down gracefully');
-    await app.close();
-    process.exit(0);
-  });
-
   // Handle uncaught exceptions
-  // Lỗi chưa try/catch
   process.on('uncaughtException', error => {
     logger.error('Uncaught Exception:' + error.stack);
     process.exit(1);
@@ -197,10 +202,18 @@ async function bootstrap() {
     process.exit(1);
   });
 
-  //   await app.listen(process.env.PORT ?? 3000);
-  const server = await app.listen(port!);
+  //   const server = await app.listen(port!);
+  //   server.setTimeout(30000);
+  const server = await app.listen(port!, '0.0.0.0');
+  server.keepAliveTimeout = configService.get<number>(
+    'production.performance.keepAliveTimeout',
+    65000,
+  );
+  server.headersTimeout = configService.get<number>('production.performance.headersTimeout', 66000);
 
-  server.setTimeout(30000); // 30 seconds
+  // Graceful shutdown
+  process.on('SIGINT', () => gracefulShutdown(app, 'SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown(app, 'SIGTERM'));
 
   const protocol = httpsOptions ? 'https' : 'http';
   logger.log(`🚀 Application is running on: ${protocol}://localhost:${port}/${apiPrefix}`);
@@ -208,7 +221,55 @@ async function bootstrap() {
   logger.log(`🛡️ Security middleware: Helmet ✅, CORS ✅, Rate Limiting ✅`);
 }
 
-bootstrap().catch(err => {
-  console.error('Error starting application:', err);
-  process.exit(1);
-});
+async function gracefulShutdown(app: NestExpressApplication, signal: string) {
+  const logger = new Logger('GracefulShutdown');
+  logger.log(`Received ${signal}. Starting graceful shutdown...`);
+
+  const configService = app.get(ConfigService);
+  const shutdownTimeout = configService.get<number>('production.gracefulShutdown.timeout', 15000);
+
+  try {
+    await app.close();
+    logger.log('Application closed successfully');
+  } catch (error) {
+    logger.error('Error during graceful shutdown:', error);
+  }
+
+  setTimeout(() => {
+    logger.error('Graceful shutdown timeout reached. Forcing exit...');
+    process.exit(1);
+  }, shutdownTimeout);
+}
+
+function startInClusterMode() {
+  const configService = new ConfigService();
+  const numWorkers = configService.get<number>('production.cluster.workers') || os.cpus().length;
+
+  if (cluster.isPrimary) {
+    console.log(`Master process ${process.pid} is running`);
+
+    for (let i = 0; i < numWorkers; i++) {
+      cluster.fork();
+    }
+
+    cluster.on('exit', (worker, code, signal) => {
+      console.log(`Worker ${worker.process.pid} died with code ${code} and signal ${signal}`);
+      console.log('Starting a new worker');
+      cluster.fork();
+    });
+  } else {
+    bootstrap();
+    console.log(`Worker process ${process.pid} started`);
+  }
+}
+
+if (process.env.CLUSTER_ENABLED === 'true') {
+  startInClusterMode();
+} else {
+  bootstrap();
+}
+
+// bootstrap().catch(err => {
+//   console.error('Error starting application:', err);
+//   process.exit(1);
+// });

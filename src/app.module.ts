@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -33,9 +33,6 @@ import { ContentAnalysisModule } from './modules/content-analysis/content-analys
 import { PredictiveAnalyticsModule } from './modules/predictive-analytics/predictive-analytics.module';
 import { CachingModule } from './modules/caching/caching.module';
 import { PerformanceModule } from './modules/performance/performance.module';
-import { PerformanceMonitoringMiddleware } from './modules/performance/middleware/performance-monitoring.middleware';
-import { CompressionMiddleware } from './common/middleware/compression.middleware';
-import { ResponseOptimizationMiddleware } from './common/middleware/response-optimization.middleware';
 import { SecurityModule } from './modules/security/security.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -103,11 +100,11 @@ import { ScheduleModule } from '@nestjs/schedule';
   controllers: [AppController, DatabaseController],
   providers: [AppService],
 })
-// export class AppModule {}
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(PerformanceMonitoringMiddleware, CompressionMiddleware, ResponseOptimizationMiddleware)
-      .forRoutes('*');
-  }
-}
+export class AppModule {}
+// export class AppModule implements NestModule {
+//   configure(consumer: MiddlewareConsumer) {
+//     consumer
+//       .apply(PerformanceMonitoringMiddleware, CompressionMiddleware, ResponseOptimizationMiddleware)
+//       .forRoutes('*');
+//   }
+// }

@@ -149,11 +149,13 @@ export class CompressionMiddleware implements NestMiddleware {
       const compressed = this.compressedCache.get(cacheKey);
 
       // Set appropriate headers
-      res.setHeader('Content-Encoding', this.selectBestAlgorithm(req));
-      res.setHeader('Content-Length', compressed!.length);
-      res.setHeader('X-Compression-Cache', 'HIT');
+      if (!res.headersSent) {
+        res.setHeader('Content-Encoding', this.selectBestAlgorithm(req));
+        res.setHeader('Content-Length', compressed!.length);
+        res.setHeader('X-Compression-Cache', 'HIT');
+        res.end(compressed);
+      }
 
-      res.end(compressed);
       return;
     }
 
