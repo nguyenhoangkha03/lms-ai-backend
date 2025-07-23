@@ -1,5 +1,8 @@
 FROM node:18-alpine
 
+# Install development tools
+RUN apk add --no-cache bash git
+
 WORKDIR /app
 
 # Install dependencies
@@ -9,8 +12,11 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Expose ports
+# Create volume for source code changes
+VOLUME ["/app/src"]
+
+# Expose ports (app + debugger)
 EXPOSE 3000 9229
 
-# Start development server
-CMD ["npm", "run", "start:dev"]
+# Development command with debugging
+CMD ["npm", "run", "start:debug"]

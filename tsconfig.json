@@ -25,5 +25,8 @@
       "@/database/*": ["src/database/*"]
     }
   },
-  "include": ["src/**/*", "test", "test/global.d.ts", "jest.config.ts"]
+  "include": [
+    "src/**/*", "test", "test/global.d.ts", "jest.config.ts", "jest.config.ci.js",
+    "performance-tests/api-load-test.js"
+  ]
 }

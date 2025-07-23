@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lms-ai-backend
+  namespace: staging
+  labels:
+    app: lms-ai-backend
+    environment: staging
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: lms-ai-backend
+  template:
+    metadata:
+      labels:
+        app: lms-ai-backend
+        version: ${GITHUB_SHA}
+    spec:
+      containers:
+        - name: lms-ai-backend
+          image: ${IMAGE_TAG}
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: 'staging'
+            - name: DATABASE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: host
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: password
+          resources:
+            requests:
+              memory: '256Mi'
+              cpu: '250m'
+            limits:
+              memory: '512Mi'
+              cpu: '500m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
