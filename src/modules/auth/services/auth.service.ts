@@ -70,7 +70,6 @@ export class AuthService {
         return null;
       }
 
-      // Update last login
       await this.userService.updateLastLogin(user.id);
 
       const { passwordHash: _passwordHash, ...result } = user;
@@ -87,18 +86,15 @@ export class AuthService {
 
     this.logger.log(`Login attempt for email: ${email}`);
 
-    // Check account lockout
     await this.checkAccountLockout(email);
 
     try {
-      // Find user
       const user = await this.userService.findByEmail(email);
       if (!user) {
         await this.recordFailedLoginAttempt(email, deviceInfo, 'User not found');
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      // Check password
       const isPasswordValid = await this.passwordService.validatePassword(
         password,
         user.passwordHash,
@@ -108,7 +104,6 @@ export class AuthService {
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      // Check user status
       if (user.status === 'suspended') {
         await this.recordFailedLoginAttempt(email, deviceInfo, 'Account suspended');
         throw new ForbiddenException('Account is suspended');
@@ -119,9 +114,7 @@ export class AuthService {
         throw new ForbiddenException('Account is inactive');
       }
 
-      // Check if 2FA is required
       if (user.twoFactorEnabled) {
-        // Generate temporary token for 2FA
         const tempToken = await this.generate2FAToken(user.id);
 
         await this.auditLogService.createAuditLog({
@@ -147,11 +140,9 @@ export class AuthService {
         };
       }
 
-      // Successful login
       await this.recordSuccessfulLoginAttempt(email, deviceInfo);
       await this.clearLoginAttempts(email);
 
-      // Create session
       const sessionId = await this.sessionService.createSession(
         user.id,
         user.userType,
@@ -165,14 +156,10 @@ export class AuthService {
         'local',
       );
 
-      // Generate tokens
       const tokens = await this.generateTokens(user, rememberMe);
       await this.userService.storeRefreshToken(user.id, tokens.refreshToken);
 
-      // Update last login
       await this.userService.updateLastLogin(user.id, deviceInfo.ip);
-
-      // Log successful login
       await this.auditLogService.createAuditLog({
         userId: user.id,
         action: AuditAction.LOGIN,
@@ -205,21 +192,16 @@ export class AuthService {
     }
   }
 
-  /**
-   * Complete 2FA login
-   */
   async complete2FALogin(
     tempToken: string,
     twoFactorCode: string,
     deviceInfo: DeviceInfo,
   ): Promise<LoginResponse> {
-    // Verify temp token
     const tempTokenData = await this.verify2FAToken(tempToken);
     if (!tempTokenData) {
       throw new UnauthorizedException('Invalid or expired temporary token');
     }
 
-    // Verify 2FA code
     const user = await this.userService.findById(tempTokenData.userId);
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -230,7 +212,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid 2FA code');
     }
 
-    // Create session
     const sessionId = await this.sessionService.createSession(
       user.id,
       user.userType,
@@ -244,14 +225,10 @@ export class AuthService {
       '2fa',
     );
 
-    // Generate tokens
     const tokens = await this.generateTokens(user);
     await this.userService.storeRefreshToken(user.id, tokens.refreshToken);
 
-    // Update last login
     await this.userService.updateLastLogin(user.id, deviceInfo.ip);
-
-    // Log successful 2FA login
     await this.auditLogService.createAuditLog({
       userId: user.id,
       action: AuditAction.LOGIN_2FA_COMPLETED,
@@ -259,7 +236,6 @@ export class AuthService {
       metadata: { deviceInfo, sessionId },
     });
 
-    // Clear temp token
     await this.clear2FAToken(tempToken);
 
     return {
@@ -280,7 +256,6 @@ export class AuthService {
   async register(registerDto: RegisterDto, deviceInfo: DeviceInfo): Promise<LoginResponse> {
     this.logger.log(`Registration attempt for email: ${registerDto.email}`);
 
-    // Check if user already exists
     const existingUser = await this.userService.findByEmail(registerDto.email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
@@ -304,10 +279,8 @@ export class AuthService {
       });
     }
 
-    // Hash password
     const passwordHash = await this.passwordService.hashPassword(registerDto.password);
 
-    // Create user
     const userData = {
       email: registerDto.email,
       username: 'temp',
@@ -315,22 +288,18 @@ export class AuthService {
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
       userType: registerDto.userType || UserType.STUDENT,
-      status: 'pending', // Require email verification
+      status: 'pending',
       emailVerified: false,
     };
 
     const user = await this.userService.create(userData);
 
-    // Generate email verification token
     const verificationToken = await this.emailVerificationService.generateEmailVerificationToken(
       user.id,
       user.email,
     );
-
-    // Send verification email
     await this.sendVerificationEmail(user.email, verificationToken);
 
-    // Log registration
     await this.auditLogService.createAuditLog({
       userId: user.id,
       action: AuditAction.USER_REGISTERED,
@@ -343,7 +312,6 @@ export class AuthService {
       },
     });
 
-    // Create session for the new user
     const sessionId = await this.sessionService.createSession(
       user.id,
       user.userType,
@@ -389,16 +357,13 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      // Verify refresh token exists in database
       const isValidRefreshToken = await this.userService.verifyRefreshToken(user.id, refreshToken);
       if (!isValidRefreshToken) {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      // Generate new tokens
       const tokens = await this.generateTokens(user);
 
-      // Store new refresh token and remove old one
       await this.userService.rotateRefreshToken(user.id, refreshToken, tokens.refreshToken);
 
       return tokens;

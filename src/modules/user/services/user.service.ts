@@ -176,6 +176,20 @@ export class UserService {
     return user;
   }
 
+  async findByEmailWithPassword(email: string): Promise<User | null> {
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.email = :email', { email })
+      .getOne();
+
+    if (!user) {
+      this.logger.warn(`Login attempt for non-existent email: ${email}`);
+    }
+
+    return user;
+  }
+
   async findByUsername(username: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { username },
@@ -205,6 +219,65 @@ export class UserService {
     return permissions.some(
       permission => permission.resource === resource && permission.action === action,
     );
+  }
+
+  async updateProfile(userId: string, updateDto: UpdateUserProfileDto): Promise<UserProfile> {
+    const user = await this.findById(userId, { includeProfiles: true });
+
+    let profile = user.userProfile;
+    if (!profile) {
+      profile = this.userProfileRepository.create({ user });
+    }
+
+    Object.assign(profile, updateDto);
+    const updatedProfile = await this.userProfileRepository.save(profile);
+
+    await this.clearUserCache(userId);
+    return updatedProfile;
+  }
+
+  async deleteUser(userId: string): Promise<User> {
+    const user = await this.findById(userId);
+    await this.userRepository.remove(user);
+    await this.clearUserCache(userId);
+    return user;
+  }
+
+  async getUsersWithFilters(queryDto: UserQueryDto): Promise<PaginatedResult<User>> {
+    const cacheKey = `users:${JSON.stringify(queryDto)}`;
+    const cached = await this.cacheService.get<PaginatedResult<User>>(cacheKey);
+    if (cached) {
+      this.logger.log(`Cache hit for key: ${cacheKey}`);
+      return cached;
+    }
+    this.logger.log(`Cache miss for key: ${cacheKey}`);
+
+    const queryBuilder = this.createUserQueryBuilder(queryDto);
+
+    const skip = (queryDto.page! - 1) * queryDto.limit!;
+    queryBuilder.skip(skip).take(queryDto.limit!);
+
+    if (queryDto.sortBy && queryDto.sortOrder) {
+      queryBuilder.orderBy(`user.${queryDto.sortBy}`, queryDto.sortOrder);
+    }
+
+    const [users, total] = await queryBuilder.getManyAndCount();
+
+    const totalPages = Math.ceil(total / queryDto.limit!);
+    const result: PaginatedResult<User> = {
+      data: users,
+      meta: {
+        page: queryDto.page!,
+        limit: queryDto.limit!,
+        total,
+        totalPages,
+        hasNext: queryDto.page! < totalPages,
+        hasPrev: queryDto.page! > 1,
+      },
+    };
+
+    await this.cacheService.set(cacheKey, result, this.configService.get<number>('CACHE_TTL', 60));
+    return result;
   }
 
   async getUserStats(): Promise<any> {

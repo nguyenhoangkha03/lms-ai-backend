@@ -24,7 +24,6 @@ export class CacheService {
     }
   }
 
-  // Lấy danh sách các keys theo pattern
   async getKeys(pattern: string): Promise<string[]> {
     const store = this.cacheManager.store as any;
     if (typeof store.keys === 'function') {
@@ -60,11 +59,9 @@ export class CacheService {
     }
   }
 
-  // tag:users:	['user:1', 'user:2'], user:1:	{...}
   async setWithTags(key: string, value: any, tags: string[], ttl?: number): Promise<void> {
     await this.set(key, value, ttl);
 
-    // Store tags for cache invalidation
     for (const tag of tags) {
       const tagKey = `tag:${tag}`;
       const taggedKeys = (await this.get<string[]>(tagKey)) || [];
@@ -88,7 +85,6 @@ export class CacheService {
     this.logger.log(`Invalidated cache for tag: ${tag} (${taggedKeys.length} keys)`);
   }
 
-  // User-specific cache methods
   async getUserCache<T>(userId: string, key: string): Promise<T | null> {
     return this.get<T>(`user:${userId}:${key}`);
   }
@@ -101,7 +97,6 @@ export class CacheService {
     await this.invalidateByTag(`user:${userId}`);
   }
 
-  // Course-specific cache methods
   async getCourseCache<T>(courseId: string, key: string): Promise<T | null> {
     return this.get<T>(`course:${courseId}:${key}`);
   }
@@ -139,5 +134,9 @@ export class CacheService {
     for (const key of keys) {
       await this.del(key);
     }
+  }
+
+  async flushAll(): Promise<void> {
+    await this.cacheManager.reset();
   }
 }

@@ -1,0 +1,15 @@
+{
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": ".",
+    "testEnvironment": "node",
+    "testRegex": ".performance-spec.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "setupFilesAfterEnv": ["<rootDir>/test/performance-setup.ts"],
+    "testTimeout": 120000,
+    "maxWorkers": 1,
+    "moduleNameMapping": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+}

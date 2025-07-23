@@ -108,6 +108,47 @@ export class AuditLogService {
     }
   }
 
+  async logAuthEvent(
+    eventType: 'LOGIN_SUCCESS' | 'LOGIN_FAILED' | 'LOGOUT' | 'REGISTER_SUCCESS' | 'REGISTER_FAILED',
+    userId: string | null,
+    context: any,
+  ): Promise<void> {
+    const logData: Partial<CreateAuditLogDto> = {
+      userId: userId || undefined,
+      ipAddress: context.ip,
+      userAgent: context.userAgent,
+      context: {
+        device: context.device,
+        browser: context.browser,
+        os: context.os,
+      },
+    };
+
+    switch (eventType) {
+      case 'LOGIN_SUCCESS':
+        logData.action = AuditAction.LOGIN;
+        logData.status = AuditStatus.SUCCESS;
+        logData.level = AuditLevel.INFO;
+        logData.description = `User successfully logged in.`;
+        break;
+      case 'LOGIN_FAILED':
+        logData.action = AuditAction.LOGIN;
+        logData.status = AuditStatus.FAILED;
+        logData.level = AuditLevel.WARNING;
+        logData.description = `Failed login attempt. Reason: ${context.reason || 'Invalid credentials'}`;
+        logData.errorDetails = context.reason;
+        break;
+      case 'LOGOUT':
+        logData.action = AuditAction.LOGOUT;
+        logData.status = AuditStatus.SUCCESS;
+        logData.level = AuditLevel.INFO;
+        logData.description = 'User successfully logged out.';
+        break;
+    }
+
+    await this.createAuditLog(logData as CreateAuditLogDto);
+  }
+
   async findAuditLogs(query: AuditLogQueryDto): Promise<{
     data: AuditLog[];
     total: number;

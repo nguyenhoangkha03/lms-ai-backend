@@ -25,5 +25,5 @@
       "@/database/*": ["src/database/*"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "test", "test/global.d.ts", "jest.config.ts"]
 }

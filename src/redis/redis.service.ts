@@ -325,4 +325,12 @@ export class RedisService {
       this.logger.error(`Redis LTRIM error for key ${key}:`, error.message);
     }
   }
+
+  async flushAll(): Promise<void> {
+    try {
+      await this.redis.flushall();
+    } catch (error) {
+      this.logger.error('Redis FLUSHALL error:', error.message);
+    }
+  }
 }
