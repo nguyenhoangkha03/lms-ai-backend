@@ -12,7 +12,7 @@ export class DropoutRiskAssessment extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'ID Sinh viên',
   })
   studentId: string;
 
@@ -20,20 +20,20 @@ export class DropoutRiskAssessment extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Course ID',
+    comment: 'ID Khóa học',
   })
   courseId?: string;
 
   @Column({
     type: 'datetime',
-    comment: 'Assessment date',
+    comment: 'Thời điểm mà việc đánh giá rủi ro được thực hiện',
   })
   assessmentDate: Date;
 
   @Column({
     type: 'enum',
     enum: RiskLevel,
-    comment: 'Overall dropout risk level',
+    comment: 'Phân loại mức độ rủi ro (very_low, low, medium, high, very_high)',
   })
   riskLevel: RiskLevel;
 
@@ -41,13 +41,14 @@ export class DropoutRiskAssessment extends BaseEntity {
     type: 'decimal',
     precision: 5,
     scale: 2,
-    comment: 'Risk probability percentage (0-100)',
+    comment: 'Xác suất (tính bằng %) mà sinh viên sẽ bỏ học, theo dự đoán của AI.',
   })
   riskProbability: number;
 
   @Column({
     type: 'json',
-    comment: 'Risk factors analysis',
+    comment:
+      'Trường JSON liệt kê các yếu tố tiêu cực góp phần làm tăng rủi ro (ví dụ: điểm thấp, không đăng nhập thường xuyên, thời gian học giảm).',
   })
   riskFactors: {
     academicPerformance?: {
@@ -90,7 +91,8 @@ export class DropoutRiskAssessment extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Protective factors',
+    comment:
+      'Trường JSON liệt kê các yếu tố tích cực giúp giảm thiểu rủi ro (ví dụ: tương tác nhiều trên diễn đàn, hoàn thành bài tập đúng hạn).',
   })
   protectiveFactors?: {
     strongMotivation?: boolean;
@@ -104,41 +106,42 @@ export class DropoutRiskAssessment extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether immediate intervention is required',
+    comment:
+      'Cờ (true/false) báo hiệu rằng cần có sự can thiệp ngay lập tức từ giảng viên hoặc hệ thống',
   })
   interventionRequired: boolean;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Recommended intervention types',
+    comment: 'Các loại can thiệp được đề xuất',
   })
   recommendedInterventions?: InterventionType[];
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Specific intervention recommendations',
+    comment: 'Khuyến nghị can thiệp cụ thể',
   })
   interventionRecommendations?: string;
 
   @Column({
     type: 'int',
-    comment: 'Priority level for intervention (1-10)',
+    comment: 'Mức độ ưu tiên can thiệp (1-10)',
   })
   interventionPriority: number;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Recommended intervention timeline',
+    comment: 'Dòng thời gian can thiệp được đề xuất',
   })
   interventionDeadline?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Trend analysis data',
+    comment: 'Dữ liệu phân tích xu hướng',
   })
   trendAnalysis?: {
     direction: 'improving' | 'stable' | 'declining';
@@ -150,28 +153,28 @@ export class DropoutRiskAssessment extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether student has been notified',
+    comment: 'Học sinh đã được thông báo chưa',
   })
   studentNotified: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether instructor has been notified',
+    comment: 'Người hướng dẫn đã được thông báo chưa',
   })
   instructorNotified: boolean;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Next assessment date',
+    comment: 'Ngày đánh giá tiếp theo',
   })
   nextAssessmentDate?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional assessment metadata',
+    comment: 'Siêu dữ liệu đánh giá bổ sung',
   })
   metadata?: Record<string, any>;
 

@@ -28,7 +28,6 @@ env:
   DOCKER_BUILDKIT: 1
 
 jobs:
-  # Job 1: Code Quality & Security
   code-quality:
     name: Code Quality & Security Analysis
     runs-on: ubuntu-latest
@@ -78,7 +77,6 @@ jobs:
             eslint-report.json
             prettier-report.json
 
-  # Job 2: Unit & Integration Tests
   test:
     name: Automated Testing Pipeline
     runs-on: ubuntu-latest

@@ -14,14 +14,15 @@ export class ModelPrediction extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to model used',
+    comment: 'Khóa ngoại liên kết tới ml_models.id, cho biết mô hình nào đã được sử dụng.',
   })
   modelId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to model version used',
+    comment:
+      'hóa ngoại liên kết tới model_versions.id, cho biết phiên bản cụ thể nào của mô hình đã được dùng.',
   })
   modelVersionId: string;
 
@@ -29,27 +30,27 @@ export class ModelPrediction extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'User this prediction is for',
+    comment: 'ID của người dùng mà dự đoán này nhắm tới (nếu có).',
   })
   userId?: string;
 
   @Column({
     type: 'varchar',
     length: 100,
-    comment: 'Type of prediction',
+    comment: 'Phân loại dự đoán (ví dụ: dropout_risk, performance).',
   })
   predictionType: string;
 
   @Column({
     type: 'json',
-    comment: 'Input data used for prediction',
+    comment: 'Trường JSON lưu lại chính xác dữ liệu đã được gửi đến mô hình để tạo ra dự đoán',
   })
   inputData: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Model prediction output',
+    comment: 'Trường JSON chứa kết quả mà mô hình đã trả về',
   })
   prediction?: Record<string, any>;
 
@@ -58,7 +59,7 @@ export class ModelPrediction extends BaseEntity {
     precision: 10,
     scale: 6,
     nullable: true,
-    comment: 'Prediction confidence score',
+    comment: 'Mức độ tự tin của mô hình về dự đoán của nó.',
   })
   confidence?: number;
 
@@ -66,21 +67,22 @@ export class ModelPrediction extends BaseEntity {
     type: 'enum',
     enum: PredictionStatus,
     default: PredictionStatus.PENDING,
-    comment: 'Prediction processing status',
+    comment:
+      'Trạng thái của quá trình dự đoán (processing - đang xử lý, completed - hoàn thành, failed - thất bại).',
   })
   status: PredictionStatus;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Error message if prediction failed',
+    comment: 'Nội dung lỗi nếu quá trình dự đoán thất bại.',
   })
   errorMessage?: string;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Processing time in milliseconds',
+    comment: 'Thời gian (tính bằng mili giây) mà mô hình cần để đưa ra dự đoán.',
   })
   processingTime?: number;
 
@@ -88,42 +90,44 @@ export class ModelPrediction extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Request ID for tracking',
+    comment: 'Một mã định danh để theo dõi yêu cầu dự đoán này qua các hệ thống.',
   })
   requestId?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Actual outcome for evaluation',
+    comment:
+      'Trường JSON lưu lại kết quả thực tế sau khi sự kiện xảy ra, dùng để so sánh với dự đoán.',
   })
   actualOutcome?: Record<string, any>;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether prediction was correct',
+    comment:
+      'Cờ (true/false) đánh dấu liệu dự đoán có chính xác hay không sau khi đã so sánh với kết quả thực tế.',
   })
   wasCorrect?: boolean;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When prediction was requested',
+    comment: 'Thời điểm yêu cầu dự đoán được gửi đi',
   })
   requestedAt?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When prediction was completed',
+    comment: 'Thời điểm nhận được kết quả.',
   })
   completedAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional prediction metadata',
+    comment: 'Trường JSON để lưu các thông tin mở rộng khác',
   })
   metadata?: Record<string, any>;
 

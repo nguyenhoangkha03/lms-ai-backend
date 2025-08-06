@@ -30,7 +30,7 @@ export class InterventionRecommendation extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'Id sinh viên',
   })
   studentId: string;
 
@@ -38,7 +38,7 @@ export class InterventionRecommendation extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Course ID',
+    comment: 'Id khóa học',
   })
   courseId?: string;
 
@@ -46,33 +46,34 @@ export class InterventionRecommendation extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Related prediction ID',
+    comment: 'Khóa ngoại liên kết tới bản ghi dự đoán đã gây ra sự can thiệp này',
   })
   predictionId?: string;
 
   @Column({
     type: 'enum',
     enum: InterventionType,
-    comment: 'Type of intervention',
+    comment:
+      'Phân loại hành động can thiệp (motivation - động viên, tutor_support - hỗ trợ từ gia sư',
   })
   interventionType: InterventionType;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Intervention title',
+    comment: 'Tiêu đề can thiệp',
   })
   title: string;
 
   @Column({
     type: 'text',
-    comment: 'Detailed intervention description',
+    comment: 'Mô tả can thiệp chi tiết',
   })
   description: string;
 
   @Column({
     type: 'int',
-    comment: 'Priority level (1-10, 10 being highest)',
+    comment: 'Mức độ ưu tiên (1-10, 10 là cao nhất)',
   })
   priority: number;
 
@@ -80,48 +81,48 @@ export class InterventionRecommendation extends BaseEntity {
     type: 'enum',
     enum: InterventionStatus,
     default: InterventionStatus.PENDING,
-    comment: 'Current intervention status',
+    comment: 'Trạng thái thực hiện của kế hoạch (pending, in_progress, completed).',
   })
   status: InterventionStatus;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Recommended intervention date',
+    comment: 'Ngày can thiệp được đề xuất',
   })
   recommendedDate?: Date;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Scheduled intervention date',
+    comment: 'Ngày can thiệp dự kiến',
   })
   scheduledDate?: Date;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Actual intervention start date',
+    comment: 'Ngày bắt đầu can thiệp thực tế',
   })
   startedAt?: Date;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Intervention completion date',
+    comment: 'Ngày hoàn thành can thiệp',
   })
   completedAt?: Date;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Estimated duration in minutes',
+    comment: 'Thời lượng ước tính tính bằng phút',
   })
   estimatedDuration?: number;
 
   @Column({
     type: 'json',
-    comment: 'Intervention parameters and settings',
+    comment: 'Các thông số và cài đặt can thiệp',
   })
   parameters: {
     targetMetrics?: string[];
@@ -136,7 +137,7 @@ export class InterventionRecommendation extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Success criteria for intervention',
+    comment: 'Tiêu chí can thiệp thành công',
   })
   successCriteria?: {
     metric: string;
@@ -149,7 +150,7 @@ export class InterventionRecommendation extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Assigned instructor/tutor ID',
+    comment: 'ID giáo viên/gia sư được chỉ định',
   })
   assignedToId?: string;
 
@@ -157,7 +158,7 @@ export class InterventionRecommendation extends BaseEntity {
     type: 'enum',
     enum: InterventionOutcome,
     nullable: true,
-    comment: 'Intervention outcome',
+    comment: 'Kết quả của sự can thiệp (successful - thành công, unsuccessful - không thành công).',
   })
   outcome?: InterventionOutcome;
 
@@ -166,56 +167,56 @@ export class InterventionRecommendation extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Effectiveness score (0-100)',
+    comment: 'Đánh giá mức độ hiệu quả của sự can thiệp (0-100).',
   })
   effectivenessScore?: number;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Student feedback',
+    comment: 'Phản hồi từ sinh viên',
   })
   studentFeedback?: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Instructor notes',
+    comment: 'Ghi chú của giảng viên về quá trình can thiệp',
   })
   instructorNotes?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Metrics before intervention',
+    comment: 'Các trường JSON lưu lại các chỉ số học tập của sinh viên trước',
   })
   preInterventionMetrics?: Record<string, number>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Metrics after intervention',
+    comment: 'Các trường JSON lưu lại các chỉ số học tập của sinh sau khi can thiệp',
   })
   postInterventionMetrics?: Record<string, number>;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Follow-up scheduled date',
+    comment: 'Ngày dự kiến theo dõi',
   })
   followUpDate?: Date;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether follow-up is required',
+    comment: 'Có cần theo dõi không',
   })
   followUpRequired: boolean;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Related interventions',
+    comment: 'Can thiệp liên quan',
   })
   relatedInterventions?: {
     interventionId: string;
@@ -225,7 +226,7 @@ export class InterventionRecommendation extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional intervention metadata',
+    comment: 'Siêu dữ liệu can thiệp bổ sung',
   })
   metadata?: Record<string, any>;
 

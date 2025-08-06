@@ -38,7 +38,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 255,
     unique: true,
-    comment: 'User email address',
+    comment: 'Địa chỉ email duy nhất',
   })
   email: string;
 
@@ -46,14 +46,14 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 50,
     unique: true,
-    comment: 'Unique username',
+    comment: 'Tên người dùng duy nhất',
   })
   username: string;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Hashed password',
+    comment: 'Chuỗi mật khẩu đã được băm an toàn',
   })
   @Exclude()
   passwordHash: string;
@@ -62,7 +62,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'First name',
+    comment: 'Tên của người dùng',
   })
   firstName?: string;
 
@@ -70,7 +70,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Last name',
+    comment: 'Họ của người dùng',
   })
   lastName?: string;
 
@@ -78,7 +78,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 150,
     nullable: true,
-    comment: 'Display name or alias',
+    comment: 'Tên sẽ xuất hiện công khai trên các diễn đàn',
   })
   displayName?: string;
 
@@ -86,7 +86,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 20,
     nullable: true,
-    comment: 'Phone number',
+    comment: 'Số điện thoại của người dùng, có thể dùng để xác thực hai lớp (2FA) hoặc liên lạc.',
   })
   phone?: string;
 
@@ -94,7 +94,7 @@ export class User extends BaseEntity {
     type: 'enum',
     enum: UserType,
     default: UserType.STUDENT,
-    comment: 'User type/role',
+    comment: 'Vai trò chính của người dùng trong hệ thống (student, teacher, admin)',
   })
   userType: UserType;
 
@@ -102,7 +102,7 @@ export class User extends BaseEntity {
     type: 'enum',
     enum: UserStatus,
     default: UserStatus.PENDING,
-    comment: 'Account status',
+    comment: 'Quản lý trạng thái của tài khoản',
   })
   status: UserStatus;
 
@@ -110,7 +110,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Profile avatar URL',
+    comment: 'Đường dẫn đến ảnh đại diện của người dùng',
   })
   avatarUrl?: string;
 
@@ -118,14 +118,14 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Profile cover image URL',
+    comment: 'Đường dẫn đến ảnh bìa trên trang cá nhân của người dùng.',
   })
   coverUrl?: string;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Email verification status',
+    comment: 'Một cờ (true/false) để biết email của người dùng đã được xác thực hay chưa. ',
   })
   emailVerified: boolean;
 
@@ -133,15 +133,15 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Email verification token',
+    comment: 'Chuỗi mã token duy nhất được gửi đến email để người dùng nhấp vào xác thực',
   })
-  @Exclude()
+  @Exclude() // Do not return this field
   emailVerificationToken?: string | null;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Email verification token expiry',
+    comment: 'Thời điểm mà mã xác thực email sẽ không còn hiệu lực.',
   })
   @Exclude()
   emailVerificationExpiry?: Date | null;
@@ -149,7 +149,7 @@ export class User extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Two-factor authentication enabled',
+    comment: 'Cờ (true/false) cho biết người dùng có bật bảo mật hai lớp hay không',
   })
   twoFactorEnabled: boolean;
 
@@ -157,7 +157,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Two-factor authentication secret',
+    comment: 'Mã bí mật dùng để liên kết với ứng dụng xác thực như Google Authenticator.',
   })
   @Exclude()
   twoFactorSecret?: string | null;
@@ -165,7 +165,8 @@ export class User extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Two-factor backup codes',
+    comment:
+      'Một danh sách các mã dự phòng (lưu dưới dạng JSON) để người dùng có thể đăng nhập nếu mất thiết bị xác thực',
   })
   @Exclude()
   backupCodes?: string[] | null;
@@ -174,7 +175,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Password reset token',
+    comment: 'Chuỗi mã token duy nhất được tạo khi người dùng yêu cầu "Quên mật khẩu"',
   })
   @Exclude()
   passwordResetToken?: string | null;
@@ -182,7 +183,7 @@ export class User extends BaseEntity {
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Password reset token expiry',
+    comment: 'Thời điểm mà mã đặt lại mật khẩu sẽ không còn hiệu lực',
   })
   @Exclude()
   passwordResetExpiry?: Date | null;
@@ -190,14 +191,14 @@ export class User extends BaseEntity {
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When password was last changed',
+    comment: 'Ghi lại lần cuối cùng người dùng thay đổi mật khẩu',
   })
   passwordChangedAt?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last login timestamp',
+    comment: 'Ghi lại thời gian của lần đăng nhập thành công gần nhất',
   })
   lastLoginAt?: Date;
 
@@ -205,28 +206,29 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 45,
     nullable: true,
-    comment: 'Last login IP address',
+    comment: 'Ghi lại địa chỉ IP của lần đăng nhập gần nhất để phát hiện hoạt động bất thường',
   })
   lastLoginIp?: string;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Failed login attempts count',
+    comment: 'Đếm số lần nhập sai mật khẩu liên tiếp',
   })
   failedLoginAttempts: number;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Account locked until timestamp',
+    comment: 'Nếu đăng nhập sai quá nhiều lần, tài khoản sẽ bị khóa đến thời điểm này',
   })
   lockedUntil?: Date | null;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Active refresh tokens',
+    comment:
+      'Lưu trữ các refresh token đang hoạt động (dưới dạng JSON) để duy trì phiên đăng nhập lâu dài',
   })
   @Exclude()
   refreshTokens?: string[];
@@ -235,7 +237,7 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 10,
     nullable: true,
-    comment: 'Preferred language code',
+    comment: 'Lưu ngôn ngữ người dùng chọn (ví dụ: vi, en) để hiển thị giao diện phù hợp',
   })
   preferredLanguage?: string;
 
@@ -243,21 +245,21 @@ export class User extends BaseEntity {
     type: 'varchar',
     length: 50,
     nullable: true,
-    comment: 'Timezone identifier',
+    comment: 'Múi giờ của người dùng để hiển thị thời gian chính xác ',
   })
   timezone?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'User preferences and settings',
+    comment: 'Tùy chọn cá nhân',
   })
   preferences?: Record<string, any>;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'User metadata',
+    comment: 'Trường JSON để lưu các thông tin mở rộng khác mà không cần thay đổi cấu trúc bảng',
   })
   metadata?: string;
 

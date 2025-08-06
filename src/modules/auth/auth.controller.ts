@@ -37,6 +37,7 @@ import { CurrentSession } from './decorators/session.decorator';
 import { Complete2FALoginDto, Enable2FADto, Verify2FADto } from './dto/two-factor.dto';
 import { LinkOAuthDto } from './dto/oauth.dto';
 import { UserService } from '../user/services/user.service';
+import { SkipCsrf } from '../security/decorators/security.decorators';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -54,6 +55,7 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @SkipCsrf()
   @ApiOperation({ summary: 'Register new user account' })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Validation error or user already exists' })

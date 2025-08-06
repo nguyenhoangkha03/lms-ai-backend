@@ -13,27 +13,27 @@ export class PeerReviewSubmission extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Peer review ID',
+    comment: 'Khóa ngoại liên kết tới peer_reviews.id, cho biết bài nộp này thuộc nhiệm vụ nào',
   })
   peerReviewId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Submitter user ID',
+    comment: 'Khóa ngoại liên kết tới users.id, xác định sinh viên đã nộp bài',
   })
   submitterId: string;
 
   @Column({
     type: 'longtext',
-    comment: 'Submission content',
+    comment: 'Nội dung chính của bài làm (dạng văn bản).',
   })
   content: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Submission attachments (JSON)',
+    comment: 'Trường JSON chứa danh sách các tệp mà sinh viên nộp kèm',
   })
   attachments?: string;
 
@@ -41,14 +41,15 @@ export class PeerReviewSubmission extends BaseEntity {
     type: 'enum',
     enum: ['draft', 'submitted', 'under_review', 'reviewed', 'completed'],
     default: 'draft',
-    comment: 'Submission status',
+    comment:
+      'Trạng thái của bài nộp (draft - bản nháp, submitted - đã nộp, under_review - đang được đánh giá).',
   })
   status: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Submission timestamp',
+    comment: 'Thời gian sinh viên nộp bài',
   })
   submittedAt?: Date;
 
@@ -57,28 +58,28 @@ export class PeerReviewSubmission extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Average peer score',
+    comment: 'Điểm số trung bình được tính từ tất cả các lượt đánh giá của các sinh viên khác',
   })
   averageScore?: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of reviews received',
+    comment: 'Đếm xem đã có bao nhiêu sinh viên khác đánh giá bài nộp này',
   })
   reviewsReceived: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of reviews completed by submitter',
+    comment: 'Đếm xem người nộp bài này đã hoàn thành việc đánh giá bài cho bao nhiêu bạn khác',
   })
   reviewsCompleted: number;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Submission metadata (JSON)',
+    comment: 'Dữ liệu metadata',
   })
   metadata?: string;
 

@@ -261,16 +261,8 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // Check username availability
-    // if (registerDto.username) {
-    //   const existingUsername = await this.userService.findByUsername(registerDto.username);
-    //   if (existingUsername) {
-    //     throw new ConflictException('Username is already taken');
-    //   }
-    // }
-
-    // Validate password strength
     const passwordValidation = this.passwordService.validatePasswordStrength(registerDto.password);
+    // const passwordValidation = registerDto.password;
 
     if (!passwordValidation.isValid) {
       throw new BadRequestException({
@@ -283,7 +275,7 @@ export class AuthService {
 
     const userData = {
       email: registerDto.email,
-      username: 'temp',
+      username: 'temp' + registerDto.email,
       passwordHash,
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
@@ -662,14 +654,14 @@ export class AuthService {
 
   private async sendVerificationEmail(email: string, token: string): Promise<void> {
     // TODO: Implement with email service
-    const verificationUrl = `${this.configService.get<string>('frontend.url')}/auth/verify-email?token=${token}`;
+    const verificationUrl = `${this.configService.get<string>('frontend.url')}/verify-email?token=${token}`;
 
     this.logger.log(`Verification email would be sent to ${email} with URL: ${verificationUrl}`);
   }
 
   private async sendPasswordResetEmail(email: string, token: string): Promise<void> {
     // TODO: Implement with email service
-    const resetUrl = `${this.configService.get<string>('frontend.url')}/auth/reset-password?token=${token}`;
+    const resetUrl = `${this.configService.get<string>('frontend.url')}/reset-password?token=${token}`;
 
     this.logger.log(`Password reset email would be sent to ${email} with URL: ${resetUrl}`);
   }

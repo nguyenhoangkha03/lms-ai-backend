@@ -3,93 +3,94 @@ import { BaseEntity } from '@/common/entities/base.entity';
 import { SettingCategory, SettingType } from '@/common/enums/system.enums';
 
 @Entity('system_settings')
-// @Unique(['key'])
+@Index(['key'])
 @Index(['category'])
-// @Index(['type'])
+@Index(['type'])
 @Index(['isPublic'])
 @Index(['isActive'])
 export class SystemSetting extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 255,
-    unique: true,
-    comment: 'Setting key identifier',
+    comment: 'Tên định danh duy nhất của cài đặt ',
   })
   key: string;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Human-readable setting name',
+    comment: 'Tên cài đặt sẽ hiển thị trên giao diện',
   })
   name: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Setting description',
+    comment: 'Giải thích rõ ràng về chức năng và ảnh hưởng của cài đặt này',
   })
   description?: string;
 
   @Column({
     type: 'enum',
     enum: SettingCategory,
-    comment: 'Setting category',
+    comment: 'Phân loại cài đặt để nhóm lại trong trang',
   })
   category: SettingCategory;
 
   @Column({
     type: 'enum',
     enum: SettingType,
-    comment: 'Data type of the setting',
+    comment: 'Kiểu dữ liệu của giá trị cài đặt',
   })
   type: SettingType;
 
   @Column({
     type: 'text',
-    comment: 'Setting value (stored as string)',
+    comment: 'Giá trị thực tế của cài đặt đang được áp dụng',
   })
   value: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Default value',
+    comment: 'Giá trị mặc định của cài đặt nếu không có giá trị nào được thiết lập',
   })
   defaultValue?: string;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Whether setting is active',
+    comment: 'Cờ (true/false) cho biết cài đặt này có đang được áp dụng hay không',
   })
   isActive: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether setting is public (visible to frontend)',
+    comment:
+      'Cờ (true/false) xác định giá trị của cài đặt có thể được gửi xuống cho giao diện người dùng (frontend) hay không',
   })
   isPublic: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether setting is read-only',
+    comment:
+      'Cờ (true/false) xác định giá trị của cài đặt có thể được gửi xuống cho giao diện người dùng (frontend) hay không',
   })
   isReadOnly: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether setting is encrypted',
+    comment: 'Cờ (true/false) xác định giá trị có nên được mã hóa trong cơ sở dữ liệu hay không',
   })
   isEncrypted: boolean;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Validation rules for the setting',
+    comment: 'Trường JSON chứa các quy tắc với giá trị cài đặt',
   })
   validationRules?: {
     required?: boolean;
@@ -105,7 +106,7 @@ export class SystemSetting extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'UI configuration for setting display',
+    comment: 'Trường JSON để giúp giao diện hiển thị cài đặt một cách phù hợp',
   })
   uiConfig?: {
     displayOrder?: number;
@@ -133,7 +134,7 @@ export class SystemSetting extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Dependencies on other settings',
+    comment: 'Trường JSON định nghĩa các phụ thuộc của cài đặt này vào các cài đặt khác',
   })
   dependencies?: {
     dependsOn?: string[];
@@ -148,21 +149,21 @@ export class SystemSetting extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'User who last modified the setting',
+    comment: 'Người sửa đổi cuối',
   })
   lastModifiedBy?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When setting was last modified',
+    comment: 'Thời điểm sửa đổi cuối',
   })
   lastModifiedAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Value history for audit trail',
+    comment: 'Trường JSON ghi lại lịch sử thay đổi của giá trị, rất hữu ích cho việc kiểm toán',
   })
   valueHistory?: {
     value: string;
@@ -174,7 +175,7 @@ export class SystemSetting extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Environment-specific overrides',
+    comment: 'Trường JSON cho phép định nghĩa các giá trị khác nhau cho các môi trường khác nhau',
   })
   environmentOverrides?: {
     development?: string;
@@ -185,7 +186,7 @@ export class SystemSetting extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional setting metadata',
+    comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
 

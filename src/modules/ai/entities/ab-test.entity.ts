@@ -13,28 +13,28 @@ export class ABTest extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'A/B test name',
+    comment: 'Tên của thử nghiệm A/B.',
   })
   name: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Test description and hypothesis',
+    comment: 'Tên của thử nghiệm A/B.',
   })
   description?: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Control model ID',
+    comment: 'Khóa ngoại liên kết tới ml_models.id, xác định mô ',
   })
   controlModelId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Test model ID',
+    comment: 'Khóa ngoại liên kết tới ml_models.id, xác định mô hình mới (phiên bản B).',
   })
   testModelId: string;
 
@@ -42,7 +42,8 @@ export class ABTest extends BaseEntity {
     type: 'enum',
     enum: ABTestStatus,
     default: ABTestStatus.PLANNED,
-    comment: 'Test status',
+    comment:
+      'Trạng thái của thử nghiệm (planned - đã lên kế hoạch, running - đang chạy, completed - đã hoàn thành).',
   })
   status: ABTestStatus;
 
@@ -51,41 +52,42 @@ export class ABTest extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 50.0,
-    comment: 'Traffic split percentage for test model',
+    comment: 'Tỷ lệ phần trăm người dùng sẽ được tiếp xúc với mô hình mới (testModelId).',
   })
   trafficSplit: number;
 
   @Column({
     type: 'timestamp',
-    comment: 'Test start date',
+    comment: 'Thời gian bắt đầu',
     default: () => 'CURRENT_TIMESTAMP',
   })
   startDate: Date;
 
   @Column({
     type: 'timestamp',
-    comment: 'Test end date',
+    comment: 'Thời gian kết thúc',
     default: () => 'CURRENT_TIMESTAMP',
   })
   endDate: Date;
 
   @Column({
     type: 'json',
-    comment: 'Success metrics to track',
+    comment:
+      'Trường JSON định nghĩa các chỉ số được dùng để đo lường và so sánh hiệu suất (ví dụ: tỷ lệ hoàn thành khóa học, điểm trung bình).',
   })
   successMetrics: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Target audience',
+    comment: 'Trường JSON mô tả nhóm người dùng sẽ tham gia vào thử nghiệm.',
   })
   targetAudience?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Test configuration and parameters',
+    comment: 'Cấu hình và thông số thử nghiệm',
   })
   configuration?: {
     minimumSampleSize?: number;
@@ -99,14 +101,14 @@ export class ABTest extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'User who created this test',
+    comment: 'Người dùng đã tạo bài kiểm tra này',
   })
   createdBy: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Test results summary',
+    comment: 'Trường JSON tóm tắt kết quả cuối cùng của thử nghiệm sau khi hoàn thành.',
   })
   results?: {
     controlPerformance?: Record<string, number>;
@@ -119,14 +121,14 @@ export class ABTest extends BaseEntity {
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Whether test is active',
+    comment: 'Kiểm tra có đang hoạt động hay không',
   })
   isActive: boolean;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional metadata',
+    comment: 'Siêu dữ liệu bổ sung',
   })
   metadata?: Record<string, any>;
 

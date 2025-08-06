@@ -22,7 +22,12 @@ export enum SimilarityStatus {
 @Index(['similarityType', 'similarityScore'])
 @Index(['status', 'calculatedAt'])
 export class ContentSimilarity extends BaseEntity {
-  @Column({ name: 'source_content_type', type: 'enum', enum: ['course', 'lesson'] })
+  @Column({
+    name: 'source_content_type',
+    type: 'enum',
+    enum: ['course', 'lesson'],
+    comment: 'Loại nội dung nguon',
+  })
   sourceContentType: 'course' | 'lesson';
 
   @Column({ name: 'source_content_id', type: 'varchar', length: 36 })

@@ -21,7 +21,7 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Lesson this file belongs to',
+    comment: 'ID của bài học mà tệp này được đính kèm',
   })
   lessonId?: string;
 
@@ -29,48 +29,48 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Course this file belongs to',
+    comment: 'ID của khóa học mà tệp này được đính kèm',
   })
   courseId?: string;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Original filename',
+    comment: 'Tên tệp gốc khi người dùng tải lên',
   })
   originalName: string;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Stored filename on disk',
+    comment: 'Tên tệp đã được đổi tên để lưu trên máy chủ, tránh trùng lặp',
   })
   storedName: string;
 
   @Column({
     type: 'varchar',
     length: 500,
-    comment: 'Relative file path from upload root',
+    comment: 'Đường dẫn tương đối đến vị trí lưu tệp trên hệ thống lưu trữ (ví dụ: AWS S3)',
   })
   filePath?: string;
 
   @Column({
     type: 'bigint',
-    comment: 'File size in bytes',
+    comment: 'Kích thước của tệp',
   })
   fileSize: number;
 
   @Column({
     type: 'varchar',
     length: 100,
-    comment: 'MIME type of the file',
+    comment: 'Loại tệp chuẩn (ví dụ: video/mp4, application/pdf)',
   })
   mimeType: string;
 
   @Column({
     type: 'enum',
     enum: FileType,
-    comment: 'Category of file type',
+    comment: 'Loại tệp chung (image, video, document).',
   })
   fileType: FileType;
 
@@ -78,7 +78,7 @@ export class FileUpload extends BaseEntity {
     type: 'enum',
     enum: FileAccessLevel,
     default: FileAccessLevel.ENROLLED_ONLY,
-    comment: 'File access permission level',
+    comment: 'Quyền truy cập tệp (enrolled_only - chỉ sinh viên đã đăng ký)',
   })
   accessLevel: FileAccessLevel;
 
@@ -100,7 +100,7 @@ export class FileUpload extends BaseEntity {
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Duration in seconds for video/audio files',
+    comment: 'Thời lượng (giây) cho các tệp video/audio',
   })
   duration?: number;
 
@@ -108,14 +108,14 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 20,
     nullable: true,
-    comment: 'Resolution for video/image files (e.g., 1920x1080)',
+    comment: 'Độ phân giải (ví dụ: 1920x1080) cho các tệp video/ảnh',
   })
   resolution?: string;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Bitrate for video/audio files',
+    comment: 'Tốc độ bit cho tệp video/âm thanh',
   })
   bitrate?: number;
 
@@ -123,7 +123,7 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'URL to optimized version of the file',
+    comment: 'URL đến phiên bản đã được xử lý (nén, chuyển đổi định dạng) của tệp',
   })
   optimizedPath?: string;
 
@@ -131,7 +131,7 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'URL to thumbnail image',
+    comment: 'URL đến ảnh thumbnail được tạo tự động cho tệp',
   })
   thumbnailPath?: string;
 
@@ -140,35 +140,35 @@ export class FileUpload extends BaseEntity {
     type: 'enum',
     enum: ProcessingStatus,
     default: ProcessingStatus.PENDING,
-    comment: 'File processing status',
+    comment: 'Trạng thái xử lý tệp sau khi tải lên (pending, processing, completed)',
   })
   processingStatus: ProcessingStatus;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Processing error message if failed',
+    comment: 'Xử lý thông báo lỗi nếu không thành công',
   })
   processingError?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Array of processed file versions',
+    comment: 'Mảng các phiên bản tệp đã xử lý',
   })
   processedVersions?: string[];
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Processing start timestamp',
+    comment: 'Dấu thời gian bắt đầu xử lý',
   })
   processingStartedAt?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Processing completion timestamp',
+    comment: 'Đang xử lý dấu thời gian hoàn thành',
   })
   processingCompletedAt?: Date;
 
@@ -178,28 +178,28 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 64,
     nullable: true,
-    comment: 'File checksum for integrity verification',
+    comment: 'Một chuỗi hash (ví dụ: MD5, SHA256) để kiểm tra tính toàn vẹn của tệp',
   })
   checksum?: string;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of times file has been downloaded',
+    comment: 'Tổng số lần tệp được tải xuống',
   })
   downloadCount: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of times file has been viewed/streamed',
+    comment: 'Tổng số lần tệp được xem hoặc phát trực tuyến',
   })
   viewCount: number;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last download timestamp',
+    comment: 'Dấu thời gian tải xuống lần cuối',
   })
   lastDownloadedAt?: Date;
 
@@ -207,14 +207,14 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'URL to download the file',
+    comment: 'URL để tải xuống tệp',
   })
   downloadUrl?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last view timestamp',
+    comment: 'Dấu thời gian xem lần cuối',
   })
   lastViewedAt?: Date;
 
@@ -222,7 +222,7 @@ export class FileUpload extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether file has been flagged for review',
+    comment: 'Tệp đã được gắn cờ để xem xét chưa',
   })
   isFlagged: boolean;
 
@@ -230,21 +230,21 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Moderator who reviewed this file',
+    comment: 'Người kiểm duyệt đã xem xét tập tin này',
   })
   moderatedBy?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Moderation timestamp',
+    comment: 'Dấu thời gian kiểm duyệt',
   })
   moderatedAt?: Date;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Moderation notes or reason',
+    comment: 'Ghi chú hoặc lý do kiểm duyệt',
   })
   moderationNotes?: string;
 
@@ -252,7 +252,7 @@ export class FileUpload extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'File-specific settings and configuration',
+    comment: 'Cài đặt và cấu hình cụ thể cho từng tệp',
   })
   settings?: {
     allowDownload?: boolean;
@@ -267,7 +267,7 @@ export class FileUpload extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional file metadata and properties',
+    comment: 'Siêu dữ liệu và thuộc tính tệp bổ sung',
   })
   metadata?: {
     description?: string;
@@ -293,28 +293,30 @@ export class FileUpload extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'User ID who uploaded the file',
+    comment: 'ID của người dùng đã tải tệp này lên',
   })
   uploaderId: string;
 
   @Column({
     type: 'varchar',
     length: 500,
-    comment: 'Full URL to access the file',
+    comment: 'Đường dẫn URL đầy đủ để truy cập tệp',
   })
   fileUrl: string;
 
   @Column({
     type: 'enum',
     enum: FileRelatedType,
-    comment: 'What this file is related to',
+    comment:
+      'xác định mục đích của tệp, ví dụ: course_thumbnail (ảnh bìa khóa học), lesson_video (video bài học), user_avatar (ảnh đại diện)',
   })
   relatedType: FileRelatedType;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Is file temporarily uploaded',
+    comment:
+      'Cờ (true/false) cho biết đây có phải là tệp được tải lên tạm thời và sẽ bị xóa sau một khoảng thời gian',
   })
   isTemporary: boolean;
 
@@ -322,21 +324,21 @@ export class FileUpload extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'File extension',
+    comment: 'Phần mở rộng tập tin',
   })
   extension?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'File expiration date for temporary files',
+    comment: 'Thời điểm tệp tạm thời sẽ bị xóa',
   })
   expiresAt?: Date;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'Upload timestamp',
+    comment: 'Tải lên dấu thời gian',
   })
   uploadedAt: Date;
 

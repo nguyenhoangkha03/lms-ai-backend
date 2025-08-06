@@ -111,6 +111,8 @@ async function bootstrap() {
       'X-Requested-With',
       'X-Access-Token',
       'Cache-Control',
+      'x-request-id',
+      'x-timestamp',
     ],
     credentials: true,
     optionsSuccessStatus: 200,

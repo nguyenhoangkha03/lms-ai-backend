@@ -11,7 +11,8 @@ export class Role extends BaseEntity {
     type: 'varchar',
     length: 100,
     unique: true,
-    comment: 'Role name',
+    comment:
+      'Tên định danh duy nhất của vai trò mở rộng của cột loại người dùng. Ví dụ: admin, teacher, student, ',
   })
   name: string;
 
@@ -19,7 +20,7 @@ export class Role extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Role description',
+    comment: 'Mô tả',
   })
   description?: string;
 
@@ -27,28 +28,30 @@ export class Role extends BaseEntity {
     type: 'varchar',
     length: 50,
     nullable: true,
-    comment: 'Role display name',
+    comment: 'Tên hiển thị',
   })
   displayName?: string;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this is a system-defined role',
+    comment:
+      'Cờ (true/false) đánh dấu đây là vai trò cốt lõi của hệ thống, không thể bị xóa bởi admin',
   })
   isSystemRole: boolean;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Whether this role is active',
+    comment: 'Cho biết vai trò này có đang được sử dụng hay không',
   })
   isActive: boolean;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Role hierarchy level (0 = highest)',
+    comment:
+      'Một số nguyên để xác định thứ bậc của vai trò. Ví dụ: 0: admin, 1: teacher, 2: student, ...',
   })
   level: number;
 
@@ -56,7 +59,7 @@ export class Role extends BaseEntity {
     type: 'varchar',
     length: 20,
     nullable: true,
-    comment: 'Role color for UI display',
+    comment: 'Mã màu để hiển thị vai trò trên giao diện người dùng',
   })
   color?: string;
 
@@ -64,21 +67,21 @@ export class Role extends BaseEntity {
     type: 'varchar',
     length: 50,
     nullable: true,
-    comment: 'Role icon identifier',
+    comment: 'Tên hoặc mã của một biểu tượng (icon) đại diện cho vai trò',
   })
   icon?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Role-specific settings and configurations',
+    comment: 'Trường JSON để lưu các cấu hình đặc thù dành riêng cho vai trò này',
   })
   settings?: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional role metadata',
+    comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
 

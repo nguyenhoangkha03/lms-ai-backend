@@ -13,6 +13,7 @@ export abstract class BaseEntity {
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
+    comment: 'Tự động ghi nhận thời điểm được tạo',
   })
   createdAt: Date;
 
@@ -20,12 +21,15 @@ export abstract class BaseEntity {
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
     onUpdate: 'CURRENT_TIMESTAMP(6)',
+    comment: 'Tự động cập nhật mỗi khi thông tin có sự thay đổi.',
   })
   updatedAt: Date;
 
   @DeleteDateColumn({
     type: 'timestamp',
     nullable: true,
+    comment:
+      'Hỗ trợ xóa mềm (soft delete). Thay vì xóa vĩnh viễn, cột này sẽ được cập nhật thời gian, giữ lại dữ liệu để có thể khôi phục',
   })
   deletedAt?: Date;
 
@@ -33,7 +37,7 @@ export abstract class BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'User ID who created this record',
+    comment: 'ID của người tạo',
   })
   createdBy?: string;
 
@@ -41,7 +45,7 @@ export abstract class BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'User ID who last updated this record',
+    comment: 'ID của người cập nhật cuối',
   })
   updatedBy?: string;
 }

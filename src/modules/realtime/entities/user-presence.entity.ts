@@ -32,7 +32,7 @@ export class UserPresence extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'User ID',
+    comment: 'Tham chiếu ID người dùng',
   })
   userId: string;
 
@@ -40,7 +40,7 @@ export class UserPresence extends BaseEntity {
     type: 'enum',
     enum: PresenceStatus,
     default: PresenceStatus.OFFLINE,
-    comment: 'Current presence status',
+    comment: 'Trạng thái chung của người dùng (online, offline, away - tạm vắng).',
   })
   status: PresenceStatus;
 
@@ -48,28 +48,28 @@ export class UserPresence extends BaseEntity {
     type: 'enum',
     enum: ActivityStatus,
     default: ActivityStatus.IDLE,
-    comment: 'Current activity status',
+    comment: 'Hoạt động cụ thể mà người dùng đang làm (studying, in_lesson, taking_quiz)',
   })
   activityStatus: ActivityStatus;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether user is currently online',
+    comment: 'Cờ (true/false) cho biết người dùng có đang kết nối với hệ thống hay không',
   })
   isOnline: boolean;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'Last time user was seen online',
+    comment: 'Thời điểm cuối cùng hệ thống ghi nhận người dùng trực tuyến.',
   })
   lastSeenAt: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When user came online',
+    comment: 'Thời điểm người dùng trên lớp hệ thống.',
   })
   onlineAt?: Date;
 
@@ -77,7 +77,7 @@ export class UserPresence extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Custom status message',
+    comment: 'Một thông điệp ngắn do người dùng tự đặt',
   })
   statusMessage?: string;
 
@@ -85,7 +85,7 @@ export class UserPresence extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Current course user is in',
+    comment: 'ID của khóa học mà người dùng đang xem',
   })
   currentCourseId?: string;
 
@@ -93,7 +93,7 @@ export class UserPresence extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Current lesson user is viewing',
+    comment: 'ID của bài học mà người dùng đang xem',
   })
   currentLessonId?: string;
 
@@ -101,7 +101,7 @@ export class UserPresence extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Current chat room user is in',
+    comment: 'Người dùng phòng chat hiện tại đang ở',
   })
   currentChatRoomId?: string;
 
@@ -109,14 +109,14 @@ export class UserPresence extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Current video session user is in',
+    comment: 'Phiên video hiện tại người dùng đang ở',
   })
   currentVideoSessionId?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Device information',
+    comment: 'Thông tin thiết bị',
   })
   deviceInfo?: {
     type: 'desktop' | 'mobile' | 'tablet';
@@ -129,7 +129,7 @@ export class UserPresence extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Location information',
+    comment: 'Thống tin vị trí người dùng',
   })
   locationInfo?: {
     country?: string;
@@ -141,7 +141,7 @@ export class UserPresence extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Current activity details',
+    comment: 'Chi tiết hoạt động hiện tại',
   })
   activityDetails?: {
     startedAt?: Date;
@@ -154,35 +154,36 @@ export class UserPresence extends BaseEntity {
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total session duration in seconds',
+    comment: 'Thời gian của phiên làm việc hiện tại, tính bằng giây.',
   })
   sessionDuration: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of pages/screens viewed in session',
+    comment: 'Số trang/màn hình được xem trong phiên',
   })
   pageViews: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'User interaction count in current session',
+    comment: 'Số lượng tương tác của người dùng trong phiên hiện tại',
   })
   interactionCount: number;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last activity timestamp',
+    comment: 'Thời gian cuối người dùng trên lớp hệ thống.',
   })
   lastActivityAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Active socket connections',
+    comment:
+      'Cột này chứa danh sách các kết nối socket hiện tại mà người dùng đang sử dụng để tương tác với hệ thống.',
   })
   connections?: {
     socketId: string;
@@ -194,7 +195,8 @@ export class UserPresence extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Presence preferences',
+    comment:
+      'Cột này dùng để lưu các cài đặt mà người dùng chọn cho việc hiển thị trạng thái online và nhận thông báo.',
   })
   preferences?: {
     showOnlineStatus?: boolean;
@@ -210,7 +212,7 @@ export class UserPresence extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional metadata',
+    comment: 'Dữ liệu metadata',
   })
   metadata?: Record<string, any>;
 

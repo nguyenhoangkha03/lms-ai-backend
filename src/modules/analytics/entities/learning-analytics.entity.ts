@@ -13,7 +13,7 @@ export class LearningAnalytics extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'ID của sinh viên được phân tích',
   })
   studentId: string;
 
@@ -21,34 +21,35 @@ export class LearningAnalytics extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Course ID (null for overall analytics)',
+    comment:
+      'ID của khóa học (nếu là phân tích cho một khóa học cụ thể) hoặc NULL (nếu là phân tích tổng thể)',
   })
   courseId?: string;
 
   @Column({
     type: 'date',
-    comment: 'Analytics date',
+    comment: 'Ngày mà dữ liệu được tổng hợp',
   })
   date: Date;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total time spent learning in seconds',
+    comment: 'Tổng thời gian học trong ngày đó, tính bằng giây',
   })
   totalTimeSpent: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of lessons completed',
+    comment: 'Số bài học đã hoàn thành trong ngày',
   })
   lessonsCompleted: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of assessments taken',
+    comment: 'Số lượng bài kiểm tra đã thực hiện trong ngày',
   })
   assessmentsTaken: number;
 
@@ -56,28 +57,28 @@ export class LearningAnalytics extends BaseEntity {
     type: 'decimal',
     precision: 5,
     scale: 2,
-    comment: 'Average assessment score percentage',
+    comment: 'Điểm trung bình của các bài kiểm tra trong ngày',
   })
   averageScore: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Skill progress',
+    comment: 'Trường JSON theo dõi sự tiến bộ của các kỹ năng cụ thể',
   })
   skillProgress: Record<string, number>;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of quizzes attempted',
+    comment: 'Số lượng bài kiểm tra đã làm',
   })
   quizzesAttempted: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of quizzes passed',
+    comment: 'Số bài kiểm tra đã vượt qua',
   })
   quizzesPassed: number;
 
@@ -86,56 +87,56 @@ export class LearningAnalytics extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Average quiz score percentage',
+    comment: 'Tỷ lệ điểm bài kiểm tra trung bình',
   })
   averageQuizScore?: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of login sessions',
+    comment: 'Số phiên đăng nhập',
   })
   loginCount: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Time spent watching videos in seconds',
+    comment: 'Thời gian xem video tính bằng giây',
   })
   videoWatchTime: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Time spent reading content in seconds',
+    comment: 'Thời gian đọc nội dung tính bằng giây',
   })
   readingTime: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of forum posts/discussions',
+    comment: 'Số lượng bài đăng/thảo luận trên diễn đàn',
   })
   discussionPosts: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of chat messages sent',
+    comment: 'Số lượng tin nhắn trò chuyện đã gửi',
   })
   chatMessages: number;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Most active hour of the day (0-23)',
+    comment: 'Giờ hoạt động mạnh nhất trong ngày (0-23)',
   })
   mostActiveHour?: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Indicators of learning struggles',
+    comment: 'Các dấu hiệu của khó khăn trong học tập',
   })
   struggleIndicators?: {
     repeatedQuizFailures?: number;
@@ -150,7 +151,7 @@ export class LearningAnalytics extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 0,
-    comment: 'Overall engagement score (0-100)',
+    comment: 'Điểm tương tác tổng thể (0-100)',
   })
   engagementScore: number;
 
@@ -159,7 +160,7 @@ export class LearningAnalytics extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 0,
-    comment: 'Learning progress percentage',
+    comment: 'Tỷ lệ tiến độ học tập',
   })
   progressPercentage: number;
 
@@ -167,7 +168,7 @@ export class LearningAnalytics extends BaseEntity {
     type: 'enum',
     enum: PerformanceLevel,
     default: PerformanceLevel.AVERAGE,
-    comment: 'Overall performance level',
+    comment: 'Mức hiệu suất tổng thể',
   })
   performanceLevel: PerformanceLevel;
 
@@ -175,14 +176,14 @@ export class LearningAnalytics extends BaseEntity {
     type: 'enum',
     enum: LearningPatternType,
     nullable: true,
-    comment: 'Identified learning pattern',
+    comment: 'Mẫu học tập đã xác định',
   })
   learningPattern?: LearningPatternType;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Detailed engagement metrics',
+    comment: 'Chỉ số tương tác chi tiết',
   })
   engagementMetrics?: {
     sessionDuration?: number;
@@ -195,7 +196,7 @@ export class LearningAnalytics extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Learning velocity and efficiency metrics',
+    comment: 'Các số liệu về tốc độ và hiệu quả học tập',
   })
   learningVelocity?: {
     lessonsPerDay?: number;
@@ -208,7 +209,7 @@ export class LearningAnalytics extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Predictive indicators',
+    comment: 'Các chỉ số dự đoán',
   })
   predictiveIndicators?: {
     dropoutRisk?: number;
@@ -221,7 +222,7 @@ export class LearningAnalytics extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Skills and competencies gained',
+    comment: 'Kỹ năng và năng lực đạt được',
   })
   skillsGained?: {
     newSkills?: string[];
@@ -234,7 +235,7 @@ export class LearningAnalytics extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Behavioral patterns observed',
+    comment: 'Các mô hình hành vi được quan sát',
   })
   behavioralPatterns?: {
     studyTimePreference?: string;
@@ -247,7 +248,7 @@ export class LearningAnalytics extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional analytics metadata',
+    comment: 'Siêu dữ liệu phân tích bổ sung',
   })
   metadata?: Record<string, any>;
 

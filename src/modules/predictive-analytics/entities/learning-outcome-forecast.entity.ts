@@ -20,7 +20,7 @@ export class LearningOutcomeForecast extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'Khóa ngoại liên kết tới users.id, xác định dự báo này dành cho ai',
   })
   studentId: string;
 
@@ -28,26 +28,27 @@ export class LearningOutcomeForecast extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Course ID',
+    comment: 'Khóa ngoại liên kết tới courses.id, xác định ngữ cảnh của dự báo',
   })
   courseId?: string;
 
   @Column({
     type: 'enum',
     enum: OutcomeType,
-    comment: 'Type of learning outcome',
+    comment:
+      'Cho biết AI đang dự báo về điều gì: course_completion (khả năng hoàn thành khóa học), skill_mastery (khả năng làm chủ kỹ năng), time_to_completion (thời gian cần để hoàn thành).',
   })
   outcomeType: OutcomeType;
 
   @Column({
     type: 'datetime',
-    comment: 'Forecast generation date',
+    comment: 'Thời điểm mà dự báo được tạo ra',
   })
   forecastDate: Date;
 
   @Column({
     type: 'datetime',
-    comment: 'Target completion date',
+    comment: 'Ngày trong tương lai mà dự báo nhắm tới',
   })
   targetDate: Date;
 
@@ -55,7 +56,7 @@ export class LearningOutcomeForecast extends BaseEntity {
     type: 'decimal',
     precision: 5,
     scale: 2,
-    comment: 'Predicted success probability (0-100)',
+    comment: 'Xác suất (tính bằng %) mà sinh viên sẽ đạt được kết quả mục tiêu',
   })
   successProbability: number;
 
@@ -64,20 +65,21 @@ export class LearningOutcomeForecast extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Predicted score or completion percentage',
+    comment: 'Điểm số hoặc phần trăm hoàn thành được dự đoán.',
   })
   predictedScore?: number;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Estimated days to completion',
+    comment: 'Số ngày ước tính mà sinh viên cần để hoàn thành mục tiêu',
   })
   estimatedDaysToCompletion?: number;
 
   @Column({
     type: 'json',
-    comment: 'Scenario-based forecasts',
+    comment:
+      'Trường JSON mô tả các kịch bản dự báo khác nhau (ví dụ: "Nếu học 5 giờ/tuần, xác suất thành công là 80%. Nếu học 2 giờ/tuần, xác suất là 50%").',
   })
   scenarios: {
     optimistic: {
@@ -103,7 +105,7 @@ export class LearningOutcomeForecast extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Milestone predictions',
+    comment: 'Trường JSON dự báo các cột mốc quan trọng mà sinh viên có thể đạt được trên đường đi',
   })
   milestones?: {
     milestoneId: string;
@@ -116,7 +118,8 @@ export class LearningOutcomeForecast extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Resource requirements forecast',
+    comment:
+      'Trường JSON dự báo các tài nguyên cần thiết (thời gian, bài tập) để đạt được mục tiêu',
   })
   resourceRequirements?: {
     studyHoursRequired: number;
@@ -128,7 +131,7 @@ export class LearningOutcomeForecast extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Potential obstacles and solutions',
+    comment: 'Trường JSON dự báo các khó khăn tiềm tàng và gợi ý giải pháp',
   })
   obstaclesAndSolutions?: {
     obstacle: string;
@@ -141,14 +144,15 @@ export class LearningOutcomeForecast extends BaseEntity {
     type: 'decimal',
     precision: 5,
     scale: 2,
-    comment: 'Forecast confidence level (0-100)',
+    comment: 'Mức độ tự tin của AI về tính chính xác của toàn bộ dự báo',
   })
   confidenceLevel: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Baseline data used for forecast',
+    comment:
+      'Trường JSON lưu lại một bản chụp (snapshot) của dữ liệu đã được dùng để tạo ra dự báo này',
   })
   baselineData?: {
     currentProgress: number;
@@ -162,7 +166,7 @@ export class LearningOutcomeForecast extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether outcome has been realized',
+    comment: 'Cờ (true/false) cho biết kết quả thực tế đã xảy ra hay chưa',
   })
   isRealized: boolean;
 
@@ -171,21 +175,22 @@ export class LearningOutcomeForecast extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Actual outcome for validation',
+    comment: 'Kết quả thực tế, dùng để so sánh và đánh giá độ chính xác của AI',
   })
   actualOutcome?: number;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Actual completion date',
+    comment: 'Ngày hoàn thành thực tế, dùng để so sánh và đánh giá độ chính xác của AI',
   })
   actualCompletionDate?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Forecast accuracy metrics',
+    comment:
+      'Trường JSON lưu các chỉ số đo lường độ chính xác của dự báo sau khi đã có kết quả thực tế.',
   })
   accuracyMetrics?: {
     outcomeAccuracy: number;
@@ -197,7 +202,7 @@ export class LearningOutcomeForecast extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional forecast metadata',
+    comment: 'Siêu dữ liệu dự báo bổ sung',
   })
   metadata?: Record<string, any>;
 

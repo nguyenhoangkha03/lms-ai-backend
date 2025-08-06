@@ -39,7 +39,7 @@ export class PerformancePrediction extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'ID sinh viên',
   })
   studentId: string;
 
@@ -47,27 +47,28 @@ export class PerformancePrediction extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Course ID (null for general predictions)',
+    comment: 'ID khóa học (null cho dự đoán chung)',
   })
   courseId?: string;
 
   @Column({
     type: 'enum',
     enum: PredictionType,
-    comment: 'Type of prediction',
+    comment:
+      'Cho biết AI đang dự đoán về cái gì (performance - điểm số, completion_time - thời gian hoàn thành).',
   })
   predictionType: PredictionType;
 
   @Column({
     type: 'datetime',
-    comment: 'Date when prediction was made',
+    comment: 'Thời điểm dự đoán được tạo ra',
   })
   predictionDate: Date;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Target date for prediction outcome',
+    comment: 'Thời điểm trong tương lai mà dự đoán nhắm tới',
   })
   targetDate?: Date;
 
@@ -75,7 +76,7 @@ export class PerformancePrediction extends BaseEntity {
     type: 'decimal',
     precision: 5,
     scale: 2,
-    comment: 'Predicted score or probability (0-100)',
+    comment: 'Kết quả dự đoán của AI (ví dụ: dự đoán điểm cuối kỳ là 8.5).',
   })
   predictedValue: number;
 
@@ -83,21 +84,21 @@ export class PerformancePrediction extends BaseEntity {
     type: 'decimal',
     precision: 5,
     scale: 2,
-    comment: 'Confidence level of prediction (0-100)',
+    comment: 'Mức độ tự tin của mô hình AI về dự đoán của nó',
   })
   confidenceScore: number;
 
   @Column({
     type: 'enum',
     enum: RiskLevel,
-    comment: 'Risk level assessment',
+    comment: 'Đánh giá mức độ rủi ro',
   })
   riskLevel: RiskLevel;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Contributing factors to prediction',
+    comment: 'Trường JSON giải thích các yếu tố chính đã ảnh hưởng đến kết quả dự đoán',
   })
   contributingFactors?: {
     engagementLevel?: number;
@@ -113,7 +114,7 @@ export class PerformancePrediction extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Detailed prediction breakdown',
+    comment: 'Phân tích dự đoán chi tiết',
   })
   predictionDetails?: {
     currentPerformance?: number;
@@ -130,7 +131,7 @@ export class PerformancePrediction extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Actual outcome for validation',
+    comment: 'Giá trị thực tế sau khi sự kiện xảy ra (ví dụ: điểm cuối kỳ thực tế là 8.7).',
   })
   actualValue?: number;
 
@@ -139,35 +140,35 @@ export class PerformancePrediction extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Prediction accuracy when validated',
+    comment: 'So sánh giữa predictedValue và actualValue để đo lường độ chính xác của mô hình',
   })
   accuracyScore?: number;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether prediction has been validated',
+    comment: 'Cờ (true/false) cho biết dự đoán đã được so sánh với kết quả thực tế hay chưa',
   })
   isValidated: boolean;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Date when prediction was validated',
+    comment: 'Ngày dự đoán được xác thực',
   })
   validatedAt?: Date;
 
   @Column({
     type: 'varchar',
     length: 100,
-    comment: 'Model version used for prediction',
+    comment: 'Phiên bản của mô hình AI đã được sử dụng để tạo ra dự đoán này',
   })
   modelVersion: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Model-specific metadata',
+    comment: 'Siêu dữ liệu dành riêng cho mô hình',
   })
   modelMetadata?: {
     algorithm?: string;
@@ -180,7 +181,7 @@ export class PerformancePrediction extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional prediction metadata',
+    comment: 'Siêu dữ liệu dự đoán bổ sung',
   })
   metadata?: Record<string, any>;
 

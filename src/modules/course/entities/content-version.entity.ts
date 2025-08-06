@@ -8,27 +8,27 @@ export class ContentVersion extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to lesson',
+    comment: 'Phiên bản này thuộc về bài học nào',
   })
   lessonId: string;
 
   @Column({
     type: 'int',
-    comment: 'Version number (incremental)',
+    comment: 'Số thứ tự tăng dần của phiên bản',
   })
   versionNumber: number;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Lesson content for this version',
+    comment: 'Nội dung của bài học tại thời điểm của phiên bản này',
   })
   content?: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Lesson description for this version',
+    comment: 'Mô tả của bài học tại thời điểm của phiên bản này',
   })
   description?: string;
 
@@ -36,21 +36,23 @@ export class ContentVersion extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Note about this version change',
+    comment:
+      'Ghi chú của giảng viên về những thay đổi trong phiên bản này (ví dụ: "Cập nhật video, sửa lỗi chính tả").',
   })
   versionNote?: string;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this is the current active version',
+    comment:
+      'Cờ (true/false) để đánh dấu đây có phải là phiên bản đang được hiển thị cho sinh viên hay không',
   })
   isActive: boolean;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Content metadata and settings for this version',
+    comment: 'Trường JSON lưu trữ các cài đặt và metadata của nội dung tại phiên bản này',
   })
   contentMetadata?: {
     wordCount?: number;
@@ -64,7 +66,7 @@ export class ContentVersion extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Change summary between versions',
+    comment: 'Trường JSON tóm tắt những thay đổi so với phiên bản trước',
   })
   changesSummary?: {
     contentChanged?: boolean;
@@ -81,14 +83,15 @@ export class ContentVersion extends BaseEntity {
     type: 'enum',
     enum: ['major', 'minor', 'patch', 'draft'],
     default: 'minor',
-    comment: 'Type of version change',
+    comment:
+      'Phân loại mức độ thay đổi (major - thay đổi lớn, minor - thay đổi nhỏ, patch - sửa lỗi nhỏ)',
   })
   versionType: 'major' | 'minor' | 'patch' | 'draft';
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional version metadata',
+    comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
 

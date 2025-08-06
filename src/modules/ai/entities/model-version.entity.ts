@@ -13,14 +13,14 @@ export class ModelVersion extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to ML model',
+    comment: 'Khóa ngoại liên kết tới ml_models.id, cho biết phiên bản này thuộc về mô hình nào.',
   })
   modelId: string;
 
   @Column({
     type: 'varchar',
     length: 100,
-    comment: 'Version identifier (e.g., v1.0.0, 2024-01-15)',
+    comment: 'Tên định danh của phiên bản (ví dụ: v1.0.0, 2025-07-28).',
   })
   version: string;
 
@@ -28,14 +28,14 @@ export class ModelVersion extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'ID of the training job in the background queue',
+    comment: 'ID của tác vụ chạy nền đã thực hiện việc huấn luyện cho phiên bản này.',
   })
   jobId?: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Version description and changes',
+    comment: 'Mô tả phiên bản',
   })
   description?: string;
 
@@ -43,7 +43,7 @@ export class ModelVersion extends BaseEntity {
     type: 'enum',
     enum: ModelVersionStatus,
     default: ModelVersionStatus.TRAINING,
-    comment: 'Version status',
+    comment: 'Trạng thái của riêng phiên bản này (training, completed, failed, deployed).',
   })
   status: ModelVersionStatus;
 
@@ -51,7 +51,7 @@ export class ModelVersion extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Model file path or artifact URL',
+    comment: 'Đường dẫn đến tệp tin của mô hình đã được huấn luyện (ví dụ: đường dẫn trên S3).',
   })
   modelPath?: string;
 
@@ -59,14 +59,14 @@ export class ModelVersion extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Docker image for this version',
+    comment: 'Tên của Docker image chứa phiên bản mô hình này, sẵn sàng để triển khai',
   })
   dockerImage?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Training metrics for this version',
+    comment: 'Số liệu đào tạo cho phiên bản này',
   })
   trainingMetrics?: {
     trainingAccuracy?: number;
@@ -82,7 +82,7 @@ export class ModelVersion extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Model evaluation results',
+    comment: 'Kết quả đánh giá mô hình',
   })
   evaluationResults?: {
     testAccuracy?: number;
@@ -96,7 +96,7 @@ export class ModelVersion extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Model artifacts information',
+    comment: 'Trường JSON chứa thông tin về các tệp tin và tài nguyên khác liên quan đến phiên bản',
   })
   artifacts?: {
     modelFile?: string;
@@ -112,35 +112,35 @@ export class ModelVersion extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'User who created this version',
+    comment: 'Người dùng đã tạo ra phiên bản này',
   })
   createdBy: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When training started',
+    comment: 'Thời điểm bắt đầu quá trình huấn luyện.',
   })
   trainingStartedAt?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When training completed',
+    comment: 'Thời điểm kết thúc quá trình huấn luyện.',
   })
   trainingCompletedAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Version-specific configuration',
+    comment: 'Cấu hình dành riêng cho phiên bản',
   })
   configuration?: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Performance comparison with previous versions',
+    comment: 'Trường JSON so sánh hiệu suất của phiên bản này với phiên bản trước đó.',
   })
   performanceComparison?: {
     previousVersion?: string;
@@ -152,14 +152,15 @@ export class ModelVersion extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this version is currently active',
+    comment:
+      'Cờ (true/false) cho biết đây có phải là phiên bản đang được sử dụng trong môi trường production hay không',
   })
   isActive: boolean;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional metadata',
+    comment: 'Siêu dữ liệu bổ sung',
   })
   metadata?: Record<string, any>;
 

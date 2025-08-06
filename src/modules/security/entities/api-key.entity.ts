@@ -1,62 +1,85 @@
 import { BaseEntity } from '@/common/entities/base.entity';
-import { Entity, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, Column, Index } from 'typeorm';
 
 @Entity('api_keys')
 @Index(['key'])
 @Index(['userId'])
 @Index(['status', 'expiresAt'])
 export class ApiKeyEntity extends BaseEntity {
-  @Column()
+  @Column({
+    type: 'varchar',
+    length: 255,
+    comment: 'Chuỗi khóa bí mật duy nhất được cung cấp cho bên thứ ba',
+  })
   key: string;
 
-  @Column()
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    comment: 'Tên gợi nhớ cho khóa API',
+  })
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, comment: 'Mô tả' })
   description: string;
 
-  @Column()
+  @Column({
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+    comment: 'ID của người dùng sở hữu khóa API này',
+  })
   userId: string;
 
   @Column({
     type: 'enum',
     enum: ['active', 'inactive', 'suspended', 'revoked'],
     default: 'active',
+    comment: 'Trạng thái của khóa (active, inactive, suspended, revoked - đã bị thu hồi).',
   })
   status: string;
 
-  @Column('json')
+  @Column('json', {
+    comment: 'Trường JSON định nghĩa các quyền hạn mà khóa API này được phép thực hiện',
+  })
   permissions: string[];
 
-  @Column('json', { nullable: true })
+  @Column('json', {
+    nullable: true,
+    comment:
+      'Trường JSON định nghĩa các giới hạn (ví dụ: chỉ cho phép truy cập từ một số địa chỉ IP nhất định).',
+  })
   restrictions: Record<string, any>;
 
-  @Column({ type: 'int', default: 1000 })
+  @Column({
+    type: 'int',
+    default: 1000,
+    comment: 'Số lượng yêu cầu tối đa mà khóa này có thể thực hiện trong một khoảng thời gian.',
+  })
   rateLimit: number;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Số lượng yêu cầu hành động trong một khoảng thời gian.',
+  })
   usageCount: number;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: true, comment: 'Thời gian lần cuối dùng khóa' })
   lastUsedAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: true, comment: 'Thời gian hệ thống bị thu hồi khóa' })
   expiresAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, comment: 'IP lần cuối dùng khóa' })
   lastUsedIp: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, comment: 'User-Agent lần cuối dùng khóa' })
   lastUsedUserAgent: string;
 
-  @Column('json', { nullable: true })
+  @Column('json', { nullable: true, comment: 'Thống tin khóa' })
   metadata: Record<string, any>;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 
   hasPermission(permission: string): boolean {
     return this.permissions.includes(permission) || this.permissions.includes('*');

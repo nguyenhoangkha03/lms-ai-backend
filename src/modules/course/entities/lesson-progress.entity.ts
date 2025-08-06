@@ -16,21 +16,22 @@ export class LessonProgress extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'Khóa ngoại liên kết tới users.id',
   })
   studentId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Lesson ID',
+    comment: 'Khóa ngoại liên kết tới lessons.id',
   })
   lessonId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Enrollment ID',
+    comment:
+      'Khóa ngoại liên kết tới enrollments.id, giúp nhóm các tiến độ bài học theo một lượt đăng ký cụ thể',
   })
   enrollmentId: string;
 
@@ -38,35 +39,37 @@ export class LessonProgress extends BaseEntity {
     type: 'enum',
     enum: LessonProgressStatus,
     default: LessonProgressStatus.NOT_STARTED,
-    comment: 'Lesson progress status',
+    comment:
+      'Trạng thái của bài học đối với sinh viên (not_started - chưa bắt đầu, in_progress - đang học, completed - đã hoàn thành).',
   })
   status: LessonProgressStatus;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Lesson completion date',
+    comment: 'Thời điểm sinh viên hoàn thành bài học.',
   })
   completionDate?: Date;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Time spent on lesson in seconds',
+    comment: 'Tổng thời gian (giây) sinh viên đã dành cho bài học này',
   })
   timeSpent: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Last playback position in seconds (for videos)',
+    comment:
+      'Vị trí cuối cùng (tính bằng giây) mà sinh viên đã xem trong một bài học video, giúp họ có thể tiếp tục xem lại lần sau',
   })
   lastPosition: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of times lesson was attempted',
+    comment: 'Số lần sinh viên đã cố gắng hoàn thành bài học (hữu ích cho các bài quiz)',
   })
   attempts: number;
 
@@ -75,7 +78,7 @@ export class LessonProgress extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Score achieved (for quizzes/assignments)',
+    comment: 'Điểm số đạt được (nếu bài học là một bài quiz/bài tập).',
   })
   score?: number;
 
@@ -84,7 +87,7 @@ export class LessonProgress extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Maximum possible score',
+    comment: 'Điểm số tối đa có thể đạt được',
   })
   maxScore?: number;
 
@@ -93,28 +96,28 @@ export class LessonProgress extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 0,
-    comment: 'Progress percentage (0-100)',
+    comment: 'Phần trăm hoàn thành của bài học (hữu ích cho các bài học dài hoặc có nhiều phần).',
   })
   progressPercentage: number;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'First time lesson was accessed',
+    comment: 'Thời điểm sinh viên truy cập bài học lần đầu tiên',
   })
   firstAccessedAt?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last time lesson was accessed',
+    comment: 'Thời điểm sinh viên truy cập bài học lần gần nhất',
   })
   lastAccessedAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'User answers for quiz/assignment lessons',
+    comment: 'Trường JSON lưu các câu trả lời của sinh viên cho bài quiz/bài tập trong bài học',
   })
   answers?: {
     questionId: string;
@@ -126,14 +129,14 @@ export class LessonProgress extends BaseEntity {
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Student notes for this lesson',
+    comment: 'Ghi chú cá nhân của sinh viên cho bài học này',
   })
   notes?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Bookmarks/timestamps for video lessons',
+    comment: 'Trường JSON lưu các mốc thời gian quan trọng mà sinh viên đã đánh dấu trong video',
   })
   bookmarks?: {
     time: number;
@@ -145,7 +148,8 @@ export class LessonProgress extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Interaction data (pause points, rewinds, etc.)',
+    comment:
+      'Trường JSON ghi lại các hành vi chi tiết như tạm dừng, tua lại video, giúp AI phân tích những điểm mà sinh viên có thể đang gặp khó khăn',
   })
   interactionData?: {
     pausePoints?: number[];
@@ -157,21 +161,21 @@ export class LessonProgress extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether lesson was skipped',
+    comment: 'Cờ (true/false) cho biết sinh viên có bỏ qua bài học này hay không',
   })
   isSkipped: boolean;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Reason for skipping or feedback',
+    comment: 'Lý do sinh viên bỏ qua bài học hoặc các phản hồi khác',
   })
   feedback?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional progress metadata',
+    comment: 'Trường JSON để lưu các thông tin tiến độ mở rộng khác',
   })
   metadata?: Record<string, any>;
 

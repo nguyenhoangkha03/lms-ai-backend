@@ -21,36 +21,72 @@ export enum PlagiarismLevel {
 @Index(['plagiarismLevel', 'scanCompletedAt'])
 @Index(['status', 'createdAt'])
 export class PlagiarismCheck extends BaseEntity {
-  @Column({ name: 'initiated_by', type: 'varchar', length: 36, nullable: true })
+  @Column({
+    name: 'initiated_by',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+    comment: 'ID người dùng đã khởi tạo quá trình kiểm tra',
+  })
   initiatedBy?: string;
 
   @Column({
     name: 'content_type',
     type: 'enum',
     enum: ['course', 'lesson', 'assignment', 'forum_post'],
+    comment: 'Loại nội dung được kiểm tra (lesson, assignment)',
   })
   contentType: 'course' | 'lesson' | 'assignment' | 'forum_post';
 
-  @Column({ name: 'content_id', type: 'varchar', length: 36 })
+  @Column({
+    name: 'content_id',
+    type: 'varchar',
+    length: 36,
+    comment: 'ID của bản ghi nội dung được kiểm tra.',
+  })
   contentId: string;
 
-  @Column({ name: 'content_hash', type: 'varchar', length: 64 })
+  @Column({
+    name: 'content_hash',
+    type: 'varchar',
+    length: 64,
+    comment:
+      'Một chuỗi hash đại diện cho nội dung, giúp tránh quét lại nếu nội dung không thay đổi',
+  })
   contentHash: string;
 
   @Column({
     type: 'enum',
     enum: PlagiarismStatus,
     default: PlagiarismStatus.PENDING,
+    comment: 'Trạng thái của quá trình quét (pending, scanning, completed)',
   })
   status: PlagiarismStatus;
 
-  @Column({ name: 'scan_started_at', type: 'timestamp', nullable: true })
+  @Column({
+    name: 'scan_started_at',
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Thời điểm bắt đầu quá trình kiểm tra đạo văn',
+  })
   scanStartedAt?: Date;
 
-  @Column({ name: 'scan_completed_at', type: 'timestamp', nullable: true })
+  @Column({
+    name: 'scan_completed_at',
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Thời điểm quá trình kiểm tra đạo văn hoàn tất',
+  })
   scanCompletedAt?: Date;
 
-  @Column({ name: 'overall_similarity', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'overall_similarity',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+    comment: 'Tỷ lệ phần trăm (%) tương đồng tổng thể được phát hiện',
+  })
   overallSimilarity?: number;
 
   @Column({
@@ -58,16 +94,31 @@ export class PlagiarismCheck extends BaseEntity {
     type: 'enum',
     enum: PlagiarismLevel,
     nullable: true,
+    comment: 'Đánh giá mức độ đạo văn (low, moderate, high)',
   })
   plagiarismLevel?: PlagiarismLevel;
 
-  @Column({ name: 'sources_checked', type: 'int', default: 0 })
+  @Column({
+    name: 'sources_checked',
+    type: 'int',
+    default: 0,
+    comment: 'Tổng số nguồn tài liệu đã được dùng để so sánh',
+  })
   sourcesChecked: number;
 
-  @Column({ name: 'matches_found', type: 'int', default: 0 })
+  @Column({
+    name: 'matches_found',
+    type: 'int',
+    default: 0,
+    comment: 'Tổng số đoạn văn bản trùng khớp được tìm thấy',
+  })
   matchesFound: number;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Trường JSON chứa danh sách chi tiết các nguồn và đoạn văn bản bị trùng lặp',
+  })
   matches?: {
     sourceUrl?: string;
     sourceTitle?: string;
@@ -79,7 +130,11 @@ export class PlagiarismCheck extends BaseEntity {
     confidence: number;
   }[];
 
-  @Column({ type: 'json', nullable: true })
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Trường JSON chứa các phân tích chi tiết khác từ công cụ kiểm tra',
+  })
   analysis?: {
     uniqueContentPercentage: number;
     paraphrasedContentPercentage: number;
@@ -92,7 +147,11 @@ export class PlagiarismCheck extends BaseEntity {
     recommendations: string[];
   };
 
-  @Column({ type: 'json', nullable: true })
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Cấu hình được sử dụng cho quá trình quét đạo văn',
+  })
   scanConfiguration?: {
     checkWebSources: boolean;
     checkAcademicSources: boolean;
@@ -102,7 +161,11 @@ export class PlagiarismCheck extends BaseEntity {
     excludedSources?: string[];
   };
 
-  @Column({ type: 'json', nullable: true })
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Thông tin metadata bổ sung liên quan đến quá trình kiểm tra',
+  })
   metadata?: {
     textLength: number;
     wordsAnalyzed: number;

@@ -12,20 +12,22 @@ export class PeerReviewFeedback extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Submission ID being reviewed',
+    comment:
+      'Khóa ngoại liên kết tới peer_review_submissions.id, xác định bài nộp nào đang được nhận xét',
   })
   submissionId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reviewer user ID',
+    comment:
+      'Khóa ngoại liên kết tới users.id, xác định sinh viên nào đang thực hiện việc đánh giá',
   })
   reviewerId?: string | null;
 
   @Column({
     type: 'longtext',
-    comment: 'Review feedback content',
+    comment: 'Nội dung nhận xét, góp ý chi tiết của người đánh giá',
   })
   feedback: string;
 
@@ -34,14 +36,14 @@ export class PeerReviewFeedback extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Overall score given',
+    comment: 'Điểm số tổng thể mà người đánh giá cho bài làm',
   })
   score?: number;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Detailed scores by criteria (JSON)',
+    comment: 'Trường JSON chứa điểm số chi tiết cho từng tiêu chí trong rubric',
   })
   criteriaScores?: string;
 
@@ -49,35 +51,36 @@ export class PeerReviewFeedback extends BaseEntity {
     type: 'enum',
     enum: ['draft', 'submitted', 'completed'],
     default: 'draft',
-    comment: 'Feedback status',
+    comment: 'Trạng thái của chính lượt phản hồi này (draft - bản nháp, submitted - đã gửi)',
   })
   status: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Feedback submission timestamp',
+    comment: 'Thời gian người đánh giá hoàn thành và gửi đi nhận xét của mình',
   })
   submittedAt?: Date;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Is feedback helpful',
+    comment:
+      'Cờ (true/false) do người được đánh giá bình chọn, cho biết phản hồi này có hữu ích hay không',
   })
   isHelpful: boolean;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Helpfulness votes',
+    comment: 'Đếm số lượt bình chọn "hữu ích" cho phản hồi này',
   })
   helpfulnessVotes: number;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Additional metadata (JSON)',
+    comment: 'Dữ liệu metadata',
   })
   metadata?: string;
 

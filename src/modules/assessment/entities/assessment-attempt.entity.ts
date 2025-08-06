@@ -8,41 +8,41 @@ import { User } from '../../user/entities/user.entity';
 @Index(['attemptNumber'])
 @Index(['status'])
 @Index(['startedAt'])
-// @Index(['studentId', 'assessmentId'])
+@Index(['studentId', 'assessmentId'])
 @Index(['gradingStatus', 'submittedAt'])
 export class AssessmentAttempt extends BaseEntity {
   // Attempt Information
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'Siêu dữ liệu câu hỏi bổ sung',
   })
   studentId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Assessment ID',
+    comment: 'Khóa ngoại liên kết tới assessments.id',
   })
   assessmentId: string;
 
   @Column({
     type: 'int',
-    comment: 'Attempt number for this student',
+    comment: 'Số thứ tự của lần làm bài (1, 2, 3...)',
   })
   attemptNumber: number;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'When the attempt was started',
+    comment: 'Thời điểm sinh viên bắt đầu',
   })
   startedAt: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When the attempt was submitted',
+    comment: 'Thời điểm sinh viên nộp bài',
   })
   submittedAt?: Date;
 
@@ -50,7 +50,7 @@ export class AssessmentAttempt extends BaseEntity {
     type: 'enum',
     enum: GradingStatus,
     default: GradingStatus.PENDING,
-    comment: 'Grading status of the attempt',
+    comment: 'Trạng thái của việc chấm điểm (pending - đang chờ, graded - đã chấm)',
   })
   gradingStatus: GradingStatus;
 
@@ -59,7 +59,7 @@ export class AssessmentAttempt extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Score achieved in this attempt',
+    comment: 'Điểm đạt được trong lần thử này',
   })
   score?: number;
 
@@ -68,7 +68,7 @@ export class AssessmentAttempt extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Maximum possible score',
+    comment: 'Điểm tối đa có thể',
   })
   maxScore?: number;
 
@@ -77,14 +77,14 @@ export class AssessmentAttempt extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Percentage score',
+    comment: 'Tỷ lệ điểm đạt trong lần thử',
   })
   percentage?: number;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Time taken to complete in seconds',
+    comment: 'Thời gian hoàn thành tính bằng giây',
   })
   timeTaken?: number;
 
@@ -92,21 +92,22 @@ export class AssessmentAttempt extends BaseEntity {
     type: 'enum',
     enum: AttemptStatus,
     default: AttemptStatus.IN_PROGRESS,
-    comment: 'Current status of the attempt',
+    comment:
+      'Trạng thái của chính lượt làm bài đó (in_progress - đang làm, submitted - đã nộp, timed_out - hết giờ)',
   })
   status: AttemptStatus;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Student answers for all questions',
+    comment: 'Cột rất quan trọng, trường JSON lưu lại tất cả câu trả lời mà sinh viên đã chọn/nhập',
   })
   answers?: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Overall feedback for the attempt',
+    comment: 'Phản hồi tổng quát của giảng viên hoặc hệ thống cho lượt làm bài này',
   })
   feedback?: string;
 
@@ -114,56 +115,56 @@ export class AssessmentAttempt extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Graded by user ID',
+    comment: 'ID của người đã chấm bài',
   })
   gradedBy?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When the attempt was graded',
+    comment: 'Thời điểm chấm bài',
   })
   gradedAt?: Date;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this attempt is flagged for review',
+    comment: 'Cờ (true/false) nếu hệ thống phát hiện hành vi đáng ngờ',
   })
   isFlagged: boolean;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Flag reason if attempt is flagged',
+    comment: 'Lý do nếu hệ thống phát hiện hành vi đáng ngờ',
   })
   flagReason?: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Proctoring data and flags',
+    comment: 'Trường JSON lưu dữ liệu từ hệ thống giám sát thi (nếu có)',
   })
   proctoringData?: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Session tracking data',
+    comment: 'Dữ liệu theo dõi phiên',
   })
   sessionData?: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Learning analytics data',
+    comment: 'Dữ liệu phân tích học tập',
   })
   analyticsData?: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Additional attempt metadata',
+    comment: 'Siêu dữ liệu của lần thử bổ sung',
   })
   metadata?: string;
 

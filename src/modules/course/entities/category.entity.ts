@@ -11,7 +11,7 @@ export class Category extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Category name',
+    comment: 'Tên hiển thị của danh mục',
   })
   name: string;
 
@@ -19,14 +19,15 @@ export class Category extends BaseEntity {
     type: 'varchar',
     length: 255,
     unique: true,
-    comment: 'URL-friendly slug',
+    comment:
+      'Tên phiên bản rút gọn, không dấu, dùng để tạo đường dẫn URL thân thiện với SEO (ví dụ: lap-trinh-web).',
   })
   slug: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Category description',
+    comment: 'Mô tả danh mục',
   })
   description?: string;
 
@@ -34,7 +35,7 @@ export class Category extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Category icon URL or identifier',
+    comment: 'URL biểu tượng danh mục',
   })
   iconUrl?: string;
 
@@ -42,7 +43,7 @@ export class Category extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Category cover image URL',
+    comment: 'URL ảnh bìa danh mục',
   })
   coverUrl?: string;
 
@@ -50,56 +51,58 @@ export class Category extends BaseEntity {
     type: 'varchar',
     length: 20,
     nullable: true,
-    comment: 'Category color theme',
+    comment: 'Mã màu chủ đạo của danh mục để hiển thị trên giao diện.',
   })
   color?: string;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Display order within parent category',
+    comment: 'Số nguyên xác định vị trí của danh mục khi hiển thị trong danh sách.',
   })
   orderIndex: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Hierarchy level (0 = root)',
+    comment: 'Cấp bậc của danh mục trong cây phân cấp (0 là cấp cao nhất).',
   })
   level: number;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Category active status',
+    comment: 'Trạng thái hoạt động của danh mục',
   })
   isActive: boolean;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Show in navigation menu',
+    comment:
+      'Cờ (true/false) quyết định danh mục có xuất hiện trên thanh điều hướng chính hay không',
   })
   showInMenu: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Featured category status',
+    comment:
+      'Cờ (true/false) để đánh dấu đây là một danh mục nổi bật, có thể được ưu tiên hiển thị ở trang chủ',
   })
   isFeatured: boolean;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of courses in this category',
+    comment: 'Số lượng khóa học',
   })
   courseCount: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'SEO metadata',
+    comment: 'Metadata cho SEO',
   })
   seoMeta?: {
     title?: string;
@@ -111,14 +114,14 @@ export class Category extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Category settings and preferences',
+    comment: 'Cài đặt bổ sung',
   })
   settings?: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional category metadata',
+    comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
 
@@ -133,7 +136,8 @@ export class Category extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Parent category ID',
+    comment:
+      'Khóa ngoại tự tham chiếu đến id của chính bảng này, dùng để tạo cấu trúc cây danh mục. Nếu là NULL, đây là danh mục gốc',
   })
   parentId?: string;
 

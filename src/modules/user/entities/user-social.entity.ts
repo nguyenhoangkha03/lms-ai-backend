@@ -11,21 +11,21 @@ export class UserSocial extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to user ID',
+    comment: 'Tham chiếu ID người dùng',
   })
   userId: string;
 
   @Column({
     type: 'enum',
     enum: SocialPlatform,
-    comment: 'Social media platform',
+    comment: 'Tên nền tảng mạng xã hội ',
   })
   platform: SocialPlatform;
 
   @Column({
     type: 'varchar',
     length: 500,
-    comment: 'Profile URL',
+    comment: 'Đường dẫn URL đầy đủ cho nền tảng mạng xã hội',
   })
   url: string;
 
@@ -33,7 +33,7 @@ export class UserSocial extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Username or handle on the platform',
+    comment: 'Tên định danh của người dùng trên nền tảng đó',
   })
   handle?: string;
 
@@ -41,28 +41,29 @@ export class UserSocial extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Display name on the platform',
+    comment: 'Tên hiển thị trên nền tảng mạng xã hội.',
   })
   displayName?: string;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Whether this social link is public',
+    comment:
+      'Cờ (true/false) cho phép người dùng chọn ẩn/hiện liên kết này trên hồ sơ công khai của họ',
   })
   isPublic: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this social account is verified',
+    comment: ': Cờ (true/false) cho biết tài khoản mạng xã hội này đã được xác minh hay chưa',
   })
   isVerified: boolean;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Order for displaying social links',
+    comment: 'Số nguyên xác định thứ tự hiển thị của các liên kết mạng xã hội trên hồ sơ',
   })
   displayOrder: number;
 
@@ -70,21 +71,21 @@ export class UserSocial extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Custom label for the social link',
+    comment: 'Nhãn do người dùng tự đặt cho liên kết',
   })
   customLabel?: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Description or note about this social link',
+    comment: 'Mô tả ngắn về liên kết này',
   })
   description?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional platform-specific metadata',
+    comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
 

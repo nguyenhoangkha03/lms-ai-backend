@@ -14,7 +14,7 @@ export class LearningActivity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'Khóa ngoại liên kết tới users.id, xác định sinh viên nào đã thực hiện hoạt động',
   })
   studentId: string;
 
@@ -22,7 +22,7 @@ export class LearningActivity extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Course ID if activity is course-related',
+    comment: 'ID khóa học nếu hoạt động liên quan đến khóa học',
   })
   courseId?: string;
 
@@ -30,7 +30,7 @@ export class LearningActivity extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Lesson ID if activity is lesson-related',
+    comment: 'ID bài học nếu hoạt động liên quan đến bài học',
   })
   lessonId?: string;
 
@@ -38,42 +38,45 @@ export class LearningActivity extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Assessment ID if activity is assessment-related',
+    comment: 'ID đánh giá nếu hoạt động liên quan đến đánh giá',
   })
   assessmentId?: string;
 
   @Column({
     type: 'enum',
     enum: ActivityType,
-    comment: 'Type of learning activity',
+    comment:
+      'Cột quan trọng nhất, phân loại hành động đã diễn ra. Ví dụ: video_play (bắt đầu xem video), video_pause (tạm dừng), video_seek (tua video), quiz_submit (nộp bài quiz).',
   })
   activityType: ActivityType;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Unique session identifier',
+    comment:
+      'Mã định danh của phiên đăng nhập khi hoạt động được thực hiện, giúp nhóm các hoạt động lại với nhau',
   })
   sessionId: string;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'Activity timestamp',
+    comment: 'Thời điểm chính xác khi hoạt động xảy ra',
   })
   timestamp: Date;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Duration of activity in seconds',
+    comment:
+      'Thời gian kéo dài của hoạt động, tính bằng giây (ví dụ: thời gian xem video trước khi tạm dừng).',
   })
   duration?: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Activity-specific metadata',
+    comment: 'Dữ liệu metadata',
   })
   metadata?: {
     videoPosition?: number;
@@ -95,14 +98,14 @@ export class LearningActivity extends BaseEntity {
     type: 'varchar',
     length: 45,
     nullable: true,
-    comment: 'IP address of the user',
+    comment: 'Địa chỉ IP của người dùng khi thực hiện hoạt động',
   })
   ipAddress?: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'User agent string',
+    comment: 'Chuỗi thông tin về trình duyệt và hệ điều hành của người dùng',
   })
   userAgent?: string;
 
@@ -110,7 +113,7 @@ export class LearningActivity extends BaseEntity {
     type: 'enum',
     enum: DeviceType,
     nullable: true,
-    comment: 'Type of device used',
+    comment: 'Loại thiết bị được sử dụng',
   })
   deviceType?: DeviceType;
 
@@ -118,7 +121,7 @@ export class LearningActivity extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Browser name',
+    comment: 'Tên trình duyệt',
   })
   browser?: string;
 
@@ -126,7 +129,7 @@ export class LearningActivity extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Operating system',
+    comment: 'Hệ điều hành',
   })
   operatingSystem?: string;
 
@@ -134,7 +137,7 @@ export class LearningActivity extends BaseEntity {
     type: 'varchar',
     length: 50,
     nullable: true,
-    comment: 'Screen resolution',
+    comment: 'Độ phân giải màn hình',
   })
   screenResolution?: string;
 
@@ -142,14 +145,14 @@ export class LearningActivity extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'User timezone',
+    comment: 'Múi giờ của người dùng',
   })
   timezone?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Geolocation data if available',
+    comment: 'Dữ liệu định vị địa lý nếu có',
   })
   location?: {
     country?: string;
@@ -162,7 +165,7 @@ export class LearningActivity extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional tracking data',
+    comment: 'Dữ liệu theo dõi bổ sung',
   })
   trackingData?: Record<string, any>;
 

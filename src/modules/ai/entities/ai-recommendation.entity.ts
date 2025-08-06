@@ -15,14 +15,15 @@ export class AIRecommendation extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'Khóa ngoại liên kết tới users.id, xác định gợi ý này dành cho sinh viên nào',
   })
   studentId: string;
 
   @Column({
     type: 'enum',
     enum: RecommendationType,
-    comment: 'Type of recommendation',
+    comment:
+      'Phân loại mục đích của gợi ý, ví dụ: next_lesson (gợi ý bài học tiếp theo), review_content (ôn tập lại nội dung), course_recommendation (gợi ý khóa học mới), study_schedule (gợi ý lịch học)',
   })
   recommendationType: RecommendationType;
 
@@ -30,7 +31,8 @@ export class AIRecommendation extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Related content ID (course, lesson, assessment)',
+    comment:
+      'ID Liên kết đến nội dung cụ thể được gợi ý (ID của một khóa học, bài học, hoặc bài kiểm tra).',
   })
   contentId?: string;
 
@@ -38,26 +40,27 @@ export class AIRecommendation extends BaseEntity {
     type: 'varchar',
     length: 50,
     nullable: true,
-    comment: 'Content type (course, lesson, assessment, skill)',
+    comment: 'Loại nội dung cụ thể được gợi ý (ID của một khóa học, bài học, hoặc bài kiểm tra).',
   })
   contentType?: string;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Recommendation title',
+    comment: 'Tiêu đề gợi ý',
   })
   title: string;
 
   @Column({
     type: 'text',
-    comment: 'Detailed recommendation description',
+    comment: 'Mô tả đề xuất chi tiết',
   })
   description: string;
 
   @Column({
     type: 'text',
-    comment: 'AI reasoning for this recommendation',
+    comment:
+      'Cột quan trọng, giải thích tại sao AI lại đưa ra gợi ý này (ví dụ: "Vì bạn đã làm sai 3/5 câu hỏi về chủ đề này trong bài quiz trước").',
   })
   reason: string;
 
@@ -66,7 +69,7 @@ export class AIRecommendation extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 0.5,
-    comment: 'AI confidence score (0.0 - 1.0)',
+    comment: 'Mức độ tự tin của AI (từ 0.0 đến 1.0) về tính hiệu quả của gợi ý',
   })
   confidenceScore: number;
 
@@ -74,7 +77,7 @@ export class AIRecommendation extends BaseEntity {
     type: 'enum',
     enum: Priority,
     default: Priority.MEDIUM,
-    comment: 'Recommendation priority level',
+    comment: 'Mức độ khẩn cấp của gợi ý (low, medium, high, urgent)',
   })
   priority: Priority;
 
@@ -82,21 +85,22 @@ export class AIRecommendation extends BaseEntity {
     type: 'enum',
     enum: RecommendationStatus,
     default: RecommendationStatus.PENDING,
-    comment: 'Current recommendation status',
+    comment:
+      'Vòng đời của một gợi ý (pending - đang chờ, accepted - người dùng chấp nhận, dismissed - người dùng bỏ qua)',
   })
   status: RecommendationStatus;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When this recommendation expires',
+    comment: 'Thời điểm mà gợi ý sẽ không còn phù hợp và tự động biến mất',
   })
   expiresAt?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When user interacted with recommendation',
+    comment: 'Ghi lại thời điểm người dùng tương tác với gợi ý',
   })
   interactedAt?: Date;
 
@@ -104,14 +108,14 @@ export class AIRecommendation extends BaseEntity {
     type: 'varchar',
     length: 50,
     nullable: true,
-    comment: 'User interaction type (viewed, clicked, accepted, dismissed)',
+    comment: 'Ghi lại cách người dùng tương tác với gợi ý (viewed, clicked)',
   })
   interactionType?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Recommendation-specific metadata',
+    comment: 'Siêu dữ liệu dành riêng cho đề xuất',
   })
   metadata?: {
     estimatedDuration?: number;
@@ -127,7 +131,7 @@ export class AIRecommendation extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'AI model information',
+    comment: 'Thông tin mô hình AI',
   })
   modelInfo?: {
     modelVersion?: string;
@@ -140,7 +144,7 @@ export class AIRecommendation extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'User context when recommendation was generated',
+    comment: 'Bối cảnh người dùng khi đề xuất được tạo ra',
   })
   userContext?: {
     currentCourse?: string;
@@ -155,7 +159,7 @@ export class AIRecommendation extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Expected outcomes from this recommendation',
+    comment: 'Kết quả mong đợi từ khuyến nghị này',
   })
   expectedOutcomes?: {
     skillImprovement?: string[];
@@ -168,7 +172,7 @@ export class AIRecommendation extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'A/B testing information',
+    comment: 'Thông tin thử nghiệm A/B',
   })
   abTestInfo?: {
     testId?: string;
@@ -181,28 +185,28 @@ export class AIRecommendation extends BaseEntity {
     precision: 3,
     scale: 2,
     nullable: true,
-    comment: 'User feedback rating (1.0 - 5.0)',
+    comment: 'Đánh giá phản hồi của người dùng (1.0 - 5.0)',
   })
   userRating?: number;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'User feedback comments',
+    comment: 'Ý kiến phản hồi của người dùng',
   })
   userFeedback?: string;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether recommendation was effective',
+    comment: 'Khuyến nghị có hiệu quả hay không',
   })
   wasEffective?: boolean;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Effectiveness metrics',
+    comment: 'Chỉ số hiệu quả',
   })
   effectivenessMetrics?: {
     clickThroughRate?: number;

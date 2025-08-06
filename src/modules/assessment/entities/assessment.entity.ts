@@ -8,16 +8,16 @@ import { Question } from './question.entity';
 import { AssessmentAttempt } from './assessment-attempt.entity';
 
 @Entity('assessments')
-// @Index(['courseId', 'status'])
-// @Index(['teacherId', 'assessmentType'])
-// @Index(['lessonId'])
+@Index(['courseId', 'status'])
+@Index(['teacherId', 'assessmentType'])
+@Index(['lessonId'])
 @Index(['availableFrom', 'availableUntil'])
 export class Assessment extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Course ID if assessment is course-level',
+    comment: 'Khóa ngoại cho biết bài kiểm tra này thuộc về cả khóa học nào',
   })
   courseId?: string;
 
@@ -25,35 +25,35 @@ export class Assessment extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Lesson ID if assessment is lesson-level',
+    comment: 'Khóa ngoại cho biết bài kiểm tra này thuộc về bài học nào',
   })
   lessonId?: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Teacher/Creator ID',
+    comment: 'Khóa ngoại liên kết tới users.id, xác định người tạo bài kiểm tra',
   })
   teacherId: string;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Assessment title',
+    comment: 'Tên của bài kiểm tra',
   })
   title: string;
 
   @Column({
     type: 'varchar',
     length: 500,
-    comment: 'Assessment description',
+    comment: 'Mô tả chi tiết về bài kiểm tra',
   })
   description: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Detailed instructions for students',
+    comment: 'Hướng dẫn chi tiết về bài kiểm tra',
   })
   instructions?: string;
 
@@ -61,7 +61,7 @@ export class Assessment extends BaseEntity {
     type: 'enum',
     enum: AssessmentType,
     default: AssessmentType.QUIZ,
-    comment: 'Type of assessment',
+    comment: 'Phân loại hình thức kiểm tra (quiz, exam, survey - khảo sát, project - dự án).',
   })
   assessmentType: AssessmentType;
 
@@ -69,21 +69,21 @@ export class Assessment extends BaseEntity {
     type: 'enum',
     enum: AssessmentStatus,
     default: AssessmentStatus.DRAFT,
-    comment: 'Assessment status',
+    comment: 'Trạng thái của bài kiểm tra (draft, published, archived).',
   })
   status: AssessmentStatus;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Time limit in minutes',
+    comment: 'Thời gian tối đa (tính bằng phút) để hoàn thành bài kiểm tra.',
   })
   timeLimit?: number;
 
   @Column({
     type: 'int',
     default: 1,
-    comment: 'Maximum number of attempts allowed',
+    comment: 'Thời gian tối đa (tính bằng phút) để hoàn thành bài kiểm tra.',
   })
   maxAttempts: number;
 
@@ -92,7 +92,7 @@ export class Assessment extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 70.0,
-    comment: 'Minimum score to pass (percentage)',
+    comment: 'Tỷ lệ phần trăm điểm số tối thiểu để được tính là "Đạt".',
   })
   passingScore: number;
 
@@ -101,7 +101,7 @@ export class Assessment extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Total possible points',
+    comment: 'Tổng số điểm của bài kiểm tra.',
   })
   totalPoints?: number;
 
@@ -109,14 +109,14 @@ export class Assessment extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether to randomize question order',
+    comment: 'Cờ (true/false) cho phép tự động xáo trộn thứ tự câu hỏi để chống gian lận',
   })
   randomizeQuestions: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether to randomize answer options',
+    comment: 'Cờ (true/false) cho phép tự động xáo trộn thứ tự trả lời để chống gian lận',
   })
   randomizeAnswers: boolean;
 
@@ -124,28 +124,30 @@ export class Assessment extends BaseEntity {
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Whether to show results immediately after submission',
+    comment:
+      'Cờ (true/false) để cấu hình việc có hiển thị kết quả ngay sau khi sinh viên nộp bài hay không',
   })
   showResults: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether to show correct answers after submission',
+    comment:
+      'Cờ (true/false) để cấu hình việc có hiển thị đáp án đúng ngay sau khi sinh viên nộp bài hay không',
   })
   showCorrectAnswers: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this assessment is mandatory',
+    comment: 'Cờ (true/false) xác định đây có phải là bài kiểm tra bắt buộc hay không',
   })
   isMandatory: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this is a proctored assessment',
+    comment: 'Cờ (true/false) cho biết bài thi có được giám sát từ xa (proctoring) hay không',
   })
   isProctored: boolean;
 
@@ -153,14 +155,14 @@ export class Assessment extends BaseEntity {
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Assessment available from date',
+    comment: 'Thời gian mở đề: Khoảng thời gian mà sinh viên được phép bắt đầu làm bài',
   })
   availableFrom?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Assessment available until date',
+    comment: 'Thời gian đóng đề',
   })
   availableUntil?: Date;
 
@@ -169,7 +171,7 @@ export class Assessment extends BaseEntity {
     type: 'enum',
     enum: GradingMethod,
     default: GradingMethod.AUTOMATIC,
-    comment: 'How this assessment should be graded',
+    comment: 'Cách thức chấm điểm (automatic - tự động, manual - thủ công, hybrid - kết hợp).',
   })
   gradingMethod: GradingMethod;
 
@@ -178,7 +180,7 @@ export class Assessment extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 1.0,
-    comment: 'Weight of this assessment in final grade',
+    comment: 'Trọng số của bài kiểm tra này trong tổng điểm cuối kỳ của khóa học',
   })
   weight: number;
 
@@ -186,7 +188,7 @@ export class Assessment extends BaseEntity {
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Assessment configuration settings',
+    comment: 'Cài đặt cấu hình đánh giá',
   })
   //   settings?: {
   //     allowBackward?: boolean;
@@ -202,7 +204,7 @@ export class Assessment extends BaseEntity {
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Anti-cheating configuration',
+    comment: 'Cấu hình chống gian lận',
   })
   //   antiCheatSettings?: {
   //     preventCopyPaste?: boolean;
@@ -217,7 +219,7 @@ export class Assessment extends BaseEntity {
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Additional metadata for assessment',
+    comment: 'Siêu dữ liệu bổ sung để đánh giá',
   })
   //   metadata?: Record<string, any>;
   metadata?: string;

@@ -25,90 +25,110 @@ export enum SecurityEvent {
 }
 
 @Entity('assessment_sessions')
-// @Index(['studentId', 'assessmentId', 'status'])
-// @Index(['sessionToken'])
+@Index(['studentId', 'assessmentId', 'status'])
+@Index(['sessionToken'])
 @Index(['expiresAt'])
 export class AssessmentSession extends BaseEntity {
-  @Column({ type: 'varchar', length: 255, unique: true, comment: 'Unique session token' })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    comment:
+      'Một chuỗi token duy nhất để xác thực các hành động trong phiên làm bài mà không cần gửi lại thông tin đăng nhập',
+  })
   sessionToken: string;
 
   @Column({
     type: 'enum',
     enum: SessionStatus,
     default: SessionStatus.PREPARING,
-    comment: 'Session status',
+    comment:
+      'Trạng thái hiện tại của phiên (active - đang làm, paused - tạm dừng, completed - đã hoàn thành).',
   })
   status: SessionStatus;
 
-  @Column({ type: 'timestamp', comment: 'Session start time', nullable: true })
+  @Column({ type: 'timestamp', comment: 'Ghi lại thời điểm bắt đầu', nullable: true })
   startedAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true, comment: 'Session end time' })
+  @Column({ type: 'timestamp', nullable: true, comment: 'Ghi lại thời điểm kết thúc' })
   endedAt?: Date;
 
-  @Column({ type: 'timestamp', comment: 'Session expiration time', nullable: true })
+  @Column({ type: 'timestamp', comment: 'Thời điểm phiên sẽ tự động hết hạn.', nullable: true })
   expiresAt: Date;
 
-  @Column({ type: 'int', nullable: true, comment: 'Time remaining in seconds' })
+  @Column({ type: 'int', nullable: true, comment: 'Số giây còn lại cho đến khi hết giờ làm bài' })
   timeRemaining?: number;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'Last activity timestamp',
+    comment:
+      'Thời điểm cuối cùng hệ thống ghi nhận một hành động từ sinh viên (ví dụ: trả lời câu hỏi)',
   })
   lastActivityAt: Date;
 
-  @Column({ type: 'int', default: 0, comment: 'Current question index' })
+  @Column({ type: 'int', default: 0, comment: 'Vị trí câu hỏi hiện tại, ' })
   currentQuestionIndex: number;
 
-  @Column({ type: 'int', default: 0, comment: 'Questions answered count' })
+  @Column({ type: 'int', default: 0, comment: 'Số câu đã trả lời.' })
   questionsAnswered: number;
 
-  @Column({ type: 'int', comment: 'Total questions count' })
+  @Column({ type: 'int', comment: 'Tổng số câu hỏi' })
   totalQuestions: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0.0, comment: 'Progress percentage' })
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0.0, comment: 'Phần trăm tiến độ' })
   progressPercentage: number;
 
-  @Column({ type: 'longtext', nullable: true, comment: 'Current answers (JSON)' })
+  @Column({
+    type: 'longtext',
+    nullable: true,
+    comment:
+      'Trường JSON lưu tạm thời các câu trả lời của sinh viên, được tự động lưu (auto-save) định kỳ',
+  })
   currentAnswers?: string;
 
-  @Column({ type: 'timestamp', nullable: true, comment: 'Last auto-save timestamp' })
+  @Column({ type: 'timestamp', nullable: true, comment: 'Dấu thời gian tự động lưu cuối cùng' })
   lastAutoSaveAt?: Date;
 
-  @Column({ type: 'int', default: 30, comment: 'Auto-save interval in seconds' })
+  @Column({ type: 'int', default: 30, comment: 'Khoảng thời gian tự động lưu tính bằng giây' })
   autoSaveInterval: number;
 
   // Security and Proctoring
-  @Column({ type: 'longtext', nullable: true, comment: 'Security events log (JSON)' })
+  @Column({ type: 'longtext', nullable: true, comment: 'Nhật ký sự kiện bảo mật (JSON)' })
   securityEvents?: string;
 
-  @Column({ type: 'int', default: 0, comment: 'Security violations count' })
+  @Column({ type: 'int', default: 0, comment: 'Số lượng vi phạm an ninh' })
   securityViolationsCount: number;
 
-  @Column({ type: 'tinyint', default: false, comment: 'Is session flagged for review' })
+  @Column({
+    type: 'tinyint',
+    default: false,
+    comment: 'Cờ (true/false) nếu phiên làm bài bị đánh dấu là đáng ngờ',
+  })
   isFlagged: boolean;
 
-  @Column({ type: 'text', nullable: true, comment: 'Flag reason' })
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: 'Lý do nếu phiên làm bài bị đánh dấu là đáng ngờ',
+  })
   flagReason?: string;
 
-  @Column({ type: 'longtext', nullable: true, comment: 'Browser information (JSON)' })
+  @Column({ type: 'longtext', nullable: true, comment: 'Ghi lại thông tin trình duyệt' })
   browserInfo?: string;
 
-  @Column({ type: 'varchar', length: 50, nullable: true, comment: 'Screen resolution' })
+  @Column({ type: 'varchar', length: 50, nullable: true, comment: 'Độ phân giải màn hình' })
   screenResolution?: string;
 
-  @Column({ type: 'tinyint', default: false, comment: 'Is fullscreen mode' })
+  @Column({ type: 'tinyint', default: false, comment: 'Trạng thái toàn màn hình' })
   isFullscreen: boolean;
 
-  @Column({ type: 'int', default: 0, comment: 'Tab switches count' })
+  @Column({ type: 'int', default: 0, comment: 'Đếm số lần chuyển tab để phát hiện gian lận' })
   tabSwitchCount: number;
 
-  @Column({ type: 'int', default: 0, comment: 'Connection interruptions count' })
+  @Column({ type: 'int', default: 0, comment: 'Số lần mất kết nối' })
   connectionInterruptions: number;
 
-  @Column({ type: 'timestamp', nullable: true, comment: 'Last ping timestamp' })
+  @Column({ type: 'timestamp', nullable: true, comment: 'Dấu thời gian ping cuối cùng' })
   lastPingAt?: Date;
 
   @Column({
@@ -116,27 +136,27 @@ export class AssessmentSession extends BaseEntity {
     precision: 3,
     scale: 2,
     nullable: true,
-    comment: 'Network quality score',
+    comment: 'Điểm chất lượng mạng',
   })
   networkQuality?: number;
 
-  @Column({ type: 'longtext', nullable: true, comment: 'Session configuration (JSON)' })
+  @Column({ type: 'longtext', nullable: true, comment: 'Cấu hình phiên' })
   sessionConfig?: string;
 
-  @Column({ type: 'longtext', nullable: true, comment: 'Randomized questions order (JSON)' })
+  @Column({ type: 'longtext', nullable: true, comment: 'Thứ tự câu hỏi ngẫu nhiên' })
   questionsOrder?: string;
 
-  @Column({ type: 'longtext', nullable: true, comment: 'Additional metadata (JSON)' })
+  @Column({ type: 'longtext', nullable: true, comment: 'Siêu dữ liệu bổ sung' })
   metadata?: string;
 
   // Relationships
-  @Column({ type: 'varchar', length: 36, comment: 'Student ID' })
+  @Column({ type: 'varchar', length: 36, comment: 'Id sinh viên' })
   studentId: string;
 
-  @Column({ type: 'varchar', length: 36, comment: 'Assessment ID' })
+  @Column({ type: 'varchar', length: 36, comment: 'Id kiểm tra' })
   assessmentId: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true, comment: 'Assessment attempt ID' })
+  @Column({ type: 'varchar', length: 36, nullable: true, comment: 'Id lần làm bài' })
   attemptId?: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })

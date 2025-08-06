@@ -11,7 +11,7 @@ export class TeacherProfile extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to user ID',
+    comment: 'Tham chiếu ID người dùng',
   })
   userId: string;
 
@@ -19,35 +19,35 @@ export class TeacherProfile extends BaseEntity {
     type: 'varchar',
     length: 20,
     unique: true,
-    comment: 'Unique teacher code/ID',
+    comment: 'Mã giảng viên',
   })
   teacherCode: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Teacher specializations and expertise',
+    comment: 'Các lĩnh vực chuyên môn sâu của giảng viên',
   })
   specializations?: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Educational qualifications',
+    comment: 'Thông tin về bằng cấp học vấn (đại học, thạc sĩ, tiến sĩ)',
   })
   qualifications?: string;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Years of teaching experience',
+    comment: 'Số năm kinh nghiệm giảng dạy',
   })
   yearsExperience: number;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Teaching style and methodology',
+    comment: 'Phong cách giảng dạy',
   })
   teachingStyle?: string;
 
@@ -55,7 +55,7 @@ export class TeacherProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Office hours schedule',
+    comment: 'Lịch làm việc hoặc thời gian sẵn sàng hỗ trợ sinh viên',
   })
   officeHours?: string;
 
@@ -64,42 +64,42 @@ export class TeacherProfile extends BaseEntity {
     precision: 3,
     scale: 2,
     default: 0,
-    comment: 'Average rating from students',
+    comment: 'Điểm đánh giá trung bình từ sinh viên',
   })
   rating: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total number of ratings',
+    comment: 'Tổng số lần giảng viên được sinh viên đánh giá.',
   })
   totalRatings: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total number of students taught',
+    comment: 'Tổng số sinh viên mà giảng viên đã dạy',
   })
   totalStudents: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total courses created',
+    comment: 'Tổng số khóa học do giảng viên tạo ra',
   })
   totalCourses: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total lessons created',
+    comment: 'Tổng số bài học do giảng viên tạo ra.',
   })
   totalLessons: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total teaching hours',
+    comment: 'Tổng số giờ đã giảng dạy trên hệ thống',
   })
   totalTeachingHours: number;
 
@@ -108,35 +108,35 @@ export class TeacherProfile extends BaseEntity {
     precision: 10,
     scale: 2,
     default: 0,
-    comment: 'Total earnings from courses',
+    comment: 'Tổng thu nhập kiếm được từ các khóa học.',
   })
   totalEarnings: number;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Teacher approval status',
+    comment: 'Cờ (true/false) xác định hồ sơ giảng viên đã được Admin phê duyệt hay chưa',
   })
   isApproved: boolean;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Teacher active status',
+    comment: 'Trạng thái hoạt động của giảng viên trên nền tảng.',
   })
   isActive: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Featured teacher status',
+    comment: 'Cờ (true/false) cho biết đây có phải là giảng viên nổi bật hay không',
   })
   isFeatured: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Verified teacher badge',
+    comment: 'Cờ (true/false) đánh dấu giảng viên đã được xác minh danh tính (ví dụ: qua CMND/CCCD',
   })
   isVerified: boolean;
 
@@ -144,21 +144,21 @@ export class TeacherProfile extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Who approved the teacher',
+    comment: 'ID của admin đã duyệt hồ sơ',
   })
   approvedBy?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When teacher was approved',
+    comment: 'Thời gian hồ sơ được duyệt.',
   })
   approvedAt?: Date;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Approval notes or comments',
+    comment: 'Ghi chú của admin khi duyệt hồ sơ',
   })
   approvalNotes?: string;
 
@@ -166,7 +166,7 @@ export class TeacherProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Teaching license or certification number',
+    comment: 'Số giấy phép hoặc chứng chỉ giảng dạy',
   })
   licenseNumber?: string;
 
@@ -174,28 +174,28 @@ export class TeacherProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Educational institution affiliations',
+    comment: 'Các trường học, tổ chức mà giảng viên đang liên kết.',
   })
   affiliations?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Teaching subjects and topics',
+    comment: 'Trường JSON liệt kê các môn học, chủ đề giảng dạys',
   })
   subjects?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Languages teacher can instruct in',
+    comment: 'Trường JSON liệt kê các ngôn ngữ mà giảng viên có thể dạy',
   })
   teachingLanguages?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Available time slots for teaching',
+    comment: 'Trường JSON lưu lịch rảnh của giảng viên cho các buổi dạy kèm hoặc họp',
   })
   availability?: Record<string, any>;
 
@@ -204,7 +204,7 @@ export class TeacherProfile extends BaseEntity {
     precision: 8,
     scale: 2,
     nullable: true,
-    comment: 'Hourly rate for private sessions',
+    comment: 'Mức phí cho mỗi giờ dạy kèm (nếu có)',
   })
   hourlyRate?: number;
 
@@ -212,28 +212,28 @@ export class TeacherProfile extends BaseEntity {
     type: 'varchar',
     length: 3,
     default: 'USD',
-    comment: 'Currency for pricing',
+    comment: 'Loại tiền tệ cho mức phí',
   })
   currency: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Awards and recognitions',
+    comment: 'Trường JSON liệt kê các giải thưởng, công nhận đã đạt được',
   })
   awards?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Publications and research work',
+    comment: 'Trường JSON liệt kê các bài báo, công trình nghiên cứu đã xuất bản',
   })
   publications?: string[];
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Professional summary',
+    comment: 'Tóm tắt chuyên môn',
   })
   professionalSummary?: string;
 
@@ -241,56 +241,56 @@ export class TeacherProfile extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'CV/Resume document URL',
+    comment: 'URL hồ sơ (CV)',
   })
   resumeUrl?: string;
   @Column({
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Portfolio or demo reel URL',
+    comment: 'Đường dẫn đến trang portfolio hoặc các sản phẩm giảng dạy mẫu',
   })
   portfolioUrl?: string;
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Accept new students',
+    comment: 'Nhận sinh viên mới',
   })
   acceptingStudents: boolean;
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Maximum students per class',
+    comment: 'Số sinh viên tối đa trong một lớp',
   })
   maxStudentsPerClass?: number;
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Allow students to rate and review',
+    comment: 'Cài đặt cho phép sinh viên đánh giá giảng viên hay không',
   })
   allowReviews: boolean;
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Receive email notifications',
+    comment: 'Cài đặt nhận thông báo qua email của giảng viên.',
   })
   emailNotifications: boolean;
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'Teacher application date',
+    comment: 'Ngày nộp hồ sơ',
   })
   applicationDate: Date;
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last teaching activity',
+    comment: 'Lần dạy cuối',
   })
   lastTeachingAt?: Date;
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional teacher metadata',
+    comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
   // Relationships

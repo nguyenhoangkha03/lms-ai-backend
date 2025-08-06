@@ -793,7 +793,6 @@ export class UserService {
   async delete(id: string): Promise<void> {
     const user = await this.findById(id);
 
-    // Soft delete
     user.deletedAt = new Date();
     await this.userRepository.save(user);
 

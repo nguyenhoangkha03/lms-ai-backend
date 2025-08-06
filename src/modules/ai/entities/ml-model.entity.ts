@@ -13,35 +13,36 @@ export class MLModel extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Model name identifier',
+    comment: 'Tên duy nhất của mô hình dùng trong code (ví dụ: course_recommender).',
   })
   name: string;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Human-readable display name',
+    comment: 'Tên mô hình hiển thị trên giao diện quản lý (ví dụ: "Hệ thống Gợi ý Khóa học").',
   })
   displayName: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Model description and purpose',
+    comment: 'Mô tả mục đích và chức năng của mô hình',
   })
   description?: string;
 
   @Column({
     type: 'enum',
     enum: ModelType,
-    comment: 'Type of ML model',
+    comment:
+      'Phân loại kỹ thuật của mô hình (recommendation - gợi ý, classification - phân loại, nlp - xử lý ngôn ngữ tự nhiên)',
   })
   modelType: ModelType;
 
   @Column({
     type: 'enum',
     enum: ModelFramework,
-    comment: 'ML framework used',
+    comment: 'Nền tảng/thư viện được dùng để xây dựng mô hình (tensorflow, pytorch...).',
   })
   framework: ModelFramework;
 
@@ -49,14 +50,15 @@ export class MLModel extends BaseEntity {
     type: 'enum',
     enum: ModelStatus,
     default: ModelStatus.DEVELOPMENT,
-    comment: 'Current model status',
+    comment:
+      'Vòng đời của mô hình (development - đang phát triển, training - đang huấn luyện, production - đang hoạt động).',
   })
   status: ModelStatus;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'User who created this model',
+    comment: 'Người dùng đã tạo mô hình này',
   })
   createdBy: string;
 
@@ -64,7 +66,7 @@ export class MLModel extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Current active version',
+    comment: 'Số hiệu của phiên bản đang được sử dụng chính thức',
   })
   currentVersion?: string;
 
@@ -72,14 +74,15 @@ export class MLModel extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Python service endpoint URL',
+    comment:
+      'Địa chỉ URL của API nơi mô hình đang được triển khai và sẵn sàng nhận yêu cầu dự đoán',
   })
   serviceEndpoint?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Model configuration and hyperparameters',
+    comment: 'Trường JSON lưu các siêu tham số (hyperparameters) và cấu hình của mô hình.',
   })
   configuration?: {
     inputSchema?: Record<string, any>;
@@ -105,7 +108,8 @@ export class MLModel extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Model performance metrics',
+    comment:
+      'Trường JSON lưu các chỉ số đánh giá hiệu suất của mô hình (ví dụ: độ chính xác, F1-score).',
   })
   metrics?: {
     accuracy?: number;
@@ -122,7 +126,7 @@ export class MLModel extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Training dataset information',
+    comment: 'Trường JSON mô tả về tập dữ liệu đã được dùng để huấn luyện mô hình.',
   })
   trainingData?: {
     datasetName?: string;
@@ -136,35 +140,36 @@ export class MLModel extends BaseEntity {
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Whether model is active',
+    comment: 'Liệu mô hình có đang hoạt động hay không',
   })
   isActive: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether model is deployed in production',
+    comment:
+      'Cờ (true/false) cho biết mô hình có đang được triển khai trong môi trường production hay không.',
   })
   isDeployed: boolean;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When model was last trained',
+    comment: 'Thời điểm mô hình được huấn luyện',
   })
   lastTrainedAt?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When model was deployed',
+    comment: 'Thời điểm mô hình được triển khai lần cuối.',
   })
   deployedAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'A/B testing configuration',
+    comment: 'Cấu hình thử nghiệm A/B',
   })
   abTestConfig?: {
     enabled?: boolean;

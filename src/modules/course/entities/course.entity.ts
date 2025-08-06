@@ -35,7 +35,7 @@ export class Course extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Course title',
+    comment: 'Tên chính thức của khóa học',
   })
   title: string;
 
@@ -43,13 +43,13 @@ export class Course extends BaseEntity {
     type: 'varchar',
     length: 255,
     unique: true,
-    comment: 'URL-friendly slug',
+    comment: 'Tên phiên bản rút gọn của tiêu đề, dùng để tạo đường dẫn URL',
   })
   slug: string;
 
   @Column({
     type: 'text',
-    comment: 'Course description',
+    comment: 'Mô tả chi tiết về khóa học',
   })
   description: string;
 
@@ -57,7 +57,7 @@ export class Course extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Short course description for previews',
+    comment: 'Mô tả ngắn về khóa học',
   })
   shortDescription?: string;
 
@@ -65,7 +65,7 @@ export class Course extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Course thumbnail image URL',
+    comment: 'URL hình ảnh thu nhỏ của khóa học',
   })
   thumbnailUrl?: string;
 
@@ -73,21 +73,21 @@ export class Course extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Course trailer video URL',
+    comment: 'URL video giới thiệu khóa học',
   })
   trailerVideoUrl?: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Teacher/Instructor ID',
+    comment: 'Khóa ngoại liên kết tới users.id, xác định giảng viên phụ trách khóa học',
   })
   teacherId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Course category ID',
+    comment: 'Khóa ngoại liên kết tới categories.id, xác định khóa học thuộc danh mục nào',
   })
   categoryId: string;
 
@@ -95,7 +95,7 @@ export class Course extends BaseEntity {
     type: 'enum',
     enum: CourseLevel,
     default: CourseLevel.BEGINNER,
-    comment: 'Course difficulty level',
+    comment: 'Mức độ khó của khóa học (beginner, intermediate, advanced).',
   })
   level: CourseLevel;
 
@@ -103,21 +103,21 @@ export class Course extends BaseEntity {
     type: 'enum',
     enum: CourseLanguage,
     default: CourseLanguage.ENGLISH,
-    comment: 'Course language',
+    comment: 'Ngôn ngữ giảng dạy của khóa học (en, vi).',
   })
   language: CourseLanguage;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Estimated course duration in hours',
+    comment: 'Thời lượng khóa học ước tính tính bằng giờ',
   })
   durationHours?: number;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Estimated course duration in minutes',
+    comment: 'Thời lượng khóa học ước tính tính bằng phút',
   })
   durationMinutes?: number;
 
@@ -126,7 +126,7 @@ export class Course extends BaseEntity {
     precision: 10,
     scale: 2,
     default: 0,
-    comment: 'Course price',
+    comment: 'Giá khóa học',
   })
   price: number;
 
@@ -134,7 +134,7 @@ export class Course extends BaseEntity {
     type: 'varchar',
     length: 3,
     default: 'USD',
-    comment: 'Price currency code',
+    comment: 'Mã tiền tệ giá khóa học',
   })
   currency: string;
 
@@ -143,14 +143,14 @@ export class Course extends BaseEntity {
     precision: 10,
     scale: 2,
     nullable: true,
-    comment: 'Original price before discount',
+    comment: 'Giá gốc trước khi giảm giá',
   })
   originalPrice?: number;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Is course free',
+    comment: 'Giá học có miễn phí không',
   })
   isFree: boolean;
 
@@ -158,7 +158,7 @@ export class Course extends BaseEntity {
     type: 'enum',
     enum: CoursePricing,
     default: CoursePricing.FREE,
-    comment: 'Course pricing model',
+    comment: 'Mô hình định giá khóa học',
   })
   pricingModel: CoursePricing;
 
@@ -166,42 +166,42 @@ export class Course extends BaseEntity {
     type: 'enum',
     enum: CourseStatus,
     default: CourseStatus.DRAFT,
-    comment: 'Course status',
+    comment: 'Trạng thái khóa học (draft, published, archived).',
   })
   status: CourseStatus;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Maximum number of enrollments',
+    comment: 'Số lượng đăng ký tối đa',
   })
   enrollmentLimit?: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Course tags for categorization',
+    comment: 'Thẻ khóa học để phân loại khóa học',
   })
   tags?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Course prerequisites',
+    comment: 'Điều kiện tiên quyết của khóa học',
   })
   requirements?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'What students will learn',
+    comment: 'Học sinh sẽ học được gì',
   })
   whatYouWillLearn?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Target audience description',
+    comment: 'Mô tả đối tượng mục tiêu',
   })
   targetAudience?: string[];
 
@@ -210,147 +210,147 @@ export class Course extends BaseEntity {
     precision: 3,
     scale: 2,
     default: 0,
-    comment: 'Average course rating',
+    comment: 'Đánh giá khóa học trung bình',
   })
   rating: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total number of ratings',
+    comment: 'Tổng số ratings',
   })
   totalRatings: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total number of enrollments',
+    comment: 'Tổng số lượt đăng ký',
   })
   totalEnrollments: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of completed enrollments',
+    comment: 'Số lượng đăng ký đã hoàn thành',
   })
   totalCompletions: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total course reviews',
+    comment: 'Tổng số reviews',
   })
   totalReviews: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of course sections',
+    comment: 'Số chương khóa học',
   })
   totalSections: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of course lessons',
+    comment: 'Số lượng bài học',
   })
   totalLessons: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total video duration in seconds',
+    comment: 'Tổng thời lượng video tính bằng giây',
   })
   totalVideoDuration: number;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Featured course status',
+    comment: 'Trạng thái khóa học nổi bật',
   })
   featured: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Bestseller badge',
+    comment: 'Huy hiệu bán chạy nhất',
   })
   bestseller: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'New course badge',
+    comment: 'Huy hiệu khóa học mới',
   })
   isNew: boolean;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Allow course reviews',
+    comment: 'Cho phép đánh giá khóa học',
   })
   allowReviews: boolean;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Allow course discussions',
+    comment: 'Cho phép thảo luận về khóa học',
   })
   allowDiscussions: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Course completion certificate available',
+    comment: 'Có chứng nhận hoàn thành khóa học',
   })
   hasCertificate: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Lifetime access to course',
+    comment: 'Truy cập khóa học trọn đời',
   })
   lifetimeAccess: boolean;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Access duration in days (if not lifetime)',
+    comment: 'Thời gian truy cập tính bằng ngày (nếu không phải trọn đời)',
   })
   accessDuration?: number;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Course available from',
+    comment: 'Khóa học có sẵn từ',
   })
   availableFrom?: Date;
 
   @Column({
     type: 'datetime',
     nullable: true,
-    comment: 'Course available until',
+    comment: 'Khóa học có sẵn cho đến khi',
   })
   availableUntil?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Course published date',
+    comment: 'Ngày xuất bản khóa học',
   })
   publishedAt?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last content update',
+    comment: 'Cập nhật nội dung cuối cùng',
   })
   lastUpdatedAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'SEO metadata',
+    comment: 'Dữ liệu metadata SEO',
   })
   seoMeta?: {
     title?: string;
@@ -362,14 +362,14 @@ export class Course extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Course settings and preferences',
+    comment: 'Cài đặt và tùy chọn khóa học',
   })
   settings?: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional course metadata',
+    comment: 'Siêu dữ liệu khóa học bổ sung',
   })
   metadata?: Record<string, any>;
 

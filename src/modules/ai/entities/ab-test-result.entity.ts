@@ -12,7 +12,7 @@ export class ABTestResult extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to A/B test',
+    comment: 'Khóa ngoại liên kết tới ab_tests.id, cho biết kết quả này thuộc về thử nghiệm nào.',
   })
   testId: string;
 
@@ -20,33 +20,34 @@ export class ABTestResult extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'User who triggered this result',
+    comment: 'ID của người dùng đã tham gia vào tương tác này.',
   })
   userId?: string;
 
   @Column({
     type: 'enum',
     enum: ['control', 'test'],
-    comment: 'Which model variant was used',
+    comment: 'Cho biết người dùng đã được tiếp xúc với mô hình nào (control - cũ hay test - mới).',
   })
   modelVariant: 'control' | 'test';
 
   @Column({
     type: 'json',
-    comment: 'Metric values recorded',
+    comment:
+      'Trường JSON ghi lại các giá trị của chỉ số thành công (successMetrics) tại thời điểm tương tác.',
   })
   metricValues: Record<string, number>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional context data',
+    comment: 'Trường JSON chứa các thông tin ngữ cảnh bổ sung tại thời điểm ghi nhận kết quả.',
   })
   contextData?: Record<string, any>;
 
   @Column({
     type: 'timestamp',
-    comment: 'When result was recorded',
+    comment: 'Thời gian chính xác khi kết quả được ghi lại.',
     default: () => 'CURRENT_TIMESTAMP',
   })
   recordedAt: Date;
@@ -54,7 +55,7 @@ export class ABTestResult extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional metadata',
+    comment: 'Siêu dữ liệu bổ sung',
   })
   metadata?: Record<string, any>;
 

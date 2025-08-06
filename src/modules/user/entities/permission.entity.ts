@@ -13,7 +13,7 @@ export class Permission extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 100,
-    comment: 'Permission name',
+    comment: 'Tên định danh của quyền dùng trong code',
   })
   name: string;
 
@@ -21,21 +21,23 @@ export class Permission extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Permission description',
+    comment: 'Mô tả rõ ràng, dễ hiểu về ý nghĩa của quyền này',
   })
   description?: string;
 
   @Column({
     type: 'enum',
     enum: PermissionResource,
-    comment: 'Resource this permission applies to',
+    comment:
+      'Đối tượng mà quyền này tác động đến, ví dụ: user (người dùng), course (khóa học), system (hệ thống).',
   })
   resource: PermissionResource;
 
   @Column({
     type: 'enum',
     enum: PermissionAction,
-    comment: 'Action this permission allows',
+    comment:
+      'Hành động cụ thể được phép thực hiện trên tài nguyên, ví dụ: create (tạo), read (xem), update (cập nhật), delete (xóa).',
   })
   action: PermissionAction;
 
@@ -43,21 +45,21 @@ export class Permission extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Additional conditions or constraints',
+    comment: 'Các điều kiện bổ sung (nếu có) để quyền có hiệu lực',
   })
   conditions?: string;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this is a system-defined permission',
+    comment: 'Cờ (true/false) đánh dấu đây là quyền cốt lõi, không thể bị xóa bởi admin.',
   })
   isSystemPermission: boolean;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Whether this permission is active',
+    comment: 'Cho biết quyền này có đang được áp dụng hay không',
   })
   isActive: boolean;
 
@@ -65,28 +67,28 @@ export class Permission extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Permission category or group',
+    comment: 'Giúp nhóm các quyền lại với nhau trong giao diện quản lý của Admin',
   })
   category?: string;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Permission priority level',
+    comment: 'Mức độ ưu tiên của quyền, hữu ích khi xử lý các xung đột quyền',
   })
   priority: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Permission-specific settings',
+    comment: 'Trường JSON để lưu các cấu hình đặc thù dành riêng cho quyền này',
   })
   settings?: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional permission metadata',
+    comment: 'Trường JSON để lưu các thông tin mở rộng khác.',
   })
   metadata?: Record<string, any>;
 

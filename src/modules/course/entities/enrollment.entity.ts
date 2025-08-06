@@ -16,28 +16,28 @@ export class Enrollment extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'Khóa ngoại liên kết tới users.id, xác định sinh viên nào đã đăng ký',
   })
   studentId: string;
 
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Course ID',
+    comment: 'Khóa ngoại liên kết tới courses.id, xác định khóa học được đăng ký',
   })
   courseId: string;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'Enrollment date',
+    comment: 'Thời điểm sinh viên đăng ký khóa học',
   })
   enrollmentDate: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Course completion date',
+    comment: 'Thời điểm sinh viên hoàn thành 100% khóa học',
   })
   completionDate?: Date;
 
@@ -45,7 +45,8 @@ export class Enrollment extends BaseEntity {
     type: 'enum',
     enum: EnrollmentStatus,
     default: EnrollmentStatus.ENROLLED,
-    comment: 'Enrollment status',
+    comment:
+      'Trạng thái hiện tại của việc học (enrolled - đã đăng ký, in_progress - đang học, completed - đã hoàn thành, dropped - đã bỏ học).',
   })
   status: EnrollmentStatus;
 
@@ -54,14 +55,14 @@ export class Enrollment extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 0,
-    comment: 'Course progress percentage',
+    comment: 'Tỷ lệ phần trăm hoàn thành khóa học của sinh viên',
   })
   progressPercentage: number;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last time student accessed the course',
+    comment: 'Thời điểm cuối cùng sinh viên truy cập vào khóa học này',
   })
   lastAccessedAt?: Date;
 
@@ -69,7 +70,8 @@ export class Enrollment extends BaseEntity {
     type: 'enum',
     enum: PaymentStatus,
     default: PaymentStatus.PENDING,
-    comment: 'Payment status for paid courses',
+    comment:
+      'Quản lý trạng thái giao dịch cho các khóa học có phí (pending - đang chờ, paid - đã thanh toán, refunded - đã hoàn tiền).',
   })
   paymentStatus: PaymentStatus;
 
@@ -78,7 +80,7 @@ export class Enrollment extends BaseEntity {
     precision: 10,
     scale: 2,
     default: 0,
-    comment: 'Amount paid for the course',
+    comment: 'Số tiền thực tế mà sinh viên đã trả cho khóa học',
   })
   paymentAmount: number;
 
@@ -86,7 +88,7 @@ export class Enrollment extends BaseEntity {
     type: 'varchar',
     length: 3,
     default: 'USD',
-    comment: 'Payment currency',
+    comment: 'Đơn vị tiền tệ của giao dịch (ví dụ: USD, VND)',
   })
   paymentCurrency: string;
 
@@ -94,14 +96,14 @@ export class Enrollment extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Payment transaction ID',
+    comment: 'Mã giao dịch từ cổng thanh toán để đối soát',
   })
   paymentTransactionId?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Payment date',
+    comment: 'Thời điểm giao dịch thanh toán được thực hiện thành công',
   })
   paymentDate?: Date;
 
@@ -109,14 +111,14 @@ export class Enrollment extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Certificate URL when course is completed',
+    comment: 'Đường dẫn đến tệp chứng chỉ sau khi sinh viên hoàn thành khóa học',
   })
   certificateUrl?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Certificate issue date',
+    comment: 'Thời điểm chứng chỉ được cấp',
   })
   certificateIssuedAt?: Date;
 
@@ -125,56 +127,58 @@ export class Enrollment extends BaseEntity {
     precision: 3,
     scale: 2,
     nullable: true,
-    comment: 'Student rating for the course',
+    comment: 'Điểm số (ví dụ: từ 1-5 sao) mà sinh viên đánh giá cho khóa học',
   })
   rating?: number;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Student review for the course',
+    comment: 'Nội dung bình luận, nhận xét của sinh viên về khóa học',
   })
   review?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Review submission date',
+    comment: 'Thời điểm sinh viên gửi đánh giá',
   })
   reviewDate?: Date;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total time spent in seconds',
+    comment: 'Tổng thời gian (tính bằng giây) mà sinh viên đã dành cho khóa học này',
   })
   totalTimeSpent: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of lessons completed',
+    comment: 'Đếm số bài học mà sinh viên đã hoàn thành trong khóa học',
   })
   lessonsCompleted: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total lessons in course at enrollment time',
+    comment:
+      'Tổng số bài học của khóa học tại thời điểm sinh viên đăng ký (để tính toán tiến độ chính xác).',
   })
   totalLessons: number;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Access expiry date for limited access courses',
+    comment: 'Thời gian hết hạn truy cập',
   })
   accessExpiresAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Enrollment source and tracking data',
+    comment:
+      'Trường JSON để lưu thông tin về nguồn gốc của lượt đăng ký (ví dụ: từ quảng cáo Facebook, từ email marketing)',
   })
   source?: {
     channel?: string;
@@ -186,7 +190,8 @@ export class Enrollment extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Student preferences for this course',
+    comment:
+      'Trường JSON lưu các tùy chọn cá nhân của sinh viên dành riêng cho khóa học này (ví dụ: cài đặt thông báo).',
   })
   preferences?: {
     playbackSpeed?: number;
@@ -198,7 +203,7 @@ export class Enrollment extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional enrollment metadata',
+    comment: 'Trường JSON để lưu các thông tin mở rộng khác liên quan đến lượt đăng ký',
   })
   metadata?: Record<string, any>;
 

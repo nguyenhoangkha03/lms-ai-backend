@@ -10,21 +10,21 @@ export class UserProfile extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to user ID',
+    comment: 'Tham chiếu ID người dùng',
   })
   userId: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'User biography',
+    comment: 'Tiểu sử',
   })
   bio?: string;
 
   @Column({
     type: 'date',
     nullable: true,
-    comment: 'Date of birth',
+    comment: 'Ngày sinh',
   })
   dateOfBirth?: Date;
 
@@ -32,14 +32,14 @@ export class UserProfile extends BaseEntity {
     type: 'enum',
     enum: Gender,
     nullable: true,
-    comment: 'Gender',
+    comment: 'Giới tính',
   })
   gender?: Gender;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Full address',
+    comment: 'Địa chỉ đầy đủ',
   })
   address?: string;
 
@@ -47,7 +47,7 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 3,
     nullable: true,
-    comment: 'ISO country code',
+    comment: 'Mã quốc gia chuẩn ISO 3166-1 alpha-3. Ví dụ: VNM, USA, ...',
   })
   countryCode?: string;
 
@@ -55,7 +55,7 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Country name',
+    comment: 'Tên quốc gia',
   })
   country?: string;
 
@@ -63,7 +63,7 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'State or province',
+    comment: 'Tỉnh, bang hoặc khu vực hành chính cấp 1. Ví dụ: Hanoi, New York, ...',
   })
   state?: string;
 
@@ -71,7 +71,7 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'City name',
+    comment: 'Tên thành phố. Ví dụ: "Ho Chi Minh City", "New York", ...',
   })
   city?: string;
 
@@ -79,7 +79,8 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 20,
     nullable: true,
-    comment: 'City code or identifier',
+    comment:
+      'Mã định danh của thành phố, có thể là mã nội bộ, mã hệ thống, hoặc mã hành chính. Ví dụ: "SGN" cho TP.HCM',
   })
   cityCode?: string;
 
@@ -87,7 +88,8 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 20,
     nullable: true,
-    comment: 'Postal or ZIP code',
+    comment:
+      'Mã bưu chính (ZIP code), dùng trong vận chuyển thư, hàng hóa. Ví dụ: "700000" cho TP.HCM, "10001" cho New York',
   })
   postalCode?: string;
 
@@ -95,7 +97,7 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Organization or company',
+    comment: 'Tên công ty, trường học hoặc tổ chức mà người dùng thuộc về',
   })
   organization?: string;
 
@@ -103,7 +105,7 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Job title or position',
+    comment: 'Chức danh công việc của người dùng',
   })
   jobTitle?: string;
 
@@ -111,7 +113,7 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Department or division',
+    comment: 'Phòng ban nơi người dùng làm việc',
   })
   department?: string;
 
@@ -119,56 +121,57 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: 'Personal website URL',
+    comment: 'Đường dẫn đến trang web cá nhân hoặc blog của người dùng',
   })
   website?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional interests',
+    comment: 'Lĩnh vực người dùng quan tâm',
   })
   interests?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Skills and competencies',
+    comment: 'Danh sách kỹ năng, năng lực',
   })
   skills?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Hobbies and personal interests',
+    comment: 'Danh sách sở thích với người dùng',
   })
   hobbies?: string[];
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Profile visibility to other users',
+    comment: 'Công khai hồ sơ',
   })
   isPublic: boolean;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Allow other users to search this profile',
+    comment: 'Cho phép tìm kiếm',
   })
   isSearchable: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Profile verification status',
+    comment:
+      'Cờ (true/false) cho biết hồ sơ này đã được xác minh (ví dụ: tài khoản của người nổi tiếng).',
   })
   isVerified: boolean;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When profile was verified',
+    comment: 'Thời điểm xác minh',
   })
   verifiedAt?: Date;
 
@@ -176,14 +179,14 @@ export class UserProfile extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'Who verified the profile',
+    comment: 'Người xác minh',
   })
   verifiedBy?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional profile metadata',
+    comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
 

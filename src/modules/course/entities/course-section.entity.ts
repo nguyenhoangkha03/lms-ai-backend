@@ -11,91 +11,92 @@ export class CourseSection extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Course ID this section belongs to',
+    comment: 'Khóa ngoại liên kết tới courses.id',
   })
   courseId: string;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Section title',
+    comment: 'Tên của chương (ví dụ: "Chương 1: Giới thiệu về Machine Learning")',
   })
   title: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Section description',
+    comment: 'Mô tả ngắn gọn về nội dung của chương',
   })
   description?: string;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Order within course',
+    comment: 'Thứ tự hiển thị',
   })
   orderIndex: number;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Section active status',
+    comment: 'Trạng thái hoạt động của phần',
   })
   isActive: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Section completion required to proceed',
+    comment:
+      ': Cờ (true/false) xác định học viên có bắt buộc phải hoàn thành chương này trước khi qua chương tiếp theo hay không',
   })
   isRequired: boolean;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of lessons in this section',
+    comment: 'Tổng số bài học có trong chương này',
   })
   totalLessons: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total duration of all lessons in seconds',
+    comment: 'Tổng thời lượng (tính bằng giây) của tất cả các bài học trong chương.',
   })
   totalDuration: number;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Section availability start date',
+    comment: 'Ngày bắt đầu có sẵn phần',
   })
   availableFrom?: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Section availability end date',
+    comment: 'Ngày kết thúc sẵn có của phần',
   })
   availableUntil?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Section learning objectives',
+    comment: 'Trường JSON liệt kê các mục tiêu học tập cần đạt được sau khi hoàn thành chương',
   })
   objectives?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Section settings and preferences',
+    comment: 'Cài đặt và tùy chọn phần',
   })
   settings?: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional section metadata',
+    comment: 'Siêu dữ liệu của phần bổ sung',
   })
   metadata?: Record<string, any>;
 

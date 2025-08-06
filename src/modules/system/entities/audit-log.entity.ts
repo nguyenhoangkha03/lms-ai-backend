@@ -18,7 +18,7 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'User who performed the action',
+    comment: 'ID của người dùng đã thực hiện hành động',
   })
   userId?: string;
 
@@ -26,14 +26,14 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Session identifier',
+    comment: 'Mã định danh của phiên đăng nhập khi hành động được thực hiện',
   })
   sessionId?: string;
 
   @Column({
     type: 'enum',
     enum: AuditAction,
-    comment: 'Action that was performed',
+    comment: ': Loại hành động đã được thực hiện, ví dụ: login, user_updated, create_assessment',
   })
   action: AuditAction;
 
@@ -41,7 +41,7 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Type of entity affected',
+    comment: 'Loại đối tượng bị tác động, ví dụ: course, user',
   })
   entityType?: string;
 
@@ -49,13 +49,13 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'ID of entity affected',
+    comment: 'ID của đối tượng cụ thể bị tác động, ví dụ: course_id, user_id',
   })
   entityId?: string;
 
   @Column({
     type: 'text',
-    comment: 'Description of the action',
+    comment: 'Mô tả chi tiết về hành động đã diễn ra',
   })
   description: string;
 
@@ -63,7 +63,7 @@ export class AuditLog extends BaseEntity {
     type: 'enum',
     enum: AuditLevel,
     default: AuditLevel.INFO,
-    comment: 'Severity level of the action',
+    comment: 'Mức độ nghiêm trọng của log (info, warning, error).',
   })
   level: AuditLevel;
 
@@ -71,14 +71,14 @@ export class AuditLog extends BaseEntity {
     type: 'enum',
     enum: AuditStatus,
     default: AuditStatus.SUCCESS,
-    comment: 'Status of the action',
+    comment: 'Trạng thái của hành động (success, failed).',
   })
   status: AuditStatus;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'When the action occurred',
+    comment: 'Thời điểm chính xác khi hành động xảy ra',
   })
   timestamp: Date;
 
@@ -86,14 +86,14 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 45,
     nullable: true,
-    comment: 'IP address of the user',
+    comment: 'Địa chỉ IP của người dùng khi thực hiện hành động',
   })
   ipAddress?: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'User agent string',
+    comment: 'Thông tin về trình duyệt và hệ điều hành của người dùng',
   })
   userAgent?: string;
 
@@ -101,7 +101,7 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Request URL or endpoint',
+    comment: 'URL của yêu cầu đã gây ra hành động',
   })
   requestUrl?: string;
 
@@ -109,28 +109,28 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 10,
     nullable: true,
-    comment: 'HTTP method used',
+    comment: 'Phương thức HTTP của yêu cầu đã gây ra hành động',
   })
   httpMethod?: string;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'HTTP response status code',
+    comment: 'Mã trạng thái HTTP trả về (ví dụ: 200, 404, 500)',
   })
   responseCode?: number;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Request processing time in milliseconds',
+    comment: 'Thời gian (tính bằng mili giây) mà hệ thống cần để xử lý yêu cầu',
   })
   processingTime?: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Request parameters and payload',
+    comment: 'Nội dung dữ liệu được gửi đi (đã được làm sạch để bỏ thông tin nhạy cảm).',
   })
   requestData?: {
     params?: Record<string, any>;
@@ -142,7 +142,7 @@ export class AuditLog extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Response data (sanitized)',
+    comment: 'Nội dung dữ liệu nhận về (đã được làm sạch để bỏ thông tin nhạy cảm)',
   })
   responseData?: {
     data?: any;
@@ -154,7 +154,8 @@ export class AuditLog extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Changes made (before/after values)',
+    comment:
+      'Trường JSON ghi lại dữ liệu "trước" và "sau" khi có hành động update, giúp thấy rõ những gì đã bị thay đổi',
   })
   changes?: {
     field: string;
@@ -165,7 +166,7 @@ export class AuditLog extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional context information',
+    comment: 'Thông tin ngữ cảnh bổ sung về hành động',
   })
   context?: {
     module?: string;
@@ -180,7 +181,7 @@ export class AuditLog extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Security-related information',
+    comment: 'Thông tin liên quan đến bảo mật',
   })
   securityInfo?: {
     authMethod?: string;
@@ -194,7 +195,7 @@ export class AuditLog extends BaseEntity {
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Error details if action failed',
+    comment: 'Chi tiết lỗi nếu hành động không thành công',
   })
   errorDetails?: string;
 
@@ -202,21 +203,21 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Error code or exception type',
+    comment: 'Mã lỗi hoặc loại ngoại lệ',
   })
   errorCode?: string;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Stack trace for errors',
+    comment: 'Mô tả ngữ cảnh và vị trí xảy ra lỗi trong mã nguồn',
   })
   stackTrace?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Related entities affected by this action',
+    comment: 'Các thực thể liên quan bị ảnh hưởng bởi hành động này',
   })
   relatedEntities?: {
     entityType: string;
@@ -227,21 +228,22 @@ export class AuditLog extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Tags for categorization and filtering',
+    comment: 'Thẻ để phân loại và lọc hành động',
   })
   tags?: string[];
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this is a sensitive action requiring special attention',
+    comment:
+      'Cờ (true/false) đánh dấu đây là một hành động quan trọng cần chú ý đặc biệt (ví dụ: thay đổi quyền admin).',
   })
   isSensitive: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether this action requires manual review',
+    comment: 'Liệu hành động này có cần phải xem xét thủ công không',
   })
   requiresReview: boolean;
 
@@ -249,28 +251,28 @@ export class AuditLog extends BaseEntity {
     type: 'varchar',
     length: 36,
     nullable: true,
-    comment: 'ID of admin who reviewed this action',
+    comment: 'ID của quản trị viên đã xem xét hành động này',
   })
   reviewedBy?: string;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'When this action was reviewed',
+    comment: 'Thời điểm hành động này được xem xét',
   })
   reviewedAt?: Date;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Review notes',
+    comment: 'Ghi chú khi xem xét hành động',
   })
   reviewNotes?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional audit metadata',
+    comment: 'Dữ liệu metadata',
   })
   metadata?: Record<string, any>;
 

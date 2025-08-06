@@ -13,7 +13,7 @@ export class LearningSession extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Student user ID',
+    comment: 'Khóa ngoại liên kết tới users.id, xác định chủ nhân của phiên học này',
   })
   studentId: string;
 
@@ -21,28 +21,28 @@ export class LearningSession extends BaseEntity {
     type: 'varchar',
     length: 255,
     unique: true,
-    comment: 'Unique session identifier',
+    comment: 'Mã định danh duy nhất cho phiên làm việc này',
   })
   sessionId: string;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'Session start time',
+    comment: 'Thời điểm bắt đầu của phiên',
   })
   startTime: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Session end time',
+    comment: 'Thời điểm kết thúc của phiên',
   })
   endTime?: Date;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Session duration in seconds',
+    comment: 'Tổng thời gian của phiên, tính bằng giây.',
   })
   duration?: number;
 
@@ -50,42 +50,44 @@ export class LearningSession extends BaseEntity {
     type: 'enum',
     enum: SessionStatus,
     default: SessionStatus.ACTIVE,
-    comment: 'Current session status',
+    comment:
+      'Trạng thái của phiên (active - đang hoạt động, completed - đã hoàn thành, abandoned - bị bỏ dở).',
   })
   status: SessionStatus;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of page views in this session',
+    comment:
+      'Trạng thái của phiên (active - đang hoạt động, completed - đã hoàn thành, abandoned - bị bỏ dở).',
   })
   pageViews: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Number of learning activities in this session',
+    comment: 'Tổng số hoạt động (learning_activities) đã được ghi lại trong phiên',
   })
   activitiesCount: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Courses accessed during this session',
+    comment: 'Các khóa học được truy cập trong phiên này',
   })
   coursesAccessed?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Lessons accessed during this session',
+    comment: 'Các bài học được truy cập trong phiên này',
   })
   lessonsAccessed?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Assessments taken during this session',
+    comment: 'Đánh giá được thực hiện trong phiên này',
   })
   assessmentsTaken?: string[];
 
@@ -93,7 +95,7 @@ export class LearningSession extends BaseEntity {
     type: 'enum',
     enum: DeviceType,
     nullable: true,
-    comment: 'Primary device type used in session',
+    comment: 'Loại thiết bị chính được sử dụng trong phiên',
   })
   deviceType?: DeviceType;
 
@@ -101,7 +103,7 @@ export class LearningSession extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Browser used in session',
+    comment: 'Trình duyệt được sử dụng trong phiên',
   })
   browser?: string;
 
@@ -109,7 +111,7 @@ export class LearningSession extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Operating system used in session',
+    comment: 'Hệ điều hành được sử dụng trong phiên',
   })
   operatingSystem?: string;
 
@@ -117,14 +119,14 @@ export class LearningSession extends BaseEntity {
     type: 'varchar',
     length: 45,
     nullable: true,
-    comment: 'IP address used in session',
+    comment: 'Địa chỉ IP được sử dụng trong phiên',
   })
   ipAddress?: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Geolocation data for session',
+    comment: 'Dữ liệu định vị địa lý cho phiên',
   })
   location?: {
     country?: string;
@@ -137,7 +139,7 @@ export class LearningSession extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Session engagement metrics',
+    comment: 'Số liệu tương tác của phiên',
   })
   engagementMetrics?: {
     scrollDepth?: number;
@@ -151,7 +153,7 @@ export class LearningSession extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Learning outcomes from this session',
+    comment: 'Kết quả học tập từ buổi học này',
   })
   learningOutcomes?: {
     lessonsCompleted?: number;
@@ -164,7 +166,7 @@ export class LearningSession extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Session quality indicators',
+    comment: 'Chỉ số chất lượng phiên',
   })
   qualityIndicators?: {
     completionRate?: number;
@@ -177,7 +179,7 @@ export class LearningSession extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional session metadata',
+    comment: 'Siêu dữ liệu phiên bổ sung',
   })
   metadata?: Record<string, any>;
 

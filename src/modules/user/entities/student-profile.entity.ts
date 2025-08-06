@@ -11,7 +11,7 @@ export class StudentProfile extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Reference to user ID',
+    comment: 'Tham chiếu ID người dùng',
   })
   userId: string;
 
@@ -19,7 +19,7 @@ export class StudentProfile extends BaseEntity {
     type: 'varchar',
     length: 20,
     unique: true,
-    comment: 'Unique student code/ID',
+    comment: 'Mã sinh viên',
   })
   studentCode: string;
 
@@ -27,7 +27,7 @@ export class StudentProfile extends BaseEntity {
     type: 'varchar',
     length: 100,
     nullable: true,
-    comment: 'Current education level',
+    comment: 'Trình độ học vấn hiện tại',
   })
   educationLevel?: string;
 
@@ -35,7 +35,7 @@ export class StudentProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Field of study or major',
+    comment: 'Chuyên ngành học',
   })
   fieldOfStudy?: string;
 
@@ -43,14 +43,14 @@ export class StudentProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Institution or school name',
+    comment: 'Tên trường học hoặc tổ chức giáo dục',
   })
   institution?: string;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Expected graduation year',
+    comment: 'Năm dự kiến tốt nghiệp',
   })
   graduationYear?: number;
 
@@ -59,14 +59,14 @@ export class StudentProfile extends BaseEntity {
     precision: 3,
     scale: 2,
     nullable: true,
-    comment: 'Current GPA',
+    comment: 'Điểm trung bình tích lũy hiện tại của sinh viên',
   })
   gpa?: number;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Learning goals and objectives',
+    comment: 'Mục tiêu mà sinh viên tự đặt ra ',
   })
   learningGoals?: string;
 
@@ -74,7 +74,7 @@ export class StudentProfile extends BaseEntity {
     type: 'enum',
     enum: LearningStyle,
     nullable: true,
-    comment: 'Preferred learning style',
+    comment: 'Phong cách học ưa thích',
   })
   preferredLearningStyle?: LearningStyle;
 
@@ -82,7 +82,7 @@ export class StudentProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Preferred study time',
+    comment: 'Thời gian học ưa thích',
   })
   studyTimePreference?: string;
 
@@ -90,42 +90,42 @@ export class StudentProfile extends BaseEntity {
     type: 'enum',
     enum: DifficultyLevel,
     default: DifficultyLevel.BEGINNER,
-    comment: 'Preferred difficulty level',
+    comment: 'Độ khó ưa thích',
   })
   difficultyPreference: DifficultyLevel;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Motivation factors',
+    comment: 'Những yếu tố giúp sinh viên có động lực học tập.',
   })
   motivationFactors?: string;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total courses enrolled',
+    comment: 'Tổng khóa học đã đăng ký',
   })
   totalCoursesEnrolled: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total courses completed',
+    comment: 'Tổng khóa học đã hoàn thành',
   })
   totalCoursesCompleted: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total certificates earned',
+    comment: 'Tổng chứng chỉ',
   })
   totalCertificates: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Total study hours',
+    comment: 'Tổng giờ học',
   })
   totalStudyHours: number;
 
@@ -134,14 +134,14 @@ export class StudentProfile extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 0,
-    comment: 'Average course rating',
+    comment: 'Điểm trung bình',
   })
   averageGrade: number;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Achievement points earned',
+    comment: 'Điểm thành tích, điểm thưởng tích lũy qua các hoạt động học tập ',
   })
   achievementPoints: number;
 
@@ -149,56 +149,56 @@ export class StudentProfile extends BaseEntity {
     type: 'varchar',
     length: 50,
     default: 'Bronze',
-    comment: 'Current achievement level',
+    comment: 'Cấp độ thành tích học tập',
   })
   achievementLevel: string;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Badges and achievements earned',
+    comment: 'Trường JSON lưu danh sách các huy hiệu đã đạt được',
   })
   badges?: string[];
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Learning preferences and settings',
+    comment: 'Trường JSON lưu các cài đặt học tập chi tiết khác.',
   })
   learningPreferences?: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Study schedule and availability',
+    comment: 'Trường JSON lưu lịch học cá nhân của sinh viên',
   })
   studySchedule?: Record<string, any>;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Learning analytics data',
+    comment: 'Trường JSON để lưu các dữ liệu phân tích học tập tổng hợp',
   })
   analyticsData?: Record<string, any>;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Allow AI recommendations',
+    comment: 'Cài đặt cho phép sinh viên bật/tắt chức năng gợi ý của AI.',
   })
   enableAIRecommendations: boolean;
 
   @Column({
     type: 'boolean',
     default: true,
-    comment: 'Allow progress tracking',
+    comment: 'Bật/Tắt theo dõi tiến độ',
   })
   enableProgressTracking: boolean;
 
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Parent/guardian consent for minors',
+    comment: 'Sự đồng ý của phụ huynh',
   })
   parentalConsent: boolean;
 
@@ -206,28 +206,28 @@ export class StudentProfile extends BaseEntity {
     type: 'varchar',
     length: 255,
     nullable: true,
-    comment: 'Parent/guardian contact information',
+    comment: 'Thông tin liên hệ phụ huynh',
   })
   parentContact?: string;
 
   @Column({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
-    comment: 'Student enrollment date',
+    comment: 'Ngày sinh viên chính thức trở thành người học trên hệ thống.',
   })
   enrollmentDate: Date;
 
   @Column({
     type: 'timestamp',
     nullable: true,
-    comment: 'Last activity timestamp',
+    comment: 'Thời điểm cuối cùng sinh viên có hoạt động trên hệ thống.',
   })
   lastActivityAt?: Date;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional student metadata',
+    comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
 

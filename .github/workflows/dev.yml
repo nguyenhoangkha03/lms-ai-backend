@@ -1,12 +1,16 @@
+# Tên của toàn bộ quy trình workflows
 name: Development Workflow
 
+# Các sự kiện sẽ kích hoạt workflows
 on:
   push:
     branches-ignore: [main, develop, staging]
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Các công việc cần thực hiện
 jobs:
+  # Id công việc
   quick-checks:
     name: Quick Development Checks
     runs-on: ubuntu-latest

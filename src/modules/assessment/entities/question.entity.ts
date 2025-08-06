@@ -4,7 +4,7 @@ import { QuestionType, DifficultyLevel } from '@/common/enums/assessment.enums';
 import { Assessment } from './assessment.entity';
 
 @Entity('questions')
-// @Index(['assessmentId', 'orderIndex'])
+@Index(['assessmentId', 'orderIndex'])
 @Index(['questionType', 'difficulty'])
 @Index(['tags'])
 export class Question extends BaseEntity {
@@ -12,14 +12,15 @@ export class Question extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 36,
-    comment: 'Assessment ID',
+    comment:
+      'Khóa ngoại liên kết tới assessments.id, xác định câu hỏi này thuộc về bài kiểm tra nào',
     nullable: true,
   })
   assessmentId?: string | null;
 
   @Column({
     type: 'text',
-    comment: 'Question text/content',
+    comment: 'Nội dung chính của câu hỏi',
   })
   questionText: string;
 
@@ -27,14 +28,15 @@ export class Question extends BaseEntity {
     type: 'enum',
     enum: QuestionType,
     default: QuestionType.MULTIPLE_CHOICE,
-    comment: 'Type of question',
+    comment:
+      'Phân loại câu hỏi (multiple_choice - trắc nghiệm, essay - tự luận, fill_in_the_blank - điền vào chỗ trống...)',
   })
   questionType: QuestionType;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Explanation for the correct answer',
+    comment: 'Phần giải thích chi tiết cho đáp án đúng',
   })
   explanation?: string;
 
@@ -43,7 +45,7 @@ export class Question extends BaseEntity {
     precision: 5,
     scale: 2,
     default: 1.0,
-    comment: 'Points awarded for correct answer',
+    comment: 'Số điểm được trao cho câu trả lời đúng',
   })
   points: number;
 
@@ -51,28 +53,28 @@ export class Question extends BaseEntity {
     type: 'enum',
     enum: DifficultyLevel,
     default: DifficultyLevel.MEDIUM,
-    comment: 'Question difficulty level',
+    comment: 'Mức độ khó của câu hỏi (easy, medium, hard)',
   })
   difficulty: DifficultyLevel;
 
   @Column({
     type: 'int',
     default: 0,
-    comment: 'Display order in assessment',
+    comment: 'Vị trí của câu hỏi trong bài kiểm tra',
   })
   orderIndex: number;
 
   @Column({
     type: 'int',
     nullable: true,
-    comment: 'Time limit for this question in seconds',
+    comment: 'Thời gian giới hạn cho câu hỏi này tính bằng giây',
   })
   timeLimit?: number;
 
   @Column({
     type: 'text',
     nullable: true,
-    comment: 'Hint for the question',
+    comment: 'Gợi ý cho sinh viên (nếu có).',
   })
   hint?: string;
 
@@ -80,49 +82,50 @@ export class Question extends BaseEntity {
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Question options for multiple choice questions',
+    comment:
+      'Trường JSON chứa danh sách các lựa chọn cho câu hỏi trắc nghiệm, bao gồm cả thông tin lựa chọn nào là đúng',
   })
   options?: string | null;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Correct answer(s) for the question',
+    comment: 'Trường JSON chứa đáp án đúng (dùng cho các loại câu hỏi không phải trắc nghiệm)',
   })
   correctAnswer?: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Question tags for categorization',
+    comment: 'Trường JSON chứa đáp án đúng (dùng cho các loại câu hỏi không phải trắc nghiệm).',
   })
   tags?: string | null;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'File attachments (JSON)',
+    comment: 'Trường JSON chứa các tệp đính kèm cho câu hỏi (ví dụ: hình ảnh, âm thanh).',
   })
   attachments?: string | null;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Validation rules for answer checking',
+    comment: 'Quy tắc xác thực để kiểm tra câu trả lời',
   })
   validationRules?: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Analytics data for this question',
+    comment: 'Dữ liệu phân tích cho câu hỏi này',
   })
   analytics?: string;
 
   @Column({
     type: 'longtext',
     nullable: true,
-    comment: 'Additional question metadata',
+    comment: 'Siêu dữ liệu câu hỏi bổ sung',
   })
   metadata?: string | null;
 

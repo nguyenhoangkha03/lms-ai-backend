@@ -161,7 +161,7 @@ export default (): Configuration => ({
   app: {
     port: parseInt(process.env.PORT!, 10) || 3000,
     apiPrefix: process.env.API_PREFIX || 'api/v1',
-    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3001'],
+    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
     uploadPath: process.env.UPLOAD_PATH || './uploads',
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE!, 10) || 10485760, // 10MB
   },
@@ -172,7 +172,7 @@ export default (): Configuration => ({
     password: process.env.DATABASE_PASSWORD || '',
     database: process.env.DATABASE_NAME || 'lms_ai_database',
     // synchronize: process.env.NODE_ENV === 'development',
-    synchronize: true,
+    synchronize: false,
     logging: process.env.NODE_ENV === 'development',
     ssl: process.env.DATABASE_SSL === 'true',
   },
@@ -269,11 +269,11 @@ export default (): Configuration => ({
   },
   frontend: {
     url: process.env.FRONTEND_URL || 'http://localhost:3001',
-    verifyEmailPath: '/auth/verify-email',
-    resetPasswordPath: '/auth/reset-password',
-    loginPath: '/auth/login',
-    oauthSuccessPath: '/auth/oauth-success',
-    oauthErrorPath: '/auth/error',
+    verifyEmailPath: '/verify-email',
+    resetPasswordPath: '/reset-password',
+    loginPath: '/login',
+    oauthSuccessPath: '/oauth-success',
+    oauthErrorPath: '/error',
   },
   audit: {
     logLoginAttempts: process.env.AUDIT_LOG_LOGIN_ATTEMPTS === 'true',

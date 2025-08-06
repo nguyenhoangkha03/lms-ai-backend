@@ -16,20 +16,21 @@ export class ResourceOptimization extends BaseEntity {
   @Column({
     type: 'enum',
     enum: ResourceType,
-    comment: 'Type of resource being optimized',
+    comment:
+      'Phân loại tài nguyên đang được phân tích để tối ưu (content - nội dung, instructor_time - thời gian của giảng viên).',
   })
   resourceType: ResourceType;
 
   @Column({
     type: 'varchar',
     length: 255,
-    comment: 'Resource identifier',
+    comment: 'ID của tài nguyên cụ thể đang được phân tích',
   })
   resourceId: string;
 
   @Column({
     type: 'datetime',
-    comment: 'Optimization analysis date',
+    comment: 'Thời điểm phân tích tối ưu hóa được thực hiện',
   })
   optimizationDate: Date;
 
@@ -37,7 +38,7 @@ export class ResourceOptimization extends BaseEntity {
     type: 'decimal',
     precision: 5,
     scale: 2,
-    comment: 'Current efficiency score (0-100)',
+    comment: 'Điểm số (0-100) đánh giá hiệu quả sử dụng của tài nguyên ở thời điểm hiện tại',
   })
   currentEfficiency: number;
 
@@ -45,13 +46,13 @@ export class ResourceOptimization extends BaseEntity {
     type: 'decimal',
     precision: 5,
     scale: 2,
-    comment: 'Predicted efficiency with optimization (0-100)',
+    comment: 'Điểm số hiệu quả dự đoán sau khi áp dụng các gợi ý tối ưu',
   })
   predictedEfficiency: number;
 
   @Column({
     type: 'json',
-    comment: 'Current usage patterns',
+    comment: 'Trường JSON mô tả cách tài nguyên đang được sử dụng',
   })
   currentUsage: {
     utilizationRate: number;
@@ -63,7 +64,7 @@ export class ResourceOptimization extends BaseEntity {
 
   @Column({
     type: 'json',
-    comment: 'Optimization recommendations',
+    comment: 'Trường JSON chứa danh sách các hành động cụ thể được AI gợi ý để cải thiện hiệu quả',
   })
   recommendations: {
     action: string;
@@ -76,7 +77,7 @@ export class ResourceOptimization extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Predicted outcomes',
+    comment: 'Trường JSON mô tả các kết quả tích cực dự kiến sau khi thực hiện tối ưu',
   })
   predictedOutcomes?: {
     costSavings: number;
@@ -89,7 +90,7 @@ export class ResourceOptimization extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Implementation plan',
+    comment: 'Kế hoạch thực hiện',
   })
   implementationPlan?: {
     phase: string;
@@ -102,7 +103,7 @@ export class ResourceOptimization extends BaseEntity {
   @Column({
     type: 'boolean',
     default: false,
-    comment: 'Whether optimization has been implemented',
+    comment: 'Cờ (true/false) cho biết các gợi ý tối ưu đã được áp dụng hay chưa',
   })
   isImplemented: boolean;
 
@@ -111,14 +112,14 @@ export class ResourceOptimization extends BaseEntity {
     precision: 5,
     scale: 2,
     nullable: true,
-    comment: 'Actual efficiency after implementation',
+    comment: 'Điểm số hiệu quả thực tế sau khi đã áp dụng các thay đổi',
   })
   actualEfficiency?: number;
 
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Implementation results',
+    comment: 'Kết quả thực hiện',
   })
   implementationResults?: {
     successRate: number;
@@ -130,7 +131,7 @@ export class ResourceOptimization extends BaseEntity {
   @Column({
     type: 'json',
     nullable: true,
-    comment: 'Additional optimization metadata',
+    comment: 'Siêu dữ liệu tối ưu hóa bổ sung',
   })
   metadata?: Record<string, any>;
 }
