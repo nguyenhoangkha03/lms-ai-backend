@@ -17,6 +17,10 @@ import { ChatMessageService } from '../services/chat-message.service';
 import { ChatModerationService } from '../services/chat-moderation.service';
 import { ChatFileService } from '../services/chat-file.service';
 import { WsJwtGuard } from '@/modules/auth/guards/ws-jwt.guard';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, MoreThan, IsNull } from 'typeorm';
+import { ChatFile } from '../entities/chat-file.entity';
+import { MessageType } from '@/common/enums/communication.enums';
 import {
   SendMessageDto,
   JoinRoomDto,
@@ -61,6 +65,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     private readonly chatMessageService: ChatMessageService,
     private readonly chatModerationService: ChatModerationService,
     private readonly chatFileService: ChatFileService,
+    @InjectRepository(ChatFile)
+    private readonly chatFileRepository: Repository<ChatFile>,
   ) {}
 
   afterInit(_server: Server) {
@@ -149,7 +155,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       const { roomId } = data;
 
       // Check if user has access to room
-      const hasAccess = await this.chatRoomService.checkUserAccess(roomId, client.userId!);
+      const hasAccess = await this.chatService.checkUserAccess(roomId, client.userId!);
       if (!hasAccess) {
         client.emit('error', {
           message: 'Access denied to chat room',
@@ -276,6 +282,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         ...data,
         senderId: client.userId,
       });
+
+      // If this is an image message, try to link recent uploaded files
+      if (data.type === MessageType.IMAGE) {
+        await this.linkRecentFilesToMessage(data.roomId, client.userId!, message.id);
+      }
 
       // Stop typing indicator
       this.stopTyping(data.roomId, client.userId!);
@@ -586,7 +597,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
           roomId: data.roomId,
           senderId: client.userId,
           content: data.messageContent,
-          type: 'file',
+          type: MessageType.FILE,
           fileIds: [fileInfo!.id!],
         });
 
@@ -711,5 +722,37 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   private async broadcastRoomUpdate(roomId: string, update: any): Promise<void> {
     this.server.to(roomId).emit('room_updated', update);
+  }
+
+  private async linkRecentFilesToMessage(roomId: string, userId: string, messageId: string): Promise<void> {
+    try {
+      // Find recent uploaded files without messageId in the last 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      
+      const recentFiles = await this.chatFileRepository.find({
+        where: {
+          uploadedBy: userId,
+          messageId: IsNull(), // Files not yet linked to messages
+          createdAt: MoreThan(fiveMinutesAgo),
+          fileCategory: 'image',
+        },
+        order: {
+          createdAt: 'DESC',
+        },
+        take: 5, // Limit to 5 recent files
+      });
+
+      if (recentFiles.length > 0) {
+        this.logger.log(`Linking ${recentFiles.length} files to message ${messageId}`);
+        
+        // Update files with messageId
+        await this.chatFileRepository.update(
+          recentFiles.map(f => f.id),
+          { messageId }
+        );
+      }
+    } catch (error) {
+      this.logger.error('Error linking files to message:', error.message);
+    }
   }
 }

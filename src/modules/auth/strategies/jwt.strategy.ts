@@ -36,8 +36,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User account is not active');
     }
 
-    if (user.passwordChangedAt && payload.iat! < user.passwordChangedAt.getTime() / 1000) {
-      throw new UnauthorizedException('Token expired due to password change');
+    if (user.passwordChangedAt) {
+      const passwordChangedTimestamp = user.passwordChangedAt instanceof Date 
+        ? user.passwordChangedAt.getTime() 
+        : new Date(user.passwordChangedAt).getTime();
+      
+      if (payload.iat! < passwordChangedTimestamp / 1000) {
+        throw new UnauthorizedException('Token expired due to password change');
+      }
     }
 
     return {

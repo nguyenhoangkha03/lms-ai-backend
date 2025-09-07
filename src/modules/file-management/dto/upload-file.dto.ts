@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { FileType, FileAccessLevel } from '@/common/enums/file.enums';
+import { FileRelatedType } from '@/common/enums/course.enums';
 
 export class UploadFileDto {
   @ApiProperty({
@@ -19,6 +20,22 @@ export class UploadFileDto {
   })
   @IsEnum(FileType)
   fileType: FileType;
+
+  @ApiProperty({
+    description: 'Related entity type that this file belongs to',
+    enum: FileRelatedType,
+    example: FileRelatedType.USER_AVATAR,
+  })
+  @IsEnum(FileRelatedType)
+  relatedType: FileRelatedType;
+
+  @ApiPropertyOptional({
+    description: 'Related entity ID that this file belongs to',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsUUID()
+  relatedId?: string;
 
   @ApiPropertyOptional({
     description: 'File access level',

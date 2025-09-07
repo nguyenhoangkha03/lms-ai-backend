@@ -113,19 +113,36 @@ export class DatabaseMonitoringService {
 
   private async getReplicationStatus() {
     try {
-      const masterStatus = await this.dataSource.query('SHOW MASTER STATUS');
-      const slaveStatus = await this.dataSource.query('SHOW SLAVE STATUS');
+      // Try MySQL 8.0+ syntax first, fallback to legacy
+      let masterStatus, slaveStatus;
+      
+      try {
+        // MySQL 8.0+ syntax
+        masterStatus = await this.dataSource.query('SHOW BINARY LOG STATUS');
+        slaveStatus = await this.dataSource.query('SHOW REPLICA STATUS');
+      } catch (modernError) {
+        // Fallback to legacy syntax for older MySQL versions
+        try {
+          masterStatus = await this.dataSource.query('SHOW MASTER STATUS');
+          slaveStatus = await this.dataSource.query('SHOW SLAVE STATUS');
+        } catch (legacyError) {
+          throw new Error(`Both modern and legacy syntax failed: ${modernError.message}`);
+        }
+      }
 
       return {
-        master: masterStatus[0] || null,
-        slave: slaveStatus[0] || null,
+        master: masterStatus?.[0] || null,
+        slave: slaveStatus?.[0] || null,
+        version: 'mysql8+',
       };
     } catch (error) {
-      // Replication might not be configured
+      // Replication might not be configured or user lacks privileges
+      this.logger.warn('Replication status check failed - likely not configured or insufficient privileges:', error.message);
       return {
         master: null,
         slave: null,
-        error: 'Replication not configured or accessible',
+        error: 'Replication not configured or insufficient privileges',
+        disabled: true,
       };
     }
   }

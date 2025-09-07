@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import { AllExceptionsFilter } from '@/common/filters/http-exception.filter';
@@ -17,18 +18,19 @@ import cluster from 'cluster';
 import os from 'os';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import * as express from 'express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const httpsOptions = SSLConfig.getHttpsOptions();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     httpsOptions,
     bufferLogs: true,
+    bodyParser: false,
   });
-  //   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-  //     httpsOptions,
-  //     logger: WinstonModule.createLogger(),
-  //     bufferLogs: true,
-  //   });
+
+  // Setup WebSocket adapter
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   const logger = app.get(WinstonService);
   logger.setContext('Bootstrap');
@@ -92,8 +94,6 @@ async function bootstrap() {
     prefix: '/static/',
   });
 
-  app.use(cookieParser(cookieSecret));
-
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
@@ -118,6 +118,102 @@ async function bootstrap() {
     optionsSuccessStatus: 200,
   });
 
+  app.use(cookieParser(cookieSecret));
+
+  app.use('/api/v1/stripe/webhook', (req, res, next) => {
+    console.log('🎯 Raw parser middleware triggered for webhook');
+    express.raw({
+      type: 'application/json',
+      limit: '1mb',
+      verify: (req, res, buf) => {
+        console.log(`✅ Raw buffer received, length: ${buf.length}`);
+        // Lưu raw buffer vào req để đảm bảo không bị mất
+        (req as any).rawBody = buf;
+      },
+    })(req, res, next);
+  });
+
+  app.use((req, res, next) => {
+    // Kiểm tra chính xác path
+    const isWebhook = req.url?.includes('/stripe/webhook');
+
+    if (isWebhook) {
+      console.log('⏭️ Skipping JSON parser for webhook (STRICT)');
+      return next(); // KHÔNG parse JSON cho webhook
+    }
+
+    console.log('📝 Applying JSON parser for non-webhook route');
+    express.json({ limit: '50mb' })(req, res, next);
+  });
+
+  // 3. Conditional URLEncoded parser
+  app.use((req, res, next) => {
+    const isWebhook = req.url?.includes('/stripe/webhook');
+
+    if (isWebhook) {
+      console.log('⏭️ Skipping URLEncoded parser for webhook (STRICT)');
+      return next();
+    }
+
+    console.log('📝 Applying URLEncoded parser for non-webhook route');
+    express.urlencoded({ limit: '50mb', extended: true })(req, res, next);
+  });
+
+  // Debug middleware để kiểm tra body sau tất cả parsers
+  app.use((req, res, next) => {
+    if (req.url?.includes('/stripe/webhook')) {
+      console.log(`🔍 Final body check for webhook:`);
+      console.log(`📦 Body type: ${typeof req.body}`);
+      console.log(`📦 Is Buffer: ${Buffer.isBuffer(req.body)}`);
+      console.log(`📦 Has rawBody: ${!!(req as any).rawBody}`);
+
+      if ((req as any).rawBody && !Buffer.isBuffer(req.body)) {
+        console.log('🔄 Restoring rawBody as req.body');
+        req.body = (req as any).rawBody;
+      }
+    }
+    next();
+  });
+
+  //   app.use('/api/v1/stripe/webhook', express.raw({ type: 'application/json' }));
+
+  //   app.use('/api/v1/payment/stripe/webhook', express.raw({ type: 'application/json' }));
+
+  //   app.use((req, res, next) => {
+  //     const isWebhook =
+  //       req.url === '/api/v1/stripe/webhook' || req.url === '/api/v1/payment/stripe/webhook';
+
+  //     if (isWebhook) {
+  //       return next(); // Skip JSON parsing
+  //     }
+
+  //     express.json({ limit: '50mb' })(req, res, next);
+  //   });
+
+  //   app.use((req, res, next) => {
+  //     const isWebhook =
+  //       req.url === '/api/v1/stripe/webhook' || req.url === '/api/v1/payment/stripe/webhook';
+
+  //     if (isWebhook) {
+  //       return next(); // Skip URLEncoded parsing
+  //     }
+
+  //     express.urlencoded({ limit: '50mb', extended: true })(req, res, next);
+  //   });
+
+  //   app.use(
+  //     express.json({
+  //       limit: '50mb',
+  //       verify: (req, res, buf) => {
+  //         if (req.url?.includes('/stripe/webhook')) {
+  //           return;
+  //         }
+  //       },
+  //     }),
+  //   );
+
+  //   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
   app.setGlobalPrefix(apiPrefix!);
 
   app.useGlobalPipes(
@@ -128,6 +224,7 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
+      skipMissingProperties: true, // Skip validation if properties are missing
       exceptionFactory: errors => {
         const errorMessages = {};
         errors.forEach(error => {
@@ -144,7 +241,12 @@ async function bootstrap() {
 
   app.useGlobalFilters(new ValidationExceptionFilter(), new AllExceptionsFilter());
 
-  app.useGlobalInterceptors(new LoggingInterceptor(), new SanitizeInterceptor());
+  // TEMPORARILY COMMENTED OUT TO DEBUG FILE UPLOADS
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector)),
+    new LoggingInterceptor(),
+    // new SanitizeInterceptor(), // This might be parsing body
+  );
 
   // Global guards (JWT auth by default, use @Public() to skip)
   //   const jwtAuthGuard = app.get(JwtAuthGuard);

@@ -231,17 +231,45 @@ export class ChatMessageService {
 
   async searchMessages(
     roomId: string,
-    query: string,
-    limit: number = 20,
-    offset: number = 0,
+    searchParams: {
+      query: string;
+      senderId?: string;
+      messageType?: string;
+      dateFrom?: Date;
+      dateTo?: Date;
+      limit?: number;
+      offset?: number;
+    }
   ): Promise<{ messages: ChatMessage[]; total: number }> {
+    const { query, senderId, messageType, dateFrom, dateTo, limit = 20, offset = 0 } = searchParams;
+
     const queryBuilder = this.messageRepository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.sender', 'sender')
       .leftJoinAndSelect('message.files', 'files')
+      .leftJoinAndSelect('message.reactions', 'reactions')
+      .leftJoinAndSelect('reactions.user', 'reactionUser')
       .where('message.roomId = :roomId', { roomId })
       .andWhere('message.deletedAt IS NULL')
-      .andWhere('LOWER(message.content) LIKE LOWER(:query)', { query: `%${query}%` })
+      .andWhere('LOWER(message.content) LIKE LOWER(:query)', { query: `%${query}%` });
+
+    if (senderId) {
+      queryBuilder.andWhere('message.senderId = :senderId', { senderId });
+    }
+
+    if (messageType) {
+      queryBuilder.andWhere('message.messageType = :messageType', { messageType });
+    }
+
+    if (dateFrom) {
+      queryBuilder.andWhere('message.createdAt >= :dateFrom', { dateFrom });
+    }
+
+    if (dateTo) {
+      queryBuilder.andWhere('message.createdAt <= :dateTo', { dateTo });
+    }
+
+    queryBuilder
       .orderBy('message.createdAt', 'DESC')
       .limit(limit)
       .offset(offset);

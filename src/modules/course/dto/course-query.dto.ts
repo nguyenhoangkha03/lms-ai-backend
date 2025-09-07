@@ -147,6 +147,14 @@ export class CourseQueryDto {
   publishedOnly?: boolean; // lấy những published course cho student
 
   @ApiPropertyOptional({
+    description: 'Exclude courses that this user is already enrolled in',
+    example: 'uuid-user-id',
+  })
+  @IsOptional()
+  @IsUUID()
+  excludeEnrolledFor?: string; // loại bỏ các course user đã enroll
+
+  @ApiPropertyOptional({
     description: 'Page number',
     example: 1,
     minimum: 1,

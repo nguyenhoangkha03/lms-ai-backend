@@ -69,6 +69,15 @@ export enum FileRelatedType {
   USER_COVER = 'user_cover',
   ASSIGNMENT_SUBMISSION = 'assignment_submission',
   CERTIFICATE = 'certificate',
+  CHAT_ATTACHMENT = 'chat_attachment',
+  VIDEO_RECORDING = 'video_recording',
+  TEACHER_RESUME = 'teacher_resume',
+  TEACHER_DEGREE = 'teacher_degree',
+  TEACHER_CERTIFICATION = 'teacher_certification',
+  TEACHER_ID_DOCUMENT = 'teacher_id_document',
+  TEACHER_PORTFOLIO = 'teacher_portfolio',
+  COURSE_PROMOTIONAL = 'course_promotional',
+  COURSE_MATERIAL = 'course_material',
 }
 
 export enum CourseLanguage {

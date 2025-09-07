@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
@@ -15,6 +16,7 @@ export abstract class BaseEntity {
     default: () => 'CURRENT_TIMESTAMP(6)',
     comment: 'Tự động ghi nhận thời điểm được tạo',
   })
+  //   @Transform(({ value }) => (value ? value.toISOString() : null))
   createdAt: Date;
 
   @UpdateDateColumn({
@@ -23,6 +25,7 @@ export abstract class BaseEntity {
     onUpdate: 'CURRENT_TIMESTAMP(6)',
     comment: 'Tự động cập nhật mỗi khi thông tin có sự thay đổi.',
   })
+  //   @Transform(({ value }) => (value ? value.toISOString() : null))
   updatedAt: Date;
 
   @DeleteDateColumn({

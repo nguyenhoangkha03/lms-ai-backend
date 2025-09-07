@@ -25,6 +25,9 @@ import { LearningStyleProfile } from '@/modules/intelligent-tutoring/entities/le
 import { DataProtectionRequest } from '@/modules/privacy/entities/data-protection-request.entity';
 import { ConsentRecord } from '@/modules/privacy/entities/consent-record.entity';
 import { PrivacySettings } from '@/modules/privacy/entities/privacy-settings.entity';
+import { Course } from '@/modules/course/entities/course.entity';
+import { Cart } from '@/modules/course/entities/cart.entity';
+import { Enrollment } from '@/modules/course/entities/enrollment.entity';
 
 @Entity('users')
 @Index(['userType', 'status'])
@@ -264,17 +267,26 @@ export class User extends BaseEntity {
   metadata?: string;
 
   // Relationships
-  @OneToOne(() => UserProfile, profile => profile.user, { cascade: true })
-  userProfile?: UserProfile;
+  @OneToOne(() => UserProfile, profile => profile.user, { cascade: true, onDelete: 'CASCADE' })
+  userProfile?: UserProfile | null;
 
-  @OneToOne(() => StudentProfile, profile => profile.user, { cascade: true })
-  studentProfile?: StudentProfile;
+  @OneToOne(() => StudentProfile, profile => profile.user, { cascade: true, onDelete: 'CASCADE' })
+  studentProfile?: StudentProfile | null;
 
-  @OneToOne(() => TeacherProfile, profile => profile.user, { cascade: true })
-  teacherProfile?: TeacherProfile;
+  @OneToOne(() => TeacherProfile, profile => profile.user, { cascade: true, onDelete: 'CASCADE' })
+  teacherProfile?: TeacherProfile | null;
 
-  @OneToMany(() => UserSocial, social => social.user, { cascade: true })
-  socials?: UserSocial[];
+  @OneToMany(() => Course, course => course.teacher)
+  courses?: Course[];
+
+  @OneToMany(() => Cart, cart => cart.user)
+  cartItems?: Cart[];
+
+  @OneToMany(() => Enrollment, enrollment => enrollment.student)
+  enrollments?: Enrollment[];
+
+  @OneToMany(() => UserSocial, social => social.user, { cascade: true, onDelete: 'CASCADE' })
+  socials?: UserSocial[] | null;
 
   @ManyToMany(() => Role, role => role.users)
   @JoinTable({
@@ -297,21 +309,29 @@ export class User extends BaseEntity {
 
   @OneToMany(() => TutoringSession, session => session.student, {
     cascade: true,
+    onDelete: 'CASCADE',
   })
   tutoringSessions: TutoringSession[];
 
   @OneToOne(() => LearningStyleProfile, profile => profile.user, {
     cascade: true,
+    onDelete: 'CASCADE',
   })
   learningStyleProfile: LearningStyleProfile;
 
-  @OneToMany(() => DataProtectionRequest, request => request.user)
+  @OneToMany(() => DataProtectionRequest, request => request.user, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   dataProtectionRequests: DataProtectionRequest[];
 
-  @OneToMany(() => ConsentRecord, consent => consent.user)
+  @OneToMany(() => ConsentRecord, consent => consent.user, { cascade: true, onDelete: 'CASCADE' })
   consentRecords: ConsentRecord[];
 
-  @OneToOne(() => PrivacySettings, settings => settings.user)
+  @OneToOne(() => PrivacySettings, settings => settings.user, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   privacySettings: PrivacySettings;
 
   // Virtual properties

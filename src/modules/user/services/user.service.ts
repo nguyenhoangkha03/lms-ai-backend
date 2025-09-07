@@ -10,7 +10,8 @@ import { User } from '../entities/user.entity';
 import { UserProfile } from '../entities/user-profile.entity';
 import { StudentProfile } from '../entities/student-profile.entity';
 import { TeacherProfile } from '../entities/teacher-profile.entity';
-import { UserStatus, UserType } from '@/common/enums/user.enums';
+import { UserSocial } from '../entities/user-social.entity';
+import { UserStatus, UserType, DifficultyLevel, SocialPlatform } from '@/common/enums/user.enums';
 import { CacheService } from '@/cache/cache.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -42,6 +43,8 @@ export class UserService {
     private readonly studentProfileRepository: Repository<StudentProfile>,
     @InjectRepository(TeacherProfile)
     private readonly teacherProfileRepository: Repository<TeacherProfile>,
+    @InjectRepository(UserSocial)
+    private readonly userSocialRepository: Repository<UserSocial>,
     private readonly cacheService: CacheService,
     private readonly logger: WinstonService,
     private readonly configService: ConfigService,
@@ -53,7 +56,6 @@ export class UserService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    // Check if user already exists
     const existingUser = await this.findByEmailOrUsername(
       createUserDto.email,
       createUserDto.username,
@@ -63,7 +65,6 @@ export class UserService {
       throw new ConflictException('User with this email or username already exists');
     }
 
-    // Create user entity
     const user = this.userRepository.create({
       ...createUserDto,
       status: UserStatus.PENDING,
@@ -71,10 +72,8 @@ export class UserService {
 
     const savedUser = await this.userRepository.save(user);
 
-    // Create appropriate profile based on user type
     await this.createUserProfile(savedUser);
 
-    // Assign default role
     await this.assignDefaultRole(savedUser);
 
     this.logger.log(`User created: ${savedUser.email} (${savedUser.userType})`);
@@ -164,10 +163,21 @@ export class UserService {
       return cached;
     }
 
-    const user = await this.userRepository.findOne({
-      where: { email },
-      relations: ['userProfile', 'studentProfile', 'teacherProfile', 'roles', 'permissions'],
-    });
+    // const user = await this.userRepository.findOne({
+    //   where: { email },
+    //   relations: ['userProfile', 'studentProfile', 'teacherProfile', 'roles', 'permissions'],
+    // });
+
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userProfile', 'userProfile')
+      .leftJoinAndSelect('user.studentProfile', 'studentProfile')
+      .leftJoinAndSelect('user.teacherProfile', 'teacherProfile')
+      .leftJoinAndSelect('user.socials', 'socials')
+      .leftJoinAndSelect('user.roles', 'roles')
+      .leftJoinAndSelect('user.permissions', 'permissions')
+      .where('user.email = :email', { email })
+      .getOne();
 
     if (user) {
       await this.cacheService.set(cacheKey, user, 300);
@@ -361,13 +371,24 @@ export class UserService {
     return updatedUser;
   }
   async updateLastLogin(id: string, ip?: string): Promise<void> {
-    await this.userRepository.update(id, {
-      lastLoginAt: new Date(),
-      lastLoginIp: ip,
-      failedLoginAttempts: 0, // Reset failed attempts on successful login
-    });
+    if (!id) {
+      this.logger.error('Cannot update last login: user id is undefined');
+      return;
+    }
 
-    await this.invalidateUserCache(id);
+    try {
+      await this.userRepository.update(id, {
+        lastLoginAt: new Date(),
+        lastLoginIp: ip,
+        failedLoginAttempts: 0, // Reset failed attempts on successful login
+      });
+
+      await this.invalidateUserCache(id);
+      this.logger.log(`Last login updated for user: ${id}`);
+    } catch (error) {
+      this.logger.error(`Failed to update last login for user ${id}:`, error);
+      throw error;
+    }
   }
 
   async incrementFailedLoginAttempts(id: string): Promise<void> {
@@ -384,11 +405,53 @@ export class UserService {
   }
 
   async createOAuthUser(oauthUser: any): Promise<User> {
-    return {
+    const userData = {
       ...oauthUser,
       status: UserStatus.ACTIVE,
       emailVerified: true,
+      // Generate username from email if not provided
+      username: oauthUser.username || oauthUser.email.split('@')[0],
+      // OAuth users don't have password - set placeholder hash
+      passwordHash: await this.passwordService.hashPassword('oauth-no-password-' + Date.now()),
+      // Set default values
+      twoFactorEnabled: false,
+      failedLoginAttempts: 0,
+      refreshTokens: [],
+      preferredLanguage: 'en',
+      timezone: 'UTC',
     };
+
+    // Create user in database
+    const user = this.userRepository.create(userData);
+    const savedUser = (await this.userRepository.save(user)) as unknown as User;
+
+    // Validate that user was created successfully
+    if (!savedUser || !savedUser.id) {
+      throw new Error('Failed to create user - user or user.id is undefined');
+    }
+
+    // ✅ FIX: Create UserProfile like normal registration
+    await this.createUserProfile(savedUser);
+
+    // ✅ FIX: Assign default role like normal registration
+    await this.assignDefaultRole(savedUser);
+
+    // Create user social record for OAuth linking
+    if (oauthUser.oauthProvider && oauthUser.oauthProviderId) {
+      await this.linkOAuthAccount(savedUser.id, {
+        provider: oauthUser.oauthProvider,
+        providerId: oauthUser.oauthProviderId,
+        accessToken: oauthUser.oauthData?.accessToken || '',
+        refreshToken: oauthUser.oauthData?.refreshToken || '',
+        profileData: {
+          name: `${oauthUser.firstName} ${oauthUser.lastName}`.trim(),
+          avatar: oauthUser.avatarUrl,
+        },
+      });
+    }
+
+    this.logger.log(`OAuth user created: ${savedUser.email} (${oauthUser.oauthProvider})`);
+    return savedUser as User;
   }
 
   async unlockAccount(id: string): Promise<void> {
@@ -705,6 +768,103 @@ export class UserService {
     await this.invalidateUserCache(userId);
   }
 
+  // Teacher Profile Methods
+  async createTeacherProfile(userId: string, profileData: any): Promise<TeacherProfile> {
+    const teacherProfile = this.teacherProfileRepository.create({
+      userId,
+      ...profileData,
+    });
+
+    const savedProfile = (await this.teacherProfileRepository.save(
+      teacherProfile,
+    )) as unknown as TeacherProfile;
+    await this.invalidateUserCache(userId);
+
+    this.logger.log(`Teacher profile created for user: ${userId}`);
+    return savedProfile;
+  }
+
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
+    try {
+      const profile = await this.userProfileRepository.findOne({
+        where: { userId },
+        relations: ['user'],
+      });
+
+      return profile;
+    } catch (error) {
+      this.logger.error(`Error fetching user profile for user ${userId}: ${error.message}`);
+      return null;
+    }
+  }
+
+  async getUserByUsername(username: string): Promise<any | null> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { username },
+        relations: [
+          'userProfile',
+          'studentProfile',
+          'teacherProfile',
+          'socials',
+          'enrollments',
+          'enrollments.course',
+        ],
+      });
+
+      return user;
+    } catch (error) {
+      this.logger.error(`Error fetching user profile for user ${username}: ${error.message}`);
+      return null;
+    }
+  }
+
+  async getStudentProfile(userId: string): Promise<StudentProfile | null> {
+    try {
+      const profile = await this.studentProfileRepository.findOne({
+        where: { userId },
+        relations: ['user'],
+      });
+
+      return profile;
+    } catch (error) {
+      this.logger.error(`Error fetching student profile for user ${userId}: ${error.message}`);
+      return null;
+    }
+  }
+
+  async getTeacherProfile(userId: string): Promise<TeacherProfile | null> {
+    try {
+      const profile = await this.teacherProfileRepository.findOne({
+        where: { userId },
+        relations: ['user'],
+      });
+
+      return profile;
+    } catch (error) {
+      this.logger.error(`Error fetching teacher profile for user ${userId}: ${error.message}`);
+      return null;
+    }
+  }
+
+  async updateTeacherProfile(
+    userId: string,
+    updateData: UpdateTeacherProfileDto,
+  ): Promise<TeacherProfile> {
+    const profile = await this.getTeacherProfile(userId);
+    if (!profile) {
+      throw new NotFoundException('Teacher profile not found');
+    }
+
+    await this.teacherProfileRepository.update(profile.id, updateData);
+    await this.invalidateUserCache(userId);
+
+    const updatedProfile = await this.getTeacherProfile(userId);
+    this.logger.log(`Teacher profile updated for user: ${userId}`);
+
+    return updatedProfile!;
+  }
+
   async removeBackupCode(userId: string, code: string): Promise<void> {
     const user = await this.findById(userId);
     const backupCodes = user.backupCodes?.filter(c => c !== code) || [];
@@ -745,28 +905,6 @@ export class UserService {
 
     Object.assign(profile, updateDto);
     const updatedProfile = await this.studentProfileRepository.save(profile);
-
-    await this.clearUserCache(id);
-    return updatedProfile;
-  }
-
-  async updateTeacherProfile(
-    id: string,
-    updateDto: UpdateTeacherProfileDto,
-  ): Promise<TeacherProfile> {
-    const user = await this.findById(id, { includeProfiles: true });
-
-    if (user.userType !== UserType.TEACHER) {
-      throw new BadRequestException('User is not a teacher');
-    }
-
-    let profile = user.teacherProfile;
-    if (!profile) {
-      profile = this.teacherProfileRepository.create({ user });
-    }
-
-    Object.assign(profile, updateDto);
-    const updatedProfile = await this.teacherProfileRepository.save(profile);
 
     await this.clearUserCache(id);
     return updatedProfile;
@@ -821,15 +959,129 @@ export class UserService {
   }
 
   // mới code mẫu: -->
-  async linkOAuthAccount(_id: any, _iv: any): Promise<void> {}
+  async linkOAuthAccount(
+    userId: string,
+    oauthData: {
+      provider: string;
+      providerId: string;
+      accessToken: string;
+      refreshToken?: string;
+      profileData: {
+        name: string;
+        avatar?: string;
+      };
+    },
+  ): Promise<void> {
+    try {
+      // Map OAuth provider to SocialPlatform enum
+      let socialPlatform: SocialPlatform;
+      let url: string;
+
+      switch (oauthData.provider.toLowerCase()) {
+        case 'google':
+          socialPlatform = SocialPlatform.PERSONAL_WEBSITE; // No Google enum, use personal website
+          url = `https://plus.google.com/${oauthData.providerId}`;
+          break;
+        case 'facebook':
+          socialPlatform = SocialPlatform.FACEBOOK;
+          url = `https://facebook.com/${oauthData.providerId}`;
+          break;
+        default:
+          throw new Error(`Unsupported OAuth provider: ${oauthData.provider}`);
+      }
+
+      // Check if OAuth account already linked
+      const existingSocial = await this.userSocialRepository.findOne({
+        where: {
+          userId,
+          platform: socialPlatform,
+        },
+      });
+
+      if (!existingSocial) {
+        // Create new UserSocial record
+        const userSocial = this.userSocialRepository.create({
+          userId,
+          platform: socialPlatform,
+          url,
+          displayName: oauthData.profileData.name,
+          isPublic: true,
+          isVerified: true, // OAuth accounts are considered verified
+          displayOrder: 0,
+          customLabel: `${oauthData.provider} Account`,
+          description: `Linked ${oauthData.provider} account`,
+          metadata: {
+            providerId: oauthData.providerId,
+            accessToken: oauthData.accessToken,
+            refreshToken: oauthData.refreshToken,
+            avatar: oauthData.profileData.avatar,
+            linkedAt: new Date().toISOString(),
+          },
+        });
+
+        await this.userSocialRepository.save(userSocial);
+        this.logger.log(`OAuth account linked successfully: ${userId} with ${oauthData.provider}`);
+      } else {
+        // Update existing record
+        existingSocial.displayName = oauthData.profileData.name;
+        existingSocial.metadata = {
+          ...existingSocial.metadata,
+          providerId: oauthData.providerId,
+          accessToken: oauthData.accessToken,
+          refreshToken: oauthData.refreshToken,
+          avatar: oauthData.profileData.avatar,
+          updatedAt: new Date().toISOString(),
+        };
+
+        await this.userSocialRepository.save(existingSocial);
+        this.logger.log(`OAuth account updated: ${userId} with ${oauthData.provider}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to link OAuth account for user ${userId}:`, error);
+      // Don't throw to prevent OAuth flow failure - but log the error for debugging
+    }
+  }
   // mới code mẫu: <--
+
+  private async createStudentProfile(
+    userId: string,
+    profileData: {
+      studentCode: string;
+      onboardingCompleted: boolean;
+      enableAIRecommendations: boolean;
+      enableProgressTracking: boolean;
+      difficultyPreference: DifficultyLevel;
+    },
+  ): Promise<StudentProfile> {
+    try {
+      const studentProfile = this.studentProfileRepository.create({
+        userId,
+        ...profileData,
+        totalCoursesEnrolled: 0,
+        totalCoursesCompleted: 0,
+        totalCertificates: 0,
+        totalStudyHours: 0,
+        averageGrade: 0,
+        achievementPoints: 0,
+        achievementLevel: 'Bronze',
+        parentalConsent: false,
+        enrollmentDate: new Date(),
+      });
+
+      const saved = await this.studentProfileRepository.save(studentProfile);
+      this.logger.log(`Student profile created for user: ${userId}`);
+      return saved;
+    } catch (error) {
+      this.logger.error(`Failed to create student profile for user ${userId}:`, error);
+      throw error;
+    }
+  }
 
   // mới code mẫu: -->
   async unlinkOAuthAccount(_userId: string, _provider: 'google' | 'facebook'): Promise<void> {}
   // mới code mẫu: <--
 
   private async createUserProfile(user: User): Promise<void> {
-    // Create basic user profile
     const userProfile = this.userProfileRepository.create({
       userId: user.id,
       isPublic: true,
@@ -837,7 +1089,6 @@ export class UserService {
     });
     await this.userProfileRepository.save(userProfile);
 
-    // Create specific profiles based on user type
     if (user.userType === UserType.STUDENT) {
       const studentProfile = this.studentProfileRepository.create({
         userId: user.id,
@@ -880,21 +1131,13 @@ export class UserService {
   private createUserQueryBuilder(queryDto: UserQueryDto): SelectQueryBuilder<User> {
     const queryBuilder = this.userRepository.createQueryBuilder('user');
 
-    // Include profiles if requested
-    if (queryDto.includeProfiles) {
-      queryBuilder
-        .leftJoinAndSelect('user.userProfile', 'userProfile')
-        .leftJoinAndSelect('user.studentProfile', 'studentProfile')
-        .leftJoinAndSelect('user.teacherProfile', 'teacherProfile')
-        .leftJoinAndSelect('user.socials', 'socials');
-    }
-
-    // Include roles if requested
-    if (queryDto.includeRoles) {
-      queryBuilder
-        .leftJoinAndSelect('user.roles', 'roles')
-        .leftJoinAndSelect('user.permissions', 'permissions');
-    }
+    queryBuilder
+      .leftJoinAndSelect('user.userProfile', 'userProfile')
+      .leftJoinAndSelect('user.studentProfile', 'studentProfile')
+      .leftJoinAndSelect('user.teacherProfile', 'teacherProfile')
+      .leftJoinAndSelect('user.socials', 'socials')
+      .leftJoinAndSelect('user.roles', 'roles')
+      .leftJoinAndSelect('user.permissions', 'permissions');
 
     // Apply filters
     if (queryDto.search) {

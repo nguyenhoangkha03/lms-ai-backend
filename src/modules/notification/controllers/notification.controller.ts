@@ -72,13 +72,20 @@ export class NotificationController {
   @ApiOperation({ summary: 'Get user notifications' })
   @ApiResponse({ status: 200, description: 'Notifications retrieved successfully' })
   async findAll(@Query() query: NotificationQueryDto, @CurrentUser() user: UserPayload) {
-    const result = await this.notificationService.findAllForUser(user.sub, query);
+    const result = await this.notificationService.findAllForUser(user.id, query);
+
+    console.log(`User ${user.id} retrieved length ${result.data.length} notifications`);
+    console.log(`User ${user.id} retrieved total ${result.total} notifications`);
+    console.log(`User ${user.id} retrieved data ${result.data}`);
 
     return {
       success: true,
       message: 'Notifications retrieved successfully',
       data: {
-        ...result,
+        notifications: result.data,
+        total: result.total,
+        unreadCount: await this.notificationService.getUnreadCount(user.id),
+        hasMore: (query.page || 1) * (query.limit || 10) < result.total,
         page: query.page || 1,
         limit: query.limit || 10,
         totalPages: Math.ceil(result.total / (query.limit || 10)),
@@ -90,12 +97,15 @@ export class NotificationController {
   @ApiOperation({ summary: 'Get unread notification count' })
   @ApiResponse({ status: 200, description: 'Unread count retrieved successfully' })
   async getUnreadCount(@CurrentUser() user: UserPayload) {
-    const count = await this.notificationService.getUnreadCount(user.sub);
+    console.log('🔍 Debug - User payload:', user);
+    console.log('🔍 Debug - User ID:', user?.id);
+
+    const count = await this.notificationService.getUnreadCount(user.id);
 
     return {
       success: true,
       message: 'Unread count retrieved successfully',
-      data: { unreadCount: count },
+      data: { count },
     };
   }
 
@@ -103,7 +113,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Mark notification as read' })
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
   async markAsRead(@Param('id') id: string, @CurrentUser() user: UserPayload) {
-    await this.notificationService.markAsRead(id, user.sub);
+    await this.notificationService.markAsRead(id, user.id);
 
     return {
       success: true,
@@ -115,7 +125,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Mark all notifications as read' })
   @ApiResponse({ status: 200, description: 'All notifications marked as read' })
   async markAllAsRead(@CurrentUser() user: UserPayload) {
-    const count = await this.notificationService.markAllAsRead(user.sub);
+    const count = await this.notificationService.markAllAsRead(user.id);
 
     return {
       success: true,
@@ -128,7 +138,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Delete notification' })
   @ApiResponse({ status: 200, description: 'Notification deleted successfully' })
   async remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {
-    await this.notificationService.delete(id, user.sub);
+    await this.notificationService.delete(id, user.id);
 
     return {
       success: true,
@@ -140,7 +150,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Send test notification' })
   @ApiResponse({ status: 201, description: 'Test notification sent successfully' })
   async sendTest(@Body() testDto: TestNotificationDto, @CurrentUser() user: UserPayload) {
-    await this.notificationService.sendTestNotification(testDto, user.sub);
+    await this.notificationService.sendTestNotification(testDto, user.id);
 
     return {
       success: true,
@@ -152,7 +162,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'Get notification analytics' })
   @ApiResponse({ status: 200, description: 'Analytics retrieved successfully' })
   async getAnalytics(@CurrentUser() user: UserPayload) {
-    const analytics = await this.notificationService.getAnalytics(user.sub);
+    const analytics = await this.notificationService.getAnalytics(user.id);
 
     return {
       success: true,

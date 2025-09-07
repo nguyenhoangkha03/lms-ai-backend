@@ -14,6 +14,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { RoleService } from './services/role.service';
 import { PermissionService } from './services/permission.service';
 import { FileUploadService } from './services/file-upload.service';
+import { FileManagementModule } from '../file-management/file-management.module';
 import { WinstonModule } from '@/logger/winston.module';
 import { AuthModule } from '../auth/auth.module';
 import { SystemModule } from '../system/system.module';
@@ -33,6 +34,7 @@ import { PermissionController } from './controllers/permission.controller';
     ]),
     CustomCacheModule,
     forwardRef(() => AuthModule),
+    FileManagementModule,
     WinstonModule,
     SystemModule,
     MulterModule.registerAsync({

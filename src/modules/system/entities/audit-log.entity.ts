@@ -56,8 +56,9 @@ export class AuditLog extends BaseEntity {
   @Column({
     type: 'text',
     comment: 'Mô tả chi tiết về hành động đã diễn ra',
+    nullable: true,
   })
-  description: string;
+  description?: string;
 
   @Column({
     type: 'enum',

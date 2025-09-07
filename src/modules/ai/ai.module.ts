@@ -18,6 +18,7 @@ import { RecommendationController } from './controllers/recommendation.controlle
 import { MlModelController } from './controllers/ml-model.controller';
 import { ModelPredictionController } from './controllers/model-prediction.controller';
 import { AbTestController } from './controllers/ab-test.controller';
+import { AIIntegrationController } from './controllers/ai-integration.controller';
 
 // Services
 import { AiService } from './services/ai.service';
@@ -27,6 +28,7 @@ import { CollaborativeFilteringService } from './services/collaborative-filterin
 import { LearningPathService } from './services/learning-path.service';
 import { DifficultyAdjustmentService } from './services/difficulty-adjustment.service';
 import { PythonAiServiceService } from './services/python-ai-service.service';
+import { AIIntegrationService } from './services/ai-integration.service';
 import { MlModelService } from './services/ml-model.service';
 import { ModelPredictionService } from './services/model-prediction.service';
 import { AbTestService } from './services/ab-test.service';
@@ -115,6 +117,7 @@ import { CustomCacheModule } from '../../cache/cache.module';
     MlModelController,
     ModelPredictionController,
     AbTestController,
+    AIIntegrationController,
   ],
   providers: [
     // Core Services
@@ -125,6 +128,7 @@ import { CustomCacheModule } from '../../cache/cache.module';
     LearningPathService,
     DifficultyAdjustmentService,
     PythonAiServiceService,
+    AIIntegrationService,
     MlModelService,
     ModelPredictionService,
     AbTestService,
@@ -148,6 +152,7 @@ import { CustomCacheModule } from '../../cache/cache.module';
     LearningPathService,
     DifficultyAdjustmentService,
     PythonAiServiceService,
+    AIIntegrationService,
     MlModelService,
     ModelPredictionService,
     AbTestService,

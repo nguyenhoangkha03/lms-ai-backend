@@ -295,7 +295,7 @@ export class Lesson extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     default: 0,
     comment: 'Điểm đánh giá trung bình của bài học từ sinh viên.',

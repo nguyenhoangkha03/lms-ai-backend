@@ -12,6 +12,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -41,6 +42,7 @@ import { BulkUpdateLessonStatusDto } from '../dto/lessons/bulk-update-lesson-sta
 import { BulkDeleteLessonsDto } from '../dto/lessons/bulk-delete-lesson.dto';
 import { ReorderLessonsDto } from '../dto/lessons/reorder-lesson.dto';
 import { RestoreVersionDto } from '../dto/lessons/restore-version.dto';
+import { UpdateVideoPositionDto } from '../dto/lessons/update-video-position.dto';
 
 @ApiTags('Lesson Management')
 @Controller('lessons')
@@ -79,28 +81,48 @@ export class LessonController {
   // === TEACHER ENDPOINTS === //
   @Post()
   @Authorize({
-    roles: [UserType.TEACHER, UserType.ADMIN],
-    permissions: ['create:lesson'],
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Create new lesson (Teacher/Admin)' })
   @ApiResponse({ status: 201, description: 'Lesson created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 403, description: 'Course ownership required' })
   async create(@Body() createLessonDto: CreateLessonDto, @CurrentUser() user: User) {
+    if (!user || !user.id) {
+      throw new BadRequestException('Authentication required');
+    }
     this.logger.log(`Creating lesson: ${createLessonDto.title} by ${user.id}`);
     return this.lessonService.create(createLessonDto, user.id);
   }
 
   @Get()
-  @Authorize({ permissions: ['read:lesson'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
   @ApiOperation({ summary: 'Get lessons with filtering and pagination' })
   @ApiResponse({ status: 200, description: 'Lessons retrieved successfully' })
   async findAll(@Query() queryDto: LessonQueryDto & PaginationDto, @CurrentUser() _user: User) {
     return this.lessonService.findAll(queryDto);
   }
 
+  @Get('course/:courseId')
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
+  @ApiOperation({ summary: 'Get lessons with filtering and pagination' })
+  @ApiResponse({ status: 200, description: 'Lessons retrieved successfully' })
+  async findAllByCourse(
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Query() queryDto: LessonQueryDto & PaginationDto,
+    @CurrentUser() _user: User,
+  ) {
+    return this.lessonService.findAllByCourse(courseId, queryDto);
+  }
+
   @Get(':id')
-  @Authorize({ permissions: ['read:lesson'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
   @ApiOperation({ summary: 'Get lesson by ID' })
   @ApiParam({ name: 'id', description: 'Lesson ID' })
   @ApiQuery({ name: 'includeContent', required: false, type: Boolean })
@@ -117,12 +139,15 @@ export class LessonController {
   }
 
   @Patch(':id')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
+  // @OwnerOnly({
+  //   entityType: 'Lesson',
+  //   entityField: 'id',
+  //   userField: 'course.teacherId',
+  //   allowedRoles: [UserType.ADMIN],
+  // })
   @ApiOperation({ summary: 'Update lesson (Owner or Admin)' })
   @ApiParam({ name: 'id', description: 'Lesson ID' })
   @ApiResponse({ status: 200, description: 'Lesson updated successfully' })
@@ -137,11 +162,14 @@ export class LessonController {
   }
 
   @Delete(':id')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  //   @OwnerOnly({
+  //     entityType: 'Lesson',
+  //     entityField: 'id',
+  //     userField: 'course.teacherId',
+  //     allowedRoles: [UserType.ADMIN],
+  //   })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete lesson (Owner or Admin)' })
@@ -155,11 +183,14 @@ export class LessonController {
 
   // === PUBLISHING WORKFLOW === //
   @Post(':id/publish')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  //   @OwnerOnly({
+  //     entityType: 'Lesson',
+  //     entityField: 'id',
+  //     userField: 'course.teacherId',
+  //     allowedRoles: [UserType.ADMIN],
+  //   })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Publish lesson (Owner or Admin)' })
   @ApiParam({ name: 'id', description: 'Lesson ID' })
@@ -171,11 +202,14 @@ export class LessonController {
   }
 
   @Post(':id/unpublish')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  //   @OwnerOnly({
+  //     entityType: 'Lesson',
+  //     entityField: 'id',
+  //     userField: 'course.teacherId',
+  //     allowedRoles: [UserType.ADMIN],
+  //   })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Unpublish lesson (Owner or Admin)' })
   @ApiParam({ name: 'id', description: 'Lesson ID' })
@@ -198,11 +232,14 @@ export class LessonController {
 
   // === CONTENT VERSIONING === //
   @Get(':id/versions')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  //   @OwnerOnly({
+  //     entityType: 'Lesson',
+  //     entityField: 'id',
+  //     userField: 'course.teacherId',
+  //     allowedRoles: [UserType.ADMIN],
+  //   })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Get lesson content versions (Owner or Admin)' })
   @ApiParam({ name: 'id', description: 'Lesson ID' })
@@ -212,11 +249,14 @@ export class LessonController {
   }
 
   @Post(':id/versions/:versionNumber/restore')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  //   @OwnerOnly({
+  //     entityType: 'Lesson',
+  //     entityField: 'id',
+  //     userField: 'course.teacherId',
+  //     allowedRoles: [UserType.ADMIN],
+  //   })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Restore lesson to specific version (Owner or Admin)' })
   @ApiParam({ name: 'id', description: 'Lesson ID' })
@@ -234,11 +274,14 @@ export class LessonController {
 
   // === FILE MANAGEMENT === //
   @Post(':id/files')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  //   @OwnerOnly({
+  //     entityType: 'Lesson',
+  //     entityField: 'id',
+  //     userField: 'course.teacherId',
+  //     allowedRoles: [UserType.ADMIN],
+  //   })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @UseInterceptors(FilesInterceptor('files', 10))
   @ApiConsumes('multipart/form-data')
@@ -264,11 +307,8 @@ export class LessonController {
   }
 
   @Delete(':id/files/:fileId')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete lesson file (Owner or Admin)' })
@@ -286,11 +326,8 @@ export class LessonController {
 
   // === VIDEO MANAGEMENT === //
   @Post(':id/video')
-  @OwnerOnly({
-    entityType: 'Lesson',
-    entityField: 'id',
-    userField: 'course.teacherId',
-    allowedRoles: [UserType.ADMIN],
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @UseInterceptors(FilesInterceptor('video', 1))
   @ApiConsumes('multipart/form-data')
@@ -307,7 +344,9 @@ export class LessonController {
   }
 
   @Get(':id/video/stream')
-  @Authorize({ permissions: ['read:lesson'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
   @ApiOperation({ summary: 'Stream lesson video' })
   @ApiParam({ name: 'id', description: 'Lesson ID' })
   @ApiResponse({ status: 200, description: 'Video stream URL' })
@@ -318,8 +357,7 @@ export class LessonController {
   // === ADMIN ENDPOINTS === //
   @Post('bulk/status')
   @Authorize({
-    roles: [UserType.ADMIN],
-    permissions: ['manage:lesson'],
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Bulk update lesson status (Admin only)' })
   @ApiResponse({ status: 200, description: 'Lessons updated successfully' })
@@ -333,8 +371,7 @@ export class LessonController {
 
   @Delete('bulk')
   @Authorize({
-    roles: [UserType.ADMIN],
-    permissions: ['manage:lesson'],
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Bulk delete lessons (Admin only)' })
@@ -346,8 +383,7 @@ export class LessonController {
 
   @Post('reorder')
   @Authorize({
-    roles: [UserType.TEACHER, UserType.ADMIN],
-    permissions: ['update:lesson'],
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Reorder lessons (Teacher/Admin)' })
   @ApiResponse({ status: 200, description: 'Lessons reordered successfully' })
@@ -359,8 +395,7 @@ export class LessonController {
   // === MODERATION ENDPOINTS === //
   @Post(':id/moderate')
   @Authorize({
-    roles: [UserType.ADMIN],
-    permissions: ['moderate:content'],
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Moderate lesson content (Admin only)' })
   @ApiParam({ name: 'id', description: 'Lesson ID' })
@@ -376,13 +411,176 @@ export class LessonController {
 
   @Get('moderation/pending')
   @Authorize({
-    roles: [UserType.ADMIN],
-    permissions: ['moderate:content'],
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
   })
   @ApiOperation({ summary: 'Get lessons pending moderation (Admin only)' })
   @ApiResponse({ status: 200, description: 'Pending lessons retrieved' })
   async getPendingModeration(@Query() queryDto: LessonQueryDto & PaginationDto) {
     queryDto.status = 'under_review' as any;
     return this.lessonService.findAll(queryDto);
+  }
+
+  // ==================== STUDENT PROGRESS ====================
+
+  @Get(':id/video-position')
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
+  @ApiOperation({ summary: 'Get student video position for lesson' })
+  @ApiParam({ name: 'id', description: 'Lesson ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Video position retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        lessonId: { type: 'string' },
+        lastPosition: { type: 'number' },
+        progressPercentage: { type: 'number' },
+        timeSpent: { type: 'number' },
+      },
+    },
+  })
+  async getVideoPosition(
+    @Param('id') lessonId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    if (!lessonId || lessonId === 'undefined' || lessonId === '[object Object]') {
+      throw new BadRequestException('Valid lesson ID is required');
+    }
+    return this.lessonService.getVideoPosition(userId, lessonId);
+  }
+
+  @Post('video-position')
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
+  @ApiOperation({ summary: 'Update video position for lesson' })
+  @ApiResponse({
+    status: 200,
+    description: 'Video position updated successfully',
+  })
+  async updateVideoPosition(
+    @Body() updateVideoPositionDto: UpdateVideoPositionDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    const { lessonId, position, duration } = updateVideoPositionDto;
+    
+    if (!lessonId || lessonId === 'undefined' || lessonId === '[object Object]') {
+      throw new BadRequestException('Valid lesson ID is required');
+    }
+    
+    return this.lessonService.updateVideoPosition(userId, lessonId, position, duration);
+  }
+
+  @Get(':id/progress')
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
+  @ApiOperation({ summary: 'Get student progress for lesson' })
+  @ApiParam({ name: 'id', description: 'Lesson ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson progress retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        lessonId: { type: 'string' },
+        status: { type: 'string' },
+        progressPercentage: { type: 'number' },
+        timeSpent: { type: 'number' },
+        lastPosition: { type: 'number' },
+        completionDate: { type: 'string', format: 'date-time', nullable: true },
+      },
+    },
+  })
+  async getLessonProgress(
+    @Param('id') lessonId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    if (!lessonId || lessonId === 'undefined' || lessonId === '[object Object]') {
+      throw new BadRequestException('Valid lesson ID is required');
+    }
+    return this.lessonService.getLessonProgress(userId, lessonId);
+  }
+
+  @Get(':id/resources')
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
+  @ApiOperation({ summary: 'Get lesson resources (attachments, transcript, subtitles)' })
+  @ApiParam({ name: 'id', description: 'Lesson ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson resources retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        attachments: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              type: { type: 'string' },
+              url: { type: 'string' },
+              size: { type: 'number' },
+              downloadable: { type: 'boolean' },
+            },
+          },
+        },
+        transcript: { type: 'string' },
+        subtitles: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              language: { type: 'string' },
+              url: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  async getLessonResources(
+    @Param('id') lessonId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    if (!lessonId || lessonId === 'undefined' || lessonId === '[object Object]') {
+      throw new BadRequestException('Valid lesson ID is required');
+    }
+    return this.lessonService.getLessonResources(userId, lessonId);
+  }
+
+  @Get(':id/notes')
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN],
+  })
+  @ApiOperation({ summary: 'Get student notes for lesson' })
+  @ApiParam({ name: 'id', description: 'Lesson ID' })
+  @ApiQuery({ name: 'includePrivate', required: false, type: Boolean })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson notes retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        lessonId: { type: 'string' },
+        notes: { type: 'string', nullable: true },
+        bookmarks: { type: 'array' },
+      },
+    },
+  })
+  async getLessonNotes(
+    @Param('id') lessonId: string,
+    @CurrentUser('id') userId: string,
+    @Query('includePrivate') includePrivate?: boolean,
+  ) {
+    if (!lessonId || lessonId === 'undefined' || lessonId === '[object Object]') {
+      throw new BadRequestException('Valid lesson ID is required');
+    }
+    return this.lessonService.getLessonNotes(userId, lessonId, includePrivate);
   }
 }

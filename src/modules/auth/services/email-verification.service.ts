@@ -42,13 +42,13 @@ export class EmailVerificationService {
     };
 
     const cacheKey = `${this.VERIFICATION_PREFIX}${tokenHash}`;
-    await this.cacheService.set(cacheKey, JSON.stringify(verificationData), 24 * 60 * 60);
+    await this.cacheService.set(cacheKey, JSON.stringify(verificationData), 24 * 60 * 60 * 1000);
 
     this.logger.log(`Email verification token generated for user: ${userId}`);
     return token;
   }
 
-  async verifyEmailToken(token: string): Promise<{ userId: string; email: string }> {
+  async verifyEmailToken(token: string): Promise<{ userId: string; email: string; user?: any }> {
     const tokenHash = this.hashToken(token);
     const cacheKey = `${this.VERIFICATION_PREFIX}${tokenHash}`;
 
@@ -63,10 +63,30 @@ export class EmailVerificationService {
       await this.cacheService.del(cacheKey);
       throw new BadRequestException('Verification token has expired');
     }
-    await this.userRepository.update(verificationData.userId, {
-      emailVerified: true,
-      status: UserStatus.ACTIVE,
+    
+    // Get user information first to check user type
+    const user = await this.userRepository.findOne({
+      where: { id: verificationData.userId },
+      select: ['id', 'email', 'userType', 'firstName', 'lastName', 'username', 'status'],
+      relations: ['teacherProfile', 'studentProfile'], // Include both profiles for redirect logic
     });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Update email verification status
+    // Only update status to ACTIVE for students, teachers will be handled in auth service
+    const updateData: Partial<User> = {
+      emailVerified: true,
+    };
+
+    // Only students get activated immediately
+    if (user.userType === 'student') {
+      updateData.status = UserStatus.ACTIVE;
+    }
+
+    await this.userRepository.update(verificationData.userId, updateData);
 
     await this.cacheService.del(cacheKey);
 
@@ -75,6 +95,23 @@ export class EmailVerificationService {
     return {
       userId: verificationData.userId,
       email: verificationData.email,
+      user: user ? {
+        id: user.id,
+        email: user.email,
+        userType: user.userType,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        teacherProfile: user.teacherProfile ? {
+          id: user.teacherProfile.id,
+          isApproved: user.teacherProfile.isApproved,
+          isActive: user.teacherProfile.isActive,
+        } : undefined,
+        studentProfile: user.studentProfile ? {
+          id: user.studentProfile.id,
+          onboardingCompleted: user.studentProfile.onboardingCompleted,
+        } : undefined,
+      } : undefined,
     };
   }
 
@@ -104,7 +141,7 @@ export class EmailVerificationService {
     };
 
     const cacheKey = `${this.RESET_PREFIX}${tokenHash}`;
-    await this.cacheService.set(cacheKey, JSON.stringify(resetData), 15 * 60);
+    await this.cacheService.set(cacheKey, JSON.stringify(resetData), 15 * 60 * 1000);
 
     await this.invalidateExistingResetTokens(user.id);
 
@@ -137,7 +174,7 @@ export class EmailVerificationService {
       throw new BadRequestException('Too many attempts. Please request a new reset token');
     }
 
-    await this.cacheService.set(cacheKey, JSON.stringify(resetData), 15 * 60);
+    await this.cacheService.set(cacheKey, JSON.stringify(resetData), 15 * 60 * 1000);
 
     return {
       userId: resetData.userId,
@@ -154,7 +191,7 @@ export class EmailVerificationService {
       const resetData: PasswordResetToken = JSON.parse(cachedData as string);
       resetData.used = true;
 
-      await this.cacheService.set(cacheKey, JSON.stringify(resetData), 60);
+      await this.cacheService.set(cacheKey, JSON.stringify(resetData), 60 * 60 * 1000);
     }
   }
 
@@ -179,7 +216,7 @@ export class EmailVerificationService {
       throw new BadRequestException('Please wait before requesting another verification email');
     }
 
-    await this.cacheService.set(rateLimitKey, new Date().toISOString(), 5 * 60);
+    await this.cacheService.set(rateLimitKey, new Date().toISOString(), 5 * 60 * 1000);
 
     return this.generateEmailVerificationToken(userId, user.email);
   }

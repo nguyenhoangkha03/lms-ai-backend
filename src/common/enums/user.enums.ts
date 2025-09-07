@@ -78,5 +78,6 @@ export enum PermissionResource {
   GRADE = 'grade',
   ANALYTICS = 'analytics',
   SYSTEM = 'system',
+  WISHLIST = 'wishlist',
   ALL = '*',
 }

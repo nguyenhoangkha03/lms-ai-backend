@@ -22,6 +22,7 @@ import { Enrollment } from './enrollment.entity';
 import { FileUpload } from './file-upload.entity';
 import { TutoringSession } from '@/modules/intelligent-tutoring/entities/tutoring-session.entity';
 import { AdaptiveContent } from '@/modules/intelligent-tutoring/entities/adaptive-content.entity';
+import { Cart } from './cart.entity';
 
 @Entity('courses')
 @Index(['teacherId'])
@@ -67,7 +68,7 @@ export class Course extends BaseEntity {
     nullable: true,
     comment: 'URL hình ảnh thu nhỏ của khóa học',
   })
-  thumbnailUrl?: string;
+  thumbnailUrl?: string | null;
 
   @Column({
     type: 'varchar',
@@ -75,7 +76,7 @@ export class Course extends BaseEntity {
     nullable: true,
     comment: 'URL video giới thiệu khóa học',
   })
-  trailerVideoUrl?: string;
+  trailerVideoUrl?: string | null;
 
   @Column({
     type: 'varchar',
@@ -207,7 +208,7 @@ export class Course extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     default: 0,
     comment: 'Đánh giá khóa học trung bình',
@@ -374,7 +375,7 @@ export class Course extends BaseEntity {
   metadata?: Record<string, any>;
 
   // Relationships
-  @ManyToOne(() => User, user => user.id, { eager: true })
+  @ManyToOne(() => User, user => user.courses, { eager: true })
   @JoinColumn({ name: 'teacherId' })
   teacher: User;
 
@@ -398,6 +399,9 @@ export class Course extends BaseEntity {
     cascade: true,
   })
   adaptiveContent: AdaptiveContent[];
+
+  @OneToMany(() => Cart, cart => cart.course)
+  cartItems?: Cart[];
 
   get formattedPrice(): string {
     if (this.isFree) return 'Free';

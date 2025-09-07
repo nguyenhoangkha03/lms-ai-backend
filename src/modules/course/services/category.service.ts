@@ -237,6 +237,25 @@ export class CategoryService {
     return category;
   }
 
+  async getRootCategories(): Promise<Category[]> {
+    const cacheKey = 'categories:root';
+    const cached = await this.cacheService.get<Category[]>(cacheKey);
+    if (cached) return cached;
+
+    const rootCategories = await this.categoryRepository.find({
+      where: { 
+        level: 0, 
+        isActive: true,
+        showInMenu: true 
+      },
+      order: { orderIndex: 'ASC' },
+      select: ['id', 'name', 'slug', 'description', 'iconUrl', 'color', 'courseCount']
+    });
+
+    await this.cacheService.set(cacheKey, rootCategories, this.CACHE_TTL);
+    return rootCategories;
+  }
+
   async getTree(): Promise<Category[]> {
     const cacheKey = 'categories:tree';
     const cached = await this.cacheService.get<Category[]>(cacheKey);
@@ -371,6 +390,171 @@ export class CategoryService {
     });
 
     this.logger.warn(`Category deleted: ${category.name} by user ${userId}`);
+  }
+
+  async getCategoryTree(): Promise<Category[]> {
+    return this.getTree();
+  }
+
+  async reorder(
+    id: string,
+    newParentId: string | null,
+    orderIndex: number,
+    userId: string,
+  ): Promise<Category> {
+    const category = await this.findById(id);
+
+    let parent: Category | null = null;
+    if (newParentId) {
+      parent = await this.categoryRepository.findOne({
+        where: { id: newParentId, isActive: true },
+      });
+
+      if (!parent) {
+        throw new BadRequestException('Invalid parent category ID');
+      }
+
+      if (parent.id === id) {
+        throw new BadRequestException('Category cannot be its own parent');
+      }
+
+      // Check for circular references
+      const ancestors = await this.categoryTreeRepository.findAncestors(parent);
+      if (ancestors.some(ancestor => ancestor.id === id)) {
+        throw new BadRequestException('Cannot create circular reference');
+      }
+    }
+
+    // Update category hierarchy
+    category.parentId = newParentId || null;
+    category.orderIndex = orderIndex;
+    category.level = parent ? parent.level + 1 : 0;
+
+    const updatedCategory = await this.categoryRepository.save(category);
+
+    await this.clearCategoryCache();
+
+    await this.auditLogService.createAuditLog({
+      userId,
+      action: AuditAction.UPDATE,
+      entityType: 'Category',
+      entityId: id,
+      description: `Category reordered: ${category.name}`,
+      level: AuditLevel.INFO,
+      metadata: {
+        categoryName: category.name,
+        newParentId,
+        orderIndex,
+        newLevel: category.level,
+      },
+    });
+
+    this.logger.log(`Category reordered: ${category.name} by user ${userId}`);
+    return updatedCategory;
+  }
+
+  async getCategoryStats(id: string): Promise<{
+    totalCourses: number;
+    activeCourses: number;
+    totalEnrollments: number;
+    subcategories: number;
+  }> {
+    const cacheKey = `category:${id}:stats`;
+    const cached = await this.cacheService.get<{
+      totalCourses: number;
+      activeCourses: number;
+      totalEnrollments: number;
+      subcategories: number;
+    }>(cacheKey);
+    if (cached) return cached;
+
+    const category = await this.findById(id);
+
+    // Get course statistics
+    const courseQuery = this.categoryRepository
+      .createQueryBuilder('category')
+      .leftJoin('category.courses', 'course')
+      .leftJoin('course.enrollments', 'enrollment')
+      .where('category.id = :id', { id })
+      .select([
+        'COUNT(course.id) as totalCourses',
+        'COUNT(CASE WHEN course.status = :published THEN 1 END) as activeCourses',
+        'COUNT(enrollment.id) as totalEnrollments',
+      ])
+      .setParameter('published', 'published')
+      .getRawOne();
+
+    // Get subcategories count
+    const subcategoriesCount = await this.categoryRepository.count({
+      where: { parentId: id },
+    });
+
+    const stats = {
+      totalCourses: parseInt((await courseQuery).totalCourses) || 0,
+      activeCourses: parseInt((await courseQuery).activeCourses) || 0,
+      totalEnrollments: parseInt((await courseQuery).totalEnrollments) || 0,
+      subcategories: subcategoriesCount,
+    };
+
+    await this.cacheService.set(cacheKey, stats, this.CACHE_TTL);
+    return stats;
+  }
+
+  /**
+   * Rebuilds course counts for all categories
+   * This includes courses from descendant categories for parent categories
+   */
+  async rebuildAllCourseCounts(): Promise<void> {
+    this.logger.log('Starting to rebuild course counts for all categories');
+    
+    const allCategories = await this.categoryRepository.find({
+      select: ['id', 'name'],
+      order: { level: 'ASC' }, // Process from root to leaves
+    });
+
+    for (const category of allCategories) {
+      await this.updateCategoryCourseCount(category.id);
+    }
+
+    await this.clearCategoryCache();
+    this.logger.log(`Rebuilt course counts for ${allCategories.length} categories`);
+  }
+
+  private async updateCategoryCourseCount(categoryId: string): Promise<void> {
+    // Get all descendant categories (including the category itself)
+    const descendantCategories = await this.getCategoryDescendants(categoryId);
+    const allCategoryIds = [categoryId, ...descendantCategories.map(cat => cat.id)];
+
+    // Count published courses in the category and all its descendants
+    const count = await this.categoryRepository
+      .createQueryBuilder('category')
+      .leftJoin('category.courses', 'course')
+      .where('category.id IN (:...categoryIds)', { categoryIds: allCategoryIds })
+      .andWhere('course.status = :status', { status: 'published' })
+      .getCount();
+
+    await this.categoryRepository.update(categoryId, { courseCount: count });
+    this.logger.debug(`Updated course count for category ${categoryId}: ${count} courses`);
+  }
+
+  private async getCategoryDescendants(categoryId: string): Promise<Category[]> {
+    try {
+      const directChildren = await this.categoryRepository.find({
+        where: { parentId: categoryId },
+      });
+
+      let allDescendants: Category[] = [...directChildren];
+
+      for (const child of directChildren) {
+        const grandChildren = await this.getCategoryDescendants(child.id);
+        allDescendants = allDescendants.concat(grandChildren);
+      }
+
+      return allDescendants;
+    } catch (error) {
+      this.logger.error(`Error getting category descendants: ${error.message}`);
+      return [];
+    }
   }
 
   private async clearCategoryCache(): Promise<void> {

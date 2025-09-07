@@ -19,6 +19,14 @@ export class Permission extends BaseEntity {
 
   @Column({
     type: 'varchar',
+    length: 100,
+    nullable: true,
+    comment: 'Tên hiển thị của quyền',
+  })
+  displayName?: string;
+
+  @Column({
+    type: 'varchar',
     length: 255,
     nullable: true,
     comment: 'Mô tả rõ ràng, dễ hiểu về ý nghĩa của quyền này',

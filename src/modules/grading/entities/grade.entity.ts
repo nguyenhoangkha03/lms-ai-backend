@@ -145,7 +145,7 @@ export class Grade extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     nullable: true,
     comment: 'Độ tự tin của AI khi chấm điểm (0.0 - 1.0)',

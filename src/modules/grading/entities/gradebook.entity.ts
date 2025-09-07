@@ -66,7 +66,7 @@ export class Gradebook extends BaseEntity {
 
   @Column({
     type: 'float',
-    precision: 3,
+    precision: 5,
     scale: 2,
     default: 60.0,
     comment: 'Ngưỡng điểm tối thiểu để được xem là đạt',
@@ -82,7 +82,7 @@ export class Gradebook extends BaseEntity {
 
   @Column({
     type: 'float',
-    precision: 3,
+    precision: 5,
     scale: 2,
     default: 10.0,
     comment: 'Phần trăm bị trừ khi nộp bài trễ',

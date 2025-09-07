@@ -3,9 +3,12 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { WinstonService } from '@/logger/winston.service';
 import { CacheService } from '@/cache/cache.service';
 import { AuditLogService } from '@/modules/system/services/audit-log.service';
@@ -16,6 +19,7 @@ import { Question } from '../entities/question.entity';
 import { User } from '@/modules/user/entities/user.entity';
 import { AssessmentService } from './assessment.service';
 import { AssessmentRandomizationService } from './assessment-randomization.service';
+import { GradingService } from '@/modules/grading/services/grading.service';
 import {
   StartAssessmentDto,
   SubmitAnswerDto,
@@ -26,9 +30,8 @@ import {
   ResumeSessionDto,
   AssessmentSessionResponse,
 } from '../dto/assessment-taking.dto';
-import { AttemptStatus, GradingStatus } from '@/common/enums/assessment.enums';
+import { AttemptStatus, GradingStatus, AssessmentStatus } from '@/common/enums/assessment.enums';
 import { randomBytes } from 'crypto';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuditAction, AuditLevel } from '@/common/enums/system.enums';
 
 @Injectable()
@@ -44,6 +47,8 @@ export class AssessmentTakingService {
     private readonly questionRepository: Repository<Question>,
     private readonly assessmentService: AssessmentService,
     private readonly randomizationService: AssessmentRandomizationService,
+    @Inject(forwardRef(() => GradingService))
+    private readonly gradingService: GradingService,
     private readonly logger: WinstonService,
     private readonly cacheService: CacheService,
     private readonly auditLogService: AuditLogService,
@@ -58,6 +63,7 @@ export class AssessmentTakingService {
     startData: StartAssessmentDto,
   ): Promise<AssessmentSessionResponse> {
     this.logger.log(`Starting assessment ${assessmentId} for student ${student.id}`);
+    console.log('=== DEBUG START ASSESSMENT ===');
 
     const assessment = await this.assessmentService.getAssessmentById(assessmentId, student, true);
 
@@ -88,7 +94,16 @@ export class AssessmentTakingService {
       ? new Date(Date.now() + timeLimit * 60 * 1000)
       : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const session = this.sessionRepository.create({
+    // Debug session data
+    console.log('Session data check:', {
+      totalQuestions: antiCheatResult.questions.length,
+      autoSaveInterval: assessment.settingsJson?.autoSaveInterval || 30,
+      timeLimit,
+      expiresAt,
+    });
+
+    // Create session with explicit field validation
+    const sessionData = {
       sessionToken: this.generateSessionToken(),
       studentId: student.id,
       assessmentId: assessment.id,
@@ -96,8 +111,16 @@ export class AssessmentTakingService {
       status: SessionStatus.ACTIVE,
       startedAt: new Date(),
       expiresAt,
-      totalQuestions: antiCheatResult.questions.length,
-      autoSaveInterval: assessment.settingsJson?.autoSaveInterval || 30,
+      totalQuestions: Number(antiCheatResult.questions.length) || 0,
+      currentQuestionIndex: 0,
+      questionsAnswered: 0,
+      progressPercentage: 0,
+      autoSaveInterval: Number(assessment.settingsJson?.autoSaveInterval) || 30,
+      securityViolationsCount: 0,
+      isFlagged: false,
+      isFullscreen: false,
+      tabSwitchCount: 0,
+      connectionInterruptions: 0,
       sessionConfig: JSON.stringify({
         randomizeQuestions: assessment.randomizeQuestions,
         randomizeAnswers: assessment.randomizeAnswers,
@@ -108,14 +131,19 @@ export class AssessmentTakingService {
       }),
       questionsOrder: JSON.stringify(antiCheatResult.questions.map(q => q.id)),
       browserInfo: startData.browserInfo ? JSON.stringify(startData.browserInfo) : null,
-      screenResolution: startData.screenResolution,
-      networkQuality: startData.networkQuality,
+      screenResolution: startData.screenResolution || null,
+      networkQuality: startData.networkQuality ? Number(startData.networkQuality) : null,
       metadata: startData.metadata ? JSON.stringify(startData.metadata) : null,
       createdBy: student.id,
       updatedBy: student.id,
-    } as AssessmentSession);
+    };
 
-    const savedSession = await this.sessionRepository.save(session);
+    console.log('Session data before create:', sessionData);
+    const session = this.sessionRepository.create(sessionData as any);
+
+    const savedSession = (await this.sessionRepository.save(
+      session,
+    )) as unknown as AssessmentSession;
 
     await this.cacheSession(savedSession);
 
@@ -166,7 +194,7 @@ export class AssessmentTakingService {
     const session = await this.getSessionByToken(sessionToken, student.id);
 
     if (!session.isActive) {
-      throw new BadRequestException('Session is not active');
+      throw new BadRequestException(`Session is not active. Current status: ${session.status}`);
     }
 
     if (session.isExpired) {
@@ -186,10 +214,13 @@ export class AssessmentTakingService {
     };
 
     const questionsAnswered = Object.keys(currentAnswers).length;
+    const progressPercentage =
+      session.totalQuestions > 0 ? (questionsAnswered / session.totalQuestions) * 100 : 0;
 
     await this.sessionRepository.update(session.id, {
       currentAnswers: JSON.stringify(currentAnswers),
       questionsAnswered,
+      progressPercentage,
       lastActivityAt: new Date(),
       lastAutoSaveAt: new Date(),
       updatedBy: student.id,
@@ -249,13 +280,19 @@ export class AssessmentTakingService {
       }
     }
 
+    const finalAnswers = session.currentAnswersJson;
+    const questionsAnswered = Object.keys(finalAnswers).length;
+    const finalProgressPercentage =
+      session.totalQuestions > 0 ? (questionsAnswered / session.totalQuestions) * 100 : 100; // Set 100% when completed
+
     await this.sessionRepository.update(session.id, {
       status: SessionStatus.COMPLETED,
+      progressPercentage: finalProgressPercentage,
+      questionsAnswered,
       endedAt: new Date(),
       updatedBy: student.id,
     });
 
-    const finalAnswers = session.currentAnswersJson;
     const timeTaken = session.durationInSeconds;
 
     await this.attemptRepository.update(session.attemptId!, {
@@ -288,8 +325,12 @@ export class AssessmentTakingService {
 
     let result: any = { attemptId: session.attemptId! };
 
+    this.logger.log(`Assessment grading method: ${assessment?.gradingMethod}`);
     if (assessment?.gradingMethod === 'automatic') {
+      this.logger.log(`Starting auto-grading for attempt ${session.attemptId}`);
       result = await this.triggerAutoGrading(session.attemptId!, finalAnswers);
+    } else {
+      this.logger.log(`Skipping auto-grading. Method: ${assessment?.gradingMethod}`);
     }
 
     return result;
@@ -578,7 +619,7 @@ export class AssessmentTakingService {
       throw new ForbiddenException('Assessment is not currently available');
     }
 
-    if (assessment.status !== 'published') {
+    if (assessment.status !== AssessmentStatus.PUBLISHED) {
       throw new ForbiddenException('Assessment is not published');
     }
   }
@@ -619,6 +660,15 @@ export class AssessmentTakingService {
         where: { assessmentId: assessment.id, studentId: student.id },
       })) + 1;
 
+    // Debug log to find NaN values
+    console.log('Assessment data check:', {
+      totalPoints: assessment.totalPoints,
+      timeLimit: assessment.timeLimit,
+      maxAttempts: assessment.maxAttempts,
+      passingScore: assessment.passingScore,
+      weight: assessment.weight,
+    });
+
     const attempt = this.attemptRepository.create({
       studentId: student.id,
       assessmentId: assessment.id,
@@ -626,7 +676,7 @@ export class AssessmentTakingService {
       startedAt: new Date(),
       status: AttemptStatus.IN_PROGRESS,
       gradingStatus: GradingStatus.PENDING,
-      maxScore: assessment.totalPoints,
+      maxScore: assessment.totalPoints || 0,
       createdBy: student.id,
       updatedBy: student.id,
     });
@@ -638,15 +688,15 @@ export class AssessmentTakingService {
     return randomBytes(32).toString('hex');
   }
 
-  private async getSessionByToken(
+  public async getSessionByToken(
     sessionToken: string,
     studentId: string,
   ): Promise<AssessmentSession> {
     const cacheKey = `session:${sessionToken}`;
-    let session = await this.cacheService.get<AssessmentSession>(cacheKey);
+    let cachedData = await this.cacheService.get<any>(cacheKey);
 
-    if (!session) {
-      session = await this.sessionRepository.findOne({
+    if (!cachedData) {
+      const session = await this.sessionRepository.findOne({
         where: { sessionToken, studentId },
         relations: ['assessment'],
       });
@@ -656,9 +706,33 @@ export class AssessmentTakingService {
       }
 
       await this.cacheSession(session);
-    }
+      return session;
+    } else {
+      // Recreate AssessmentSession instance from cached data to restore getter methods
+      const session = Object.assign(new AssessmentSession(), cachedData);
 
-    return session;
+      // Convert date strings back to Date objects
+      if (session.expiresAt && typeof session.expiresAt === 'string') {
+        session.expiresAt = new Date(session.expiresAt);
+      }
+      if (session.startedAt && typeof session.startedAt === 'string') {
+        session.startedAt = new Date(session.startedAt);
+      }
+      if (session.endedAt && typeof session.endedAt === 'string') {
+        session.endedAt = new Date(session.endedAt);
+      }
+      if (session.lastActivityAt && typeof session.lastActivityAt === 'string') {
+        session.lastActivityAt = new Date(session.lastActivityAt);
+      }
+      if (session.lastPingAt && typeof session.lastPingAt === 'string') {
+        session.lastPingAt = new Date(session.lastPingAt);
+      }
+      if (session.lastAutoSaveAt && typeof session.lastAutoSaveAt === 'string') {
+        session.lastAutoSaveAt = new Date(session.lastAutoSaveAt);
+      }
+
+      return session;
+    }
   }
 
   private async cacheSession(session: any): Promise<void> {
@@ -673,11 +747,12 @@ export class AssessmentTakingService {
 
   private getSessionQuestions(session: AssessmentSession, allQuestions: Question[]): Question[] {
     const questionsOrder = session.questionsOrderJson;
-    if (!questionsOrder.length) return allQuestions;
+    if (!questionsOrder || !Array.isArray(questionsOrder) || !questionsOrder.length)
+      return allQuestions;
 
     return questionsOrder
       .map((questionId: string) => allQuestions.find(q => q.id === questionId))
-      .filter(Boolean);
+      .filter((q): q is Question => q !== undefined);
   }
 
   private buildSessionResponse(
@@ -685,8 +760,8 @@ export class AssessmentTakingService {
     assessment: Assessment,
     questions: Question[],
   ): AssessmentSessionResponse {
-    const config = session.sessionConfigJson;
-    const currentAnswers = session.currentAnswersJson;
+    const config = session.sessionConfigJson || {};
+    const currentAnswers = session.currentAnswersJson || {};
 
     return {
       sessionId: session.id,
@@ -703,15 +778,29 @@ export class AssessmentTakingService {
       },
       questions: questions.map((q, index) => ({
         id: q.id,
-        questionText: q.questionText,
-        questionType: q.questionType,
+        title: q.questionText, // For question title
+        content: q.questionText, // For question content/text
+        type: q.questionType, // Map to 'type' field expected by frontend
+        questionType: q.questionType, // Keep original for compatibility
         options: q.optionsJson,
         points: q.points,
-        hint: q.hint,
+        hints: q.hint ? [q.hint] : [], // Convert single hint to array
         timeLimit: q.timeLimit,
+        difficultyLevel:
+          q.difficulty === 'easy'
+            ? 1
+            : q.difficulty === 'medium'
+              ? 2
+              : q.difficulty === 'hard'
+                ? 3
+                : 4,
+        required: true, // Default to required
         order: index,
         answered: !!currentAnswers[q.id],
+        attachments: q.attachmentsJson,
+        explanation: q.explanation,
         currentAnswer: currentAnswers[q.id]?.answer,
+        metadata: q.metadataJson || {},
       })),
       config: {
         allowQuestionNavigation: config.allowQuestionNavigation,
@@ -801,12 +890,347 @@ export class AssessmentTakingService {
     return warnings;
   }
 
-  private async triggerAutoGrading(attemptId: string, _answers: any): Promise<any> {
-    // This will be implemented in the next grading module
-    // For now, return basic response
+  private async triggerAutoGrading(attemptId: string, answers: any): Promise<any> {
+    try {
+      this.logger.log(`Starting auto-grading for attempt ${attemptId}`);
+
+      // Get attempt with assessment details
+      const attempt = await this.attemptRepository.findOne({
+        where: { id: attemptId },
+        relations: ['assessment'],
+      });
+
+      if (!attempt) {
+        throw new NotFoundException('Assessment attempt not found');
+      }
+
+      const assessment = attempt.assessment;
+
+      // Call grading service to perform actual grading
+      const grade = await this.gradingService.autoGradeMultipleChoice(attemptId, attempt.studentId);
+
+      // Update assessment attempt with grading results
+      await this.attemptRepository.update(attemptId, {
+        score: grade.score,
+        maxScore: grade.maxScore,
+        percentage: grade.percentage,
+        gradingStatus: GradingStatus.GRADED,
+        gradedAt: new Date(),
+        gradedBy: attempt.studentId,
+      });
+
+      // Determine if student passed
+      const passed = grade.percentage >= assessment.passingScore;
+
+      this.logger.log(
+        `Auto-grading completed for attempt ${attemptId}: ${grade.score}/${grade.maxScore} (${grade.percentage}%) - ${passed ? 'PASSED' : 'FAILED'}`,
+      );
+
+      // Emit grading completed event
+      this.eventEmitter.emit('assessment.graded', {
+        attemptId,
+        studentId: attempt.studentId,
+        assessmentId: attempt.assessmentId,
+        score: grade.score,
+        maxScore: grade.maxScore,
+        percentage: grade.percentage,
+        passed,
+        gradedAt: new Date(),
+      });
+
+      return {
+        attemptId,
+        score: grade.score,
+        maxScore: grade.maxScore,
+        percentage: grade.percentage,
+        passed,
+        message: 'Assessment graded successfully.',
+      };
+    } catch (error) {
+      this.logger.error(`Auto-grading failed for attempt ${attemptId}:`, error);
+
+      // Update attempt to indicate manual review is needed
+      await this.attemptRepository.update(attemptId, {
+        gradingStatus: GradingStatus.IN_PROGRESS,
+        feedback: 'Automatic grading failed. Manual review required.',
+      });
+
+      return {
+        attemptId,
+        message: 'Assessment submitted successfully. Manual review required for grading.',
+        requiresManualReview: true,
+      };
+    }
+  }
+
+  // ================================
+  // STUDENT ACCESS METHODS
+  // ================================
+
+  async getCourseAssessments(courseId: string, user: User): Promise<any[]> {
+    const assessments = await this.assessmentRepository.find({
+      where: {
+        courseId,
+        status: AssessmentStatus.PUBLISHED,
+      },
+      select: [
+        'id',
+        'title',
+        'description',
+        'assessmentType',
+        'timeLimit',
+        'maxAttempts',
+        'passingScore',
+        'totalPoints',
+        'isMandatory',
+        'availableFrom',
+        'availableUntil',
+        'isProctored',
+        'status',
+      ],
+      order: { createdAt: 'ASC' },
+    });
+
+    // Check availability and attempts for each assessment
+    const enrichedAssessments = await Promise.all(
+      assessments.map(async assessment => {
+        const attemptCount = await this.attemptRepository.count({
+          where: { assessmentId: assessment.id, studentId: user.id },
+        });
+
+        const isAvailable = assessment.isAvailable;
+        const hasAttemptsLeft = attemptCount < assessment.maxAttempts;
+
+        // Debug log
+        console.log(`Assessment ${assessment.id}:`, {
+          title: assessment.title,
+          availableFrom: assessment.availableFrom,
+          availableUntil: assessment.availableUntil,
+          status: assessment.status,
+          isActive: assessment.isActive,
+          isAvailable,
+          attemptCount,
+          maxAttempts: assessment.maxAttempts,
+          hasAttemptsLeft,
+          canTakeNow: isAvailable && hasAttemptsLeft,
+        });
+
+        return {
+          ...assessment,
+          attemptCount,
+          attemptsLeft: assessment.maxAttempts - attemptCount,
+          isAvailable,
+          canTakeNow: isAvailable && hasAttemptsLeft,
+        };
+      }),
+    );
+
+    return enrichedAssessments;
+  }
+
+  async getLessonAssessments(lessonId: string, user: User): Promise<any[]> {
+    const assessments = await this.assessmentRepository.find({
+      where: {
+        lessonId,
+        status: AssessmentStatus.PUBLISHED,
+      },
+      select: [
+        'id',
+        'title',
+        'description',
+        'assessmentType',
+        'timeLimit',
+        'maxAttempts',
+        'passingScore',
+        'totalPoints',
+        'isMandatory',
+        'availableFrom',
+        'availableUntil',
+        'isProctored',
+      ],
+      order: { createdAt: 'ASC' },
+    });
+
+    // Check availability and attempts for each assessment
+    const enrichedAssessments = await Promise.all(
+      assessments.map(async assessment => {
+        const attemptCount = await this.attemptRepository.count({
+          where: { assessmentId: assessment.id, studentId: user.id },
+        });
+
+        const isAvailable = assessment.isAvailable;
+        const hasAttemptsLeft = attemptCount < assessment.maxAttempts;
+
+        return {
+          ...assessment,
+          attemptCount,
+          attemptsLeft: assessment.maxAttempts - attemptCount,
+          isAvailable,
+          canTakeNow: isAvailable && hasAttemptsLeft,
+        };
+      }),
+    );
+
+    return enrichedAssessments;
+  }
+
+  async getAssessmentAttempts(assessmentId: string, user: User): Promise<any[]> {
+    // Verify the assessment exists and user has access
+    const assessment = await this.assessmentRepository.findOne({
+      where: { id: assessmentId },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException('Assessment not found');
+    }
+
+    // Get all attempts for this assessment and user
+    const attempts = await this.attemptRepository.find({
+      where: {
+        assessmentId: assessmentId,
+        studentId: user.id,
+      },
+      relations: ['assessment', 'student'],
+      order: { attemptNumber: 'DESC' },
+    });
+
+    const transformedAttempts = await Promise.all(
+      attempts.map(async attempt => {
+        let answersJson: any = attempt.answers;
+        let answers: any[] = [];
+
+        // Parse answers if it's a string
+        if (typeof answersJson === 'string') {
+          try {
+            answersJson = JSON.parse(answersJson);
+          } catch (e) {
+            answersJson = [];
+          }
+        }
+
+        // Normalize answer structure
+        if (Array.isArray(answersJson)) {
+          answers = answersJson;
+        } else if (answersJson && typeof answersJson === 'object') {
+          answers = Object.entries(answersJson).map(([questionId, data]) => ({
+            questionId,
+            ...(data as Record<string, any>),
+          }));
+        }
+
+        // Optional: enrich each answer with question data (if needed)
+        for (const answer of answers) {
+          const questionFind = await this.questionRepository.findOne({
+            where: { id: answer.questionId },
+          });
+
+          if (questionFind?.options) {
+            for (const option of JSON.parse(questionFind.options)) {
+              if (answer.answer === option.id) {
+                if (option.isCorrect) {
+                  answer.isCorrect = true;
+                } else {
+                  answer.isCorrect = false;
+                }
+                break;
+              }
+            }
+          }
+        }
+
+        return {
+          id: attempt.id,
+          studentId: attempt.studentId,
+          assessmentId: attempt.assessmentId,
+          attempt: attempt.attemptNumber,
+          attemptNumber: attempt.attemptNumber,
+          startedAt: attempt.startedAt,
+          submittedAt: attempt.submittedAt,
+          timeSpent: attempt.timeTaken || 0,
+          timeTaken: attempt.timeTaken,
+          score: attempt.score || 0,
+          maxScore: attempt.maxScore || assessment.totalPoints,
+          percentage: attempt.percentage || 0,
+          status: attempt.status,
+          gradingStatus: attempt.gradingStatus,
+          passed: attempt.percentage ? attempt.percentage >= assessment.passingScore : false,
+          answers: answers,
+          flagged: attempt.isFlagged,
+          isFlagged: attempt.isFlagged,
+          flagReason: attempt.flagReason,
+          gradedAt: attempt.gradedAt,
+          gradedBy: attempt.gradedBy,
+          feedback: attempt.feedback,
+          manualReviewRequired: false,
+          autoGraded: true,
+          totalPoints: attempt.maxScore || assessment.totalPoints,
+          createdAt: attempt.createdAt,
+          updatedAt: attempt.updatedAt,
+          sessionId: attempt.id,
+        };
+      }),
+    );
+
+    return transformedAttempts;
+  }
+
+  async checkAssessmentAvailability(
+    assessmentId: string,
+    user: User,
+  ): Promise<{
+    available: boolean;
+    reason?: string;
+    details: {
+      isPublished: boolean;
+      isInTimeWindow: boolean;
+      hasAttemptsLeft: boolean;
+      attemptCount: number;
+      maxAttempts: number;
+    };
+  }> {
+    const assessment = await this.assessmentRepository.findOne({
+      where: { id: assessmentId },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException('Assessment not found');
+    }
+
+    const attemptCount = await this.attemptRepository.count({
+      where: { assessmentId: assessment.id, studentId: user.id },
+    });
+
+    const isPublished = assessment.status === AssessmentStatus.PUBLISHED;
+    const isInTimeWindow = assessment.isAvailable;
+    const hasAttemptsLeft = attemptCount < assessment.maxAttempts;
+
+    let available = isPublished && isInTimeWindow && hasAttemptsLeft;
+    let reason: string | undefined;
+
+    if (!isPublished) {
+      reason = 'Assessment is not published yet';
+    } else if (!isInTimeWindow) {
+      if (assessment.availableFrom && new Date() < assessment.availableFrom) {
+        reason = `Assessment will be available from ${assessment.availableFrom}`;
+      } else if (assessment.availableUntil && new Date() > assessment.availableUntil) {
+        reason = 'Assessment deadline has passed';
+      } else {
+        reason = 'Assessment is not currently available';
+      }
+    } else if (!hasAttemptsLeft) {
+      reason = `Maximum attempts (${assessment.maxAttempts}) exceeded`;
+    }
+
     return {
-      attemptId,
-      message: 'Assessment submitted successfully. Grading in progress.',
+      available,
+      reason,
+      details: {
+        isPublished,
+        isInTimeWindow,
+        hasAttemptsLeft,
+        attemptCount,
+        maxAttempts: assessment.maxAttempts,
+      },
     };
   }
 }

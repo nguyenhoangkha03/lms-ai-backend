@@ -14,6 +14,7 @@ import { RedisModule } from './redis/redis.module';
 import { DatabaseController } from './database/database.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
+import { TeacherModule } from './modules/teacher/teacher.module';
 import { CourseModule } from './modules/course/course.module';
 import { AssessmentModule } from './modules/assessment/assessment.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
@@ -35,6 +36,10 @@ import { CachingModule } from './modules/caching/caching.module';
 import { PerformanceModule } from './modules/performance/performance.module';
 import { SecurityModule } from './modules/security/security.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
@@ -76,6 +81,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     // Feature modules
     AuthModule,
     UserModule,
+    TeacherModule,
     CourseModule,
     AssessmentModule,
     AnalyticsModule,
@@ -96,6 +102,10 @@ import { ScheduleModule } from '@nestjs/schedule';
     PerformanceModule,
     SecurityModule,
     PrivacyModule,
+    AdminModule,
+    UploadModule,
+    OnboardingModule,
+    PaymentModule,
   ],
   controllers: [AppController, DatabaseController],
   providers: [AppService],

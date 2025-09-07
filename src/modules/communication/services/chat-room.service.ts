@@ -7,7 +7,7 @@ import { ChatMessage } from '../entities/chat-message.entity';
 import { CreateRoomDto, UpdateRoomDto } from '../dto/chat.dto';
 import { CacheService } from '@/cache/cache.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ParticipantRole } from '@/common/enums/communication.enums';
+import { ParticipantRole, ParticipantStatus, ChatRoomType } from '@/common/enums/communication.enums';
 
 @Injectable()
 export class ChatRoomService {
@@ -25,7 +25,6 @@ export class ChatRoomService {
   async createRoom(createRoomDto: CreateRoomDto & { createdBy: string }): Promise<ChatRoom> {
     const room = this.roomRepository.create({
       ...createRoomDto,
-      participantCount: 1,
       isActive: true,
     });
 
@@ -40,6 +39,18 @@ export class ChatRoomService {
     });
 
     return this.getRoomWithParticipants(savedRoom.id);
+  }
+
+  async getRoomBasicInfo(roomId: string): Promise<ChatRoom> {
+    const room = await this.roomRepository.findOne({
+      where: { id: roomId },
+    });
+    
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+    
+    return room;
   }
 
   async getRoomWithParticipants(roomId: string): Promise<ChatRoom> {
@@ -106,26 +117,52 @@ export class ChatRoomService {
       throw new NotFoundException('Room not found');
     }
 
-    if (!room.canAcceptNewMembers) {
-      throw new BadRequestException('Room cannot accept new members');
-    }
-
+    // Check if user is already a participant
     const existingParticipant = await this.participantRepository.findOne({
       where: { roomId, userId },
     });
 
+    // For public rooms or course rooms, allow anyone to join
+    // For private/study group rooms, check if user has been invited or is already a member
+    const restrictedRoomTypes = [ChatRoomType.PRIVATE, ChatRoomType.STUDY_GROUP, ChatRoomType.OFFICE_HOURS];
+    
+    if (restrictedRoomTypes.includes(room.roomType)) {
+      if (!existingParticipant) {
+        // Check if room accepts new members
+        if (!room.canAcceptNewMembers) {
+          console.log(`Room ${roomId} cannot accept new members:`, {
+            roomType: room.roomType,
+            isActive: room.isActive,
+            participantCount: room.participantCount,
+            maxParticipants: room.maxParticipants,
+          });
+          throw new BadRequestException('This room requires an invitation to join');
+        }
+      }
+    } else {
+      // Public or course rooms - check if can accept new members
+      if (!room.canAcceptNewMembers) {
+        throw new BadRequestException('Room cannot accept new members');
+      }
+    }
+
     if (existingParticipant) {
       if (existingParticipant.isActive) {
-        throw new BadRequestException('User is already in the room');
+        // User is already active - just clear cache and return success
+        console.log(`User ${userId} is already an active member of room ${roomId}`);
+        await this.cacheService.del(`room_access:${roomId}:${userId}`);
+        return;
       } else {
         await this.participantRepository.update(existingParticipant.id, {
-          isActive: true,
+          status: ParticipantStatus.ACTIVE,
           joinedAt: new Date(),
           role,
         });
+        console.log(`Reactivated participant ${userId} in room ${roomId}`);
       }
     } else {
       await this.addParticipant(roomId, userId, role);
+      console.log(`Added new participant ${userId} to room ${roomId}`);
     }
 
     await this.updateParticipantCount(roomId);
@@ -143,7 +180,7 @@ export class ChatRoomService {
 
   async leaveRoom(roomId: string, userId: string): Promise<void> {
     const participant = await this.participantRepository.findOne({
-      where: { roomId, userId, isActive: true },
+      where: { roomId, userId, status: ParticipantStatus.ACTIVE },
     });
 
     if (!participant) {
@@ -151,7 +188,7 @@ export class ChatRoomService {
     }
 
     await this.participantRepository.update(participant.id, {
-      isActive: false,
+      status: ParticipantStatus.INACTIVE,
       leftAt: new Date(),
     });
 
@@ -202,7 +239,7 @@ export class ChatRoomService {
     const [participants, total] = await this.participantRepository.findAndCount({
       where: {
         roomId,
-        isActive: true,
+        status: ParticipantStatus.ACTIVE,
       },
       relations: ['user'],
       order: { joinedAt: 'DESC' },
@@ -219,7 +256,7 @@ export class ChatRoomService {
     role: ParticipantRole,
   ): Promise<void> {
     const participant = await this.participantRepository.findOne({
-      where: { roomId, userId, isActive: true },
+      where: { roomId, userId, status: ParticipantStatus.ACTIVE },
     });
 
     if (!participant) {
@@ -244,24 +281,62 @@ export class ChatRoomService {
 
   async getUserRooms(
     userId: string,
-    type?: string,
-    limit: number = 50,
-    offset: number = 0,
+    filters: {
+      roomType?: string;
+      courseId?: string;
+      status?: string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
   ): Promise<{ rooms: ChatRoom[]; total: number }> {
+    const { roomType, courseId, status, search, limit = 50, offset = 0 } = filters;
+
     const queryBuilder = this.participantRepository
       .createQueryBuilder('participant')
       .leftJoinAndSelect('participant.room', 'room')
       .leftJoinAndSelect('room.course', 'course')
       .leftJoinAndSelect('room.lesson', 'lesson')
       .where('participant.userId = :userId', { userId })
-      .andWhere('participant.isActive = true')
+      .andWhere('participant.status = :status', { status: 'active' })
       .andWhere('room.deletedAt IS NULL')
-      .orderBy('participant.lastSeenAt', 'DESC')
-      .limit(limit)
-      .offset(offset);
+      .orderBy('room.lastActivityAt', 'DESC')
+      .limit(Number(limit) || 20)
+      .offset(Number(offset) || 0);
 
-    if (type) {
-      queryBuilder.andWhere('room.type = :type', { type });
+    if (roomType) {
+      // Map frontend roomType to backend enum values
+      let backendType = roomType;
+      switch (roomType) {
+        case 'direct':
+          backendType = 'private';
+          break;
+        case 'group':
+          backendType = 'study_group';
+          break;
+        case 'course':
+          backendType = 'course';
+          break;
+        case 'public':
+          backendType = 'public';
+          break;
+      }
+      queryBuilder.andWhere('room.roomType = :roomType', { roomType: backendType });
+    }
+
+    if (courseId) {
+      queryBuilder.andWhere('room.courseId = :courseId', { courseId });
+    }
+
+    if (status) {
+      queryBuilder.andWhere('room.status = :status', { status });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(room.name ILIKE :search OR room.description ILIKE :search)',
+        { search: `%${search}%` }
+      );
     }
 
     const [participants, total] = await queryBuilder.getManyAndCount();
@@ -305,7 +380,7 @@ export class ChatRoomService {
       where: {
         roomId,
         userId,
-        isActive: true,
+        status: ParticipantStatus.ACTIVE,
       },
     });
 
@@ -317,7 +392,7 @@ export class ChatRoomService {
       where: {
         roomId,
         userId,
-        isActive: true,
+        status: ParticipantStatus.ACTIVE,
         role: In(['moderator', 'admin', 'owner']),
       },
     });
@@ -354,7 +429,7 @@ export class ChatRoomService {
       roomId,
       userId,
       role,
-      isActive: true,
+      status: ParticipantStatus.ACTIVE,
       joinedAt: new Date(),
       lastSeenAt: new Date(),
     } as ChatParticipant);
@@ -364,7 +439,7 @@ export class ChatRoomService {
 
   private async updateParticipantCount(roomId: string): Promise<void> {
     const count = await this.participantRepository.count({
-      where: { roomId, isActive: true },
+      where: { roomId, status: ParticipantStatus.ACTIVE },
     });
 
     await this.roomRepository.update(roomId, { participantCount: count });

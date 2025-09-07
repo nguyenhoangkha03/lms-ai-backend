@@ -1,13 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { SystemSeeder } from './system.seeder';
 import { WinstonService } from '@/logger/winston.service';
 
 @Injectable()
 export class SeedService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly systemSeeder: SystemSeeder,
     private readonly logger: WinstonService,
   ) {
     this.logger.setContext(SeedService.name);
@@ -18,7 +16,7 @@ export class SeedService {
 
     try {
       // Run seeders in order
-      await this.systemSeeder.run();
+      //   await this.systemSeeder.run();
 
       this.logger.log('✅ All seeders completed successfully');
     } catch (error) {
@@ -32,7 +30,7 @@ export class SeedService {
 
     switch (seederName) {
       case 'system':
-        await this.systemSeeder.run();
+        // await this.systemSeeder.run();
         break;
       default:
         throw new Error(`Unknown seeder: ${seederName}`);

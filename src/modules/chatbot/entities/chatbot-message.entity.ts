@@ -169,7 +169,7 @@ export class ChatbotMessage extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     nullable: true,
     comment: 'User rating for this message (1.0 - 5.0)',

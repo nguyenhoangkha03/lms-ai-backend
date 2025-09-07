@@ -18,6 +18,8 @@ export class CreateRoleDto {
   level?: number;
   color?: string;
   icon?: string;
+  isActive?: boolean;
+  isSystemRole?: boolean;
   permissionIds?: string[];
 }
 
@@ -29,6 +31,7 @@ export class UpdateRoleDto {
   color?: string;
   icon?: string;
   isActive?: boolean;
+  isSystemRole?: boolean;
 }
 
 @Injectable()
@@ -66,16 +69,17 @@ export class RoleService {
   }
 
   async findAll(): Promise<Role[]> {
-    const cacheKey = 'roles:all';
-    const cached = await this.cacheService.get<Role[]>(cacheKey);
-    if (cached) return cached;
+    // Temporarily disable cache to test date serialization
+    // const cacheKey = 'roles:all';
+    // const cached = await this.cacheService.get<Role[]>(cacheKey);
+    // if (cached) return cached;
 
     const roles = await this.roleRepository.find({
       relations: ['permissions'],
       order: { level: 'ASC', name: 'ASC' },
     });
 
-    await this.cacheService.set(cacheKey, roles, 3600);
+    // await this.cacheService.set(cacheKey, roles, 3600);
     return roles;
   }
 
@@ -91,6 +95,24 @@ export class RoleService {
 
     if (!role) {
       throw new NotFoundException(`Role with ID ${id} not found`);
+    }
+
+    await this.cacheService.set(cacheKey, role, 3600);
+    return role;
+  }
+
+  async findByName(name: string): Promise<Role> {
+    const cacheKey = `role:name:${name}`;
+    const cached = await this.cacheService.get<Role>(cacheKey);
+    if (cached) return cached;
+
+    const role = await this.roleRepository.findOne({
+      where: { name },
+      relations: ['permissions'],
+    });
+
+    if (!role) {
+      throw new NotFoundException(`Role with name ${name} not found`);
     }
 
     await this.cacheService.set(cacheKey, role, 3600);

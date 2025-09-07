@@ -16,7 +16,7 @@ export interface SessionData {
   lastAccessedAt: Date;
   expiresAt: Date;
   isActive: boolean;
-  loginMethod: 'local' | 'google' | 'facebook' | '2fa';
+  loginMethod: 'local' | 'google' | 'facebook' | '2fa' | 'email_verify';
 }
 
 export interface ActiveSession {

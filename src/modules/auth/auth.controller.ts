@@ -14,6 +14,9 @@ import {
   Request,
   Response,
   UseGuards,
+  ForbiddenException,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './services/auth.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -29,6 +32,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { TeacherRegistrationDto } from './dto/teacher-registration.dto';
 import { FacebookAuthGuard, GoogleAuthGuard } from './guards/oauth.guard';
 import { ConfigService } from '@nestjs/config';
 import { SessionService } from './services/session.service';
@@ -76,8 +80,8 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @SkipCsrf()
   @UseGuards(LocalAuthGuard)
-  // dùng để thiết lập HTTP status code trả về cho một route mặc định là 200 OK
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
@@ -92,8 +96,7 @@ export class AuthController {
     const deviceInfo: DeviceInfo = this.extractDeviceInfo(userAgent, ip);
     const result = await this.authService.login(loginDto, deviceInfo);
 
-    // Set cookies if not requiring 2FA
-    if (!result.requires2FA) {
+    if (!result.twoFactorEnabled) {
       this.setAuthCookies(res, result);
     }
 
@@ -137,9 +140,20 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refreshToken(@Request() req, @Response({ passthrough: true }) res) {
+  async refreshToken(
+    @Request() req,
+    @Response({ passthrough: true }) res,
+    @Body() body?: { refreshToken?: string },
+  ) {
+    // Try to get refresh token from multiple sources: body, cookies, headers
     const refreshToken =
-      req.cookies?.['refresh-token'] || req.headers?.authorization?.replace('Bearer ', '');
+      body?.refreshToken || // From request body (frontend sends this)
+      req.cookies?.['refresh-token'] || // From cookies
+      req.headers?.authorization?.replace('Bearer ', ''); // From headers
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
 
     const tokens = await this.authService.refreshToken(refreshToken);
     this.setAuthCookies(res, tokens);
@@ -214,6 +228,7 @@ export class AuthController {
 
   @Public()
   @Post('forgot-password')
+  @SkipCsrf()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset' })
   @ApiResponse({ status: 200, description: 'Password reset email sent (if email exists)' })
@@ -227,6 +242,7 @@ export class AuthController {
 
   @Public()
   @Post('reset-password')
+  @SkipCsrf()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
@@ -241,19 +257,93 @@ export class AuthController {
 
   @Public()
   @Get('verify-email')
+  @SkipCsrf()
   @ApiOperation({ summary: 'Verify email address' })
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
   @ApiResponse({ status: 400, description: 'Invalid or expired verification token' })
-  async verifyEmail(@Query('token') token: string) {
-    await this.authService.verifyEmail(token);
+  async verifyEmail(
+    @Query('token') token: string,
+    @Headers('user-agent') userAgent: string,
+    @Ip() ip: string,
+    @Response() res,
+  ) {
+    try {
+      this.logger.log(`Starting email verification for token: ${token.substring(0, 10)}...`);
 
-    return {
-      message: 'Email verified successfully',
-    };
+      const deviceInfo: DeviceInfo = this.extractDeviceInfo(userAgent, ip);
+      const result = await this.authService.verifyEmail(token, deviceInfo);
+
+      this.logger.log(`Verification result:`, JSON.stringify(result, null, 2));
+
+      // If verification includes user info, set auth cookies
+      if (result.user && result.sessionId) {
+        this.logger.log(`Setting auth cookies for user: ${result.user.id}`);
+        this.setAuthCookies(res, {
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          sessionId: result.sessionId,
+        });
+      } else {
+        this.logger.warn('No user or session found in verification result');
+      }
+
+      // Get frontend URL with fallback
+      const frontendUrl = this.configService.get<string>('frontend.url') || 'http://localhost:3000';
+
+      // Determine redirect URL based on user type
+      let redirectUrl = `${frontendUrl}/student`;
+
+      if (result.user?.userType) {
+        this.logger.log(`User type found: ${result.user.userType}`);
+        switch (result.user.userType) {
+          case 'student':
+            // Check if student has completed onboarding
+            if (result.user.studentProfile?.onboardingCompleted) {
+              redirectUrl = `${frontendUrl}/student`;
+            } else {
+              redirectUrl = `${frontendUrl}/onboarding`;
+            }
+            break;
+          case 'teacher':
+            // For teachers, check if they are approved
+            if (result.user.teacherProfile?.isApproved) {
+              redirectUrl = `${frontendUrl}/teacher`;
+            } else {
+              // Not approved yet, redirect to pending approval page
+              redirectUrl = `${frontendUrl}/teacher-application-pending`;
+            }
+            break;
+          case 'admin':
+            redirectUrl = `${frontendUrl}/admin`;
+            break;
+          default:
+            redirectUrl = `${frontendUrl}/student`;
+        }
+      } else {
+        // If no user info, default to login
+        this.logger.log('No user type found, redirecting to login');
+        redirectUrl = `${frontendUrl}/login`;
+      }
+
+      // Add success message as query param
+      redirectUrl += `?verified=true&message=${encodeURIComponent('Email verified successfully')}`;
+
+      this.logger.log(`Redirecting to: ${redirectUrl}`);
+      res.redirect(redirectUrl);
+    } catch (error) {
+      this.logger.error('Email verification failed:', error);
+      const frontendUrl = this.configService.get<string>('frontend.url') || 'http://localhost:3000';
+      const errorMessage = error.message || 'Email verification failed';
+      const errorUrl = `${frontendUrl}/verify-email?error=${encodeURIComponent(errorMessage)}`;
+
+      this.logger.log(`Redirecting to error page: ${errorUrl}`);
+      res.redirect(errorUrl);
+    }
   }
 
   @Public()
   @Post('resend-verification')
+  @SkipCsrf()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend email verification' })
   @ApiResponse({ status: 200, description: 'Verification email sent' })
@@ -262,6 +352,116 @@ export class AuthController {
 
     return {
       message: 'Verification email sent if the account exists',
+    };
+  }
+
+  @Public()
+  @Post('teacher/apply')
+  @SkipCsrf()
+  @ApiOperation({ summary: 'Submit teacher application' })
+  @ApiResponse({
+    status: 201,
+    description: 'Teacher application submitted successfully',
+    schema: {
+      example: {
+        message:
+          'Teacher application submitted successfully. Please check your email to verify your account.',
+        user: {
+          id: 'uuid',
+          email: 'teacher@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          userType: 'teacher',
+        },
+        applicationId: 'uuid',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad request or validation failed' })
+  @ApiResponse({ status: 409, description: 'User with this email already exists' })
+  async applyAsTeacher(
+    @Body() teacherData: TeacherRegistrationDto,
+    @Headers('user-agent') userAgent: string,
+    @Ip() ip: string,
+  ) {
+    const deviceInfo: DeviceInfo = this.extractDeviceInfo(userAgent, ip);
+    const result = await this.authService.registerTeacher(teacherData, deviceInfo);
+
+    this.logger.log(`teacherDataaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ${teacherData}`);
+
+    return {
+      success: true,
+      ...result,
+    };
+  }
+
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Get('teacher/application-status')
+  @ApiOperation({ summary: 'Get teacher application status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Teacher application status retrieved successfully',
+    schema: {
+      example: {
+        status: 'pending',
+        message: 'Your application is under review',
+        submittedAt: '2025-08-08T12:00:00Z',
+        reviewedAt: null,
+        reviewNotes: null,
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Not a teacher or no application found' })
+  async getTeacherApplicationStatus(@CurrentUser() user: any) {
+    this.logger.log(`Teacher application status requested for user: ${user?.id || 'unknown'}`);
+    this.logger.log(`User data:`, JSON.stringify(user, null, 2));
+    // Only teachers can access this endpoint
+    if (user.userType !== 'teacher') {
+      throw new ForbiddenException('Only teachers can access application status');
+    }
+
+    const teacherProfile = await this.userService.getTeacherProfile(user.id);
+    if (!teacherProfile) {
+      throw new NotFoundException('Teacher application not found');
+    }
+
+    // Determine status based on profile data
+    let status: 'pending' | 'under_review' | 'approved' | 'rejected';
+    let message: string;
+
+    if (teacherProfile.isApproved) {
+      status = 'approved';
+      message =
+        'Congratulations! Your application has been approved. You can now access all teacher features.';
+    } else if (teacherProfile.reviewNotes) {
+      status = 'rejected';
+      message = 'Your application requires some revisions before it can be approved.';
+    } else {
+      // Check if it's been submitted recently (under review) or just pending
+      const daysSinceSubmission = teacherProfile.applicationDate
+        ? Math.floor(
+            (Date.now() - new Date(teacherProfile.applicationDate).getTime()) /
+              (1000 * 60 * 60 * 24),
+          )
+        : 0;
+
+      if (daysSinceSubmission > 1) {
+        status = 'under_review';
+        message =
+          'Your application is currently being reviewed by our team. We appreciate your patience.';
+      } else {
+        status = 'pending';
+        message = 'Your application has been received and is in our review queue.';
+      }
+    }
+
+    return {
+      status,
+      message,
+      submittedAt: teacherProfile.applicationDate || teacherProfile.createdAt,
+      reviewedAt: teacherProfile.approvedAt,
+      reviewNotes: teacherProfile.reviewNotes,
     };
   }
 
@@ -332,17 +532,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   async getProfile(@CurrentUser() user: any) {
-    return {
-      message: 'Profile retrieved successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        userType: user.userType,
-        roles: user.roles,
-        permissions: user.permissions,
-      },
-    };
+    if (user.userType === 'teacher') {
+      const teacherProfile = await this.userService.getTeacherProfile(user.id);
+      return {
+        message: 'Profile retrieved successfully',
+        ...user,
+        teacherProfile,
+      };
+    }
   }
 
   @ApiBearerAuth('JWT-auth')
@@ -352,7 +549,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Authentication status' })
   async checkAuth(@CurrentUser() user: any, @CurrentSession() session: any) {
     return {
-      authenticated: true,
+      isAuthenticated: true,
       user,
       session: session
         ? {
@@ -444,16 +641,20 @@ export class AuthController {
     const user = req.user;
 
     if (!user) {
-      return res.redirect(
-        `${this.configService.get<string>('frontend.url')}/auth/error?message=OAuth failed`,
-      );
+      const errorUrl =
+        this.configService.get<string>('oauth.errorRedirect') ||
+        `${this.configService.get<string>('frontend.url')}/oauth-error`;
+      return res.redirect(`${errorUrl}?message=OAuth failed`);
     }
 
     // Generate JWT tokens
     const tokens = await this.authService.generateTokens(user);
     this.setAuthCookies(res, tokens);
 
-    return res.redirect(`${this.configService.get<string>('frontend.url')}/auth/oauth-success`);
+    const successUrl =
+      this.configService.get<string>('oauth.successRedirect') ||
+      `${this.configService.get<string>('frontend.url')}/oauth-success`;
+    return res.redirect(successUrl);
   }
 
   @Public()
@@ -474,16 +675,20 @@ export class AuthController {
     const user = req.user;
 
     if (!user) {
-      return res.redirect(
-        `${this.configService.get<string>('frontend.url')}/auth/error?message=OAuth failed`,
-      );
+      const errorUrl =
+        this.configService.get<string>('oauth.errorRedirect') ||
+        `${this.configService.get<string>('frontend.url')}/oauth-error`;
+      return res.redirect(`${errorUrl}?message=OAuth failed`);
     }
 
     // Generate JWT tokens
     const tokens = await this.authService.generateTokens(user);
     this.setAuthCookies(res, tokens);
 
-    return res.redirect(`${this.configService.get<string>('frontend.url')}/auth/oauth-success`);
+    const successUrl =
+      this.configService.get<string>('oauth.successRedirect') ||
+      `${this.configService.get<string>('frontend.url')}/oauth-success`;
+    return res.redirect(successUrl);
   }
 
   @ApiBearerAuth('JWT-auth')
@@ -554,31 +759,33 @@ export class AuthController {
     const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
     const domain = this.configService.get<string>('cookie.domain');
 
-    res.cookie('access-token', tokens.accessToken, {
+    // For development, use more relaxed cookie settings
+    const cookieOptions = {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'strict',
-      domain,
+      sameSite: isProduction ? 'strict' : 'lax', // More permissive for dev
+      ...(isProduction && domain && { domain }), // Only set domain in production
+      path: '/', // Explicitly set path
+    };
+
+    res.cookie('access-token', tokens.accessToken, {
+      ...cookieOptions,
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refresh-token', tokens.refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict',
-      domain,
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     if (tokens.sessionId) {
       res.cookie('session-id', tokens.sessionId, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: 'strict',
-        domain,
+        ...cookieOptions,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
     }
+
+    console.log('🍪 Setting cookies with options:', cookieOptions);
   }
 
   private extractDeviceInfo(userAgent: string, ip: string): DeviceInfo {

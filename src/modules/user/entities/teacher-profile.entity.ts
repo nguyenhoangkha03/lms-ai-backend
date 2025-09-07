@@ -5,7 +5,6 @@ import { User } from './user.entity';
 @Entity('teacher_profiles')
 @Index(['userId'], { unique: true })
 @Index(['isApproved', 'isActive'])
-@Index(['specializations'])
 @Index(['rating'])
 export class TeacherProfile extends BaseEntity {
   @Column({
@@ -61,7 +60,7 @@ export class TeacherProfile extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     default: 0,
     comment: 'Điểm đánh giá trung bình từ sinh viên',
@@ -293,6 +292,42 @@ export class TeacherProfile extends BaseEntity {
     comment: 'Dữ liệu meta',
   })
   metadata?: Record<string, any>;
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Dữ liệu đơn đăng ký làm giảng viên',
+  })
+  applicationData?: Record<string, any>;
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: 'Ghi chú review từ admin',
+  })
+  reviewNotes?: string;
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Thời gian nộp đơn đăng ký',
+  })
+  submittedAt?: Date;
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: 'Yêu cầu thông tin bổ sung',
+  })
+  additionalInfoRequested: boolean;
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Hạn cung cấp thông tin bổ sung',
+  })
+  additionalInfoDueDate?: Date;
+  @Column({
+    type: 'json',
+    nullable: true,
+    comment: 'Danh sách tài liệu yêu cầu',
+  })
+  requiredDocuments?: string[];
   // Relationships
   @OneToOne(() => User, user => user.teacherProfile)
   @JoinColumn({ name: 'userId' })

@@ -52,7 +52,7 @@ export class EmailCampaignAnalytics extends BaseEntity {
 
   @Column({
     type: 'varchar',
-    length: 1000,
+    length: 255,
     nullable: true,
     comment: 'URL clicked (for click events)',
   })
@@ -60,7 +60,7 @@ export class EmailCampaignAnalytics extends BaseEntity {
 
   @Column({
     type: 'varchar',
-    length: 500,
+    length: 255,
     nullable: true,
     comment: 'User agent string',
   })

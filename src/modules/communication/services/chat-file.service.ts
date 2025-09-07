@@ -6,7 +6,7 @@ import { FileManagementService } from '../../file-management/services/file-manag
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import * as sharp from 'sharp';
-import { FileType } from '@/common/enums/course.enums';
+import { FileType, FileRelatedType } from '@/common/enums/course.enums';
 import { UploadFileDto } from '@/modules/file-management/dto/upload-file.dto';
 import { FileAccessLevel } from '@/common/enums/file.enums';
 import { User } from '@/modules/user/entities/user.entity';
@@ -56,9 +56,11 @@ export class ChatFileService {
         file,
         {
           fileType: category === 'image' ? FileType.IMAGE : FileType.DOCUMENT,
+          relatedType: FileRelatedType.CHAT_ATTACHMENT,
+          relatedId: roomId,
+          accessLevel: FileAccessLevel.PRIVATE,
           metadata: { roomId },
         },
-        // `chat/${roomId}`,
         savedFile.id,
       );
 
@@ -139,6 +141,8 @@ export class ChatFileService {
 
       const uploadDto: UploadFileDto = {
         fileType: FileType.IMAGE,
+        relatedType: FileRelatedType.CHAT_ATTACHMENT,
+        relatedId: fileId,
         accessLevel: FileAccessLevel.PRIVATE,
         description: 'Thumbnail for chat image',
         metadata: {

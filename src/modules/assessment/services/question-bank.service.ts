@@ -26,7 +26,9 @@ export class QuestionBankService {
     const question = this.questionRepository.create({
       ...createQuestionDto,
       assessmentId: null,
-      options: createQuestionDto.options ? JSON.stringify(createQuestionDto.options) : null,
+      options: createQuestionDto.options 
+        ? (typeof createQuestionDto.options === 'string' ? createQuestionDto.options : JSON.stringify(createQuestionDto.options))
+        : null,
       correctAnswer: JSON.stringify(createQuestionDto.correctAnswer),
       tags: createQuestionDto.tags ? JSON.stringify(createQuestionDto.tags) : null,
       attachments: createQuestionDto.attachments
@@ -52,6 +54,8 @@ export class QuestionBankService {
       page = 1,
       limit = 20,
       search,
+      searchQuery, // Frontend sends searchQuery
+      courseId,
       questionType,
       difficulty,
       subject,
@@ -63,6 +67,9 @@ export class QuestionBankService {
       sortOrder = 'DESC',
     } = queryDto;
 
+    // Use searchQuery if provided, otherwise use search
+    const searchTerm = searchQuery || search;
+
     const cacheKey = `question-bank:${user.id}:${JSON.stringify(queryDto)}`;
     const cached = await this.cacheService.get<PaginatedResult<Question>>(cacheKey);
     if (cached) return cached;
@@ -71,14 +78,29 @@ export class QuestionBankService {
       .createQueryBuilder('question')
       .where('question.assessmentId IS NULL');
 
+    // Filter question bank questions (those not assigned to assessments) by courseId
+    // Since question bank questions have assessmentId = NULL, we need to filter differently
+    // For question bank, we might need to store courseId differently or join with assessments where questions are used
+    // For now, let's skip courseId filtering for question bank questions since they're generic
+    if (courseId) {
+      // Option 1: Join with assessments to find questions used in this course
+      // But this would only show questions already used in assessments from this course
+      
+      // Option 2: For question bank, ignore courseId filter since these are generic questions
+      // that can be used across courses
+      
+      // For now, let's comment this out since question bank questions don't have direct courseId
+      // queryBuilder.andWhere('question.courseId = :courseId', { courseId });
+    }
+
     if (user.userType === 'teacher') {
       queryBuilder.andWhere('question.createdBy = :userId', { userId: user.id });
     } else if (user.userType === 'student') {
       queryBuilder.andWhere('question.isActive = :isActive', { isActive: true });
     }
 
-    if (search) {
-      queryBuilder.andWhere('question.questionText LIKE :search', { search: `%${search}%` });
+    if (searchTerm) {
+      queryBuilder.andWhere('question.questionText LIKE :search', { search: `%${searchTerm}%` });
     }
 
     if (questionType) {
@@ -112,7 +134,7 @@ export class QuestionBankService {
       queryBuilder.andWhere('question.isActive = :isActive', { isActive });
     }
 
-    queryBuilder.orderBy(`question.${sortBy}`, sortOrder);
+    queryBuilder.orderBy(`question.${sortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC');
 
     const offset = (page - 1) * limit;
     queryBuilder.skip(offset).take(limit);
@@ -165,7 +187,9 @@ export class QuestionBankService {
 
     const updatedData = {
       ...updateData,
-      options: updateData.options ? JSON.stringify(updateData.options) : question.options,
+      options: updateData.options 
+        ? (typeof updateData.options === 'string' ? updateData.options : JSON.stringify(updateData.options))
+        : question.options,
       correctAnswer: updateData.correctAnswer
         ? JSON.stringify(updateData.correctAnswer)
         : question.correctAnswer,
@@ -248,7 +272,8 @@ export class QuestionBankService {
       const saved = await this.questionRepository.save(copiedQuestion);
       copiedQuestions.push(saved);
 
-      await this.questionRepository.increment({ id: question.id }, 'usageCount', 1);
+      // Note: usageCount column doesn't exist, so we skip incrementing it
+      // In future, we could add usageCount column or track usage in separate table
     }
 
     this.logger.log(`Imported ${copiedQuestions.length} questions to assessment ${assessmentId}`);
@@ -256,8 +281,8 @@ export class QuestionBankService {
     return copiedQuestions;
   }
 
-  async getQuestionBankStatistics(user: User): Promise<any> {
-    const cacheKey = `question-bank:stats:${user.id}`;
+  async getQuestionBankStatistics(user: User, courseId?: string): Promise<any> {
+    const cacheKey = `question-bank:stats:${user.id}:${courseId || 'all'}`;
     const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
 
@@ -265,42 +290,79 @@ export class QuestionBankService {
       .createQueryBuilder('question')
       .where('question.assessmentId IS NULL');
 
+    // Skip courseId filtering for question bank statistics since question bank questions 
+    // don't have direct courseId (they're generic questions that can be used across courses)
+    if (courseId) {
+      // For question bank, we ignore courseId filter since these are generic questions
+      // If needed, we could join with assessments to find questions used in specific courses
+      // but that would be a different query
+    }
+
     if (user.userType === 'teacher') {
       queryBuilder.andWhere('question.createdBy = :userId', { userId: user.id });
     }
 
     const totalQuestions = await queryBuilder.getCount();
 
-    const typeStats = await queryBuilder
+    // Create separate query builders for aggregation queries
+    const typeStatsBuilder = this.questionRepository
+      .createQueryBuilder('question')
+      .where('question.assessmentId IS NULL');
+    
+    if (user.userType === 'teacher') {
+      typeStatsBuilder.andWhere('question.createdBy = :userId', { userId: user.id });
+    }
+
+    const typeStats = await typeStatsBuilder
       .select('question.questionType', 'type')
       .addSelect('COUNT(*)', 'count')
       .groupBy('question.questionType')
       .getRawMany();
 
-    const difficultyStats = await queryBuilder
+    const difficultyStatsBuilder = this.questionRepository
+      .createQueryBuilder('question')
+      .where('question.assessmentId IS NULL');
+    
+    if (user.userType === 'teacher') {
+      difficultyStatsBuilder.andWhere('question.createdBy = :userId', { userId: user.id });
+    }
+
+    const difficultyStats = await difficultyStatsBuilder
       .select('question.difficulty', 'difficulty')
       .addSelect('COUNT(*)', 'count')
       .groupBy('question.difficulty')
       .getRawMany();
 
-    const mostUsed = await queryBuilder.orderBy('question.usageCount', 'DESC').limit(10).getMany();
+    // Create separate query builder for mostUsed
+    const mostUsedBuilder = this.questionRepository
+      .createQueryBuilder('question')
+      .where('question.assessmentId IS NULL');
+    
+    if (user.userType === 'teacher') {
+      mostUsedBuilder.andWhere('question.createdBy = :userId', { userId: user.id });
+    }
+
+    // Since we don't have usageCount column, order by creation date instead
+    const mostUsed = await mostUsedBuilder.orderBy('question.createdAt', 'DESC').limit(10).getMany();
 
     const statistics = {
       totalQuestions,
-      byType: typeStats.reduce((acc, stat) => {
+      questionsByType: typeStats.reduce((acc, stat) => {
         acc[stat.type] = parseInt(stat.count);
         return acc;
       }, {}),
-      byDifficulty: difficultyStats.reduce((acc, stat) => {
+      questionsByDifficulty: difficultyStats.reduce((acc, stat) => {
         acc[stat.difficulty] = parseInt(stat.count);
         return acc;
       }, {}),
+      averagePoints: 0, // Placeholder since we don't calculate this
+      mostUsedTags: [], // Placeholder since we don't have tags analytics yet
       mostUsed: mostUsed.map(q => ({
         id: q.id,
         questionText: q.questionText.substring(0, 100) + '...',
-        // usageCount: q.usageCount || 0,
         questionType: q.questionType,
         difficulty: q.difficulty,
+        createdAt: q.createdAt,
       })),
     };
 

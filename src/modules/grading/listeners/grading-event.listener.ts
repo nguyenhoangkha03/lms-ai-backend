@@ -7,6 +7,8 @@ import { Repository } from 'typeorm';
 import { Grade } from '../entities/grade.entity';
 import { User } from '../../user/entities/user.entity';
 import { Assessment } from '../../assessment/entities/assessment.entity';
+import { NotificationService } from '../../notification/services/notification.service';
+import { NotificationType, NotificationCategory, NotificationPriority } from '@/common/enums/notification.enums';
 
 interface GradeCreatedEvent {
   gradeId: string;
@@ -31,6 +33,17 @@ interface FeedbackCreatedEvent {
   authorId: string;
 }
 
+interface AssessmentGradedEvent {
+  attemptId: string;
+  studentId: string;
+  assessmentId: string;
+  score: number;
+  maxScore: number;
+  percentage: number;
+  passed: boolean;
+  gradedAt: Date;
+}
+
 @Injectable()
 export class GradingEventListener {
   constructor(
@@ -40,6 +53,7 @@ export class GradingEventListener {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Assessment)
     private readonly assessmentRepository: Repository<Assessment>,
+    private readonly notificationService: NotificationService,
     private readonly logger: WinstonService,
   ) {
     this.logger.setContext(GradingEventListener.name);
@@ -122,6 +136,65 @@ export class GradingEventListener {
       await this.generateCoursePerformanceReport(payload);
     } catch (error) {
       this.logger.error('Error handling gradebook calculated event', error);
+    }
+  }
+
+  @OnEvent('assessment.graded')
+  async handleAssessmentGraded(payload: AssessmentGradedEvent) {
+    this.logger.log(`Assessment graded: ${payload.attemptId} for student ${payload.studentId}`);
+
+    try {
+      // Create a grade record if it doesn't exist
+      const existingGrade = await this.gradeRepository.findOne({
+        where: { 
+          studentId: payload.studentId, 
+          assessmentId: payload.assessmentId 
+        }
+      });
+
+      let gradeId: string;
+      
+      if (!existingGrade) {
+        const newGrade = this.gradeRepository.create({
+          studentId: payload.studentId,
+          assessmentId: payload.assessmentId,
+          score: payload.score,
+          percentage: payload.percentage,
+          maxScore: payload.maxScore,
+          isPublished: true,
+          gradedAt: payload.gradedAt,
+          graderId: payload.studentId, // Auto-graded
+        });
+        
+        const savedGrade = await this.gradeRepository.save(newGrade);
+        gradeId = savedGrade.id;
+      } else {
+        // Update existing grade
+        await this.gradeRepository.update(existingGrade.id, {
+          score: payload.score,
+          percentage: payload.percentage,
+          maxScore: payload.maxScore,
+          isPublished: true,
+          gradedAt: payload.gradedAt,
+        });
+        gradeId = existingGrade.id;
+      }
+
+      // Send grade notification
+      await this.sendGradeNotification({
+        gradeId,
+        studentId: payload.studentId,
+        assessmentId: payload.assessmentId,
+        score: payload.score,
+        percentage: payload.percentage,
+      });
+
+      // Update statistics
+      await this.updateStudentGradeStatistics(payload.studentId);
+      await this.updateAssessmentStatistics(payload.assessmentId);
+
+    } catch (error) {
+      this.logger.error('Error handling assessment graded event', error);
     }
   }
 
@@ -212,23 +285,28 @@ export class GradingEventListener {
   }
 
   private async sendGradeNotification(payload: GradePublishedEvent): Promise<void> {
-    // This would integrate with the notification service
     this.logger.log(`Sending grade notification to student ${payload.studentId}`);
 
-    const _notificationData = {
-      userId: payload.studentId,
-      type: 'grade_published',
-      title: 'New Grade Available',
-      message: `Your grade has been published: ${payload.score} points (${payload.percentage.toFixed(1)}%)`,
-      data: {
-        gradeId: payload.gradeId,
-        assessmentId: payload.assessmentId,
-        score: payload.score,
-        percentage: payload.percentage,
-      },
-    };
+    try {
+      await this.notificationService.create({
+        userId: payload.studentId,
+        type: NotificationType.GRADE_POSTED,
+        category: NotificationCategory.ACADEMIC,
+        priority: NotificationPriority.MEDIUM,
+        title: 'New Grade Available',
+        message: `Your grade has been published: ${payload.score} points (${payload.percentage.toFixed(1)}%)`,
+        data: {
+          gradeId: payload.gradeId,
+          assessmentId: payload.assessmentId,
+          score: payload.score,
+          percentage: payload.percentage,
+        },
+      });
 
-    // Would call notification service here
+      this.logger.log(`Grade notification sent successfully to student ${payload.studentId}`);
+    } catch (error) {
+      this.logger.error(`Failed to send grade notification to student ${payload.studentId}:`, error);
+    }
   }
 
   private async updateLearningAnalytics(payload: GradePublishedEvent): Promise<void> {

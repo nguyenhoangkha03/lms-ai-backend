@@ -10,7 +10,7 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ParticipantRole } from '@/common/enums/communication.enums';
+import { ParticipantRole, MessageType } from '@/common/enums/communication.enums';
 
 export class SendMessageDto {
   @IsUUID()
@@ -26,8 +26,8 @@ export class SendMessageDto {
   content: string;
 
   @IsOptional()
-  @IsEnum(['text', 'image', 'video', 'audio', 'file', 'emoji'])
-  type?: string = 'text';
+  @IsEnum(MessageType)
+  type?: MessageType = MessageType.TEXT;
 
   @IsOptional()
   @IsUUID()
@@ -153,6 +153,12 @@ export class CreateRoomDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  settings?: any;
+
+  @IsOptional()
+  moderationSettings?: any;
 }
 
 export class UpdateRoomDto {

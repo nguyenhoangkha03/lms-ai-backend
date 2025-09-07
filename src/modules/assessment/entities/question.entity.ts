@@ -6,7 +6,6 @@ import { Assessment } from './assessment.entity';
 @Entity('questions')
 @Index(['assessmentId', 'orderIndex'])
 @Index(['questionType', 'difficulty'])
-@Index(['tags'])
 export class Question extends BaseEntity {
   // Core Question Information
   @Column({
@@ -136,7 +135,68 @@ export class Question extends BaseEntity {
 
   // Virtual properties
   get optionsJson() {
-    return this.options ? JSON.parse(this.options) : [];
+    if (!this.options) return [];
+    
+    try {
+      // Thử parse JSON trực tiếp trước
+      return JSON.parse(this.options);
+    } catch (error) {
+      console.log('Initial JSON parse failed, attempting to fix malformed JSON...');
+      console.log('Original options string:', this.options);
+      
+      try {
+        // Thử sửa JSON bị lỗi format
+        let fixedJson = this.options;
+        
+        // Fix thiếu dấu ngoặc kép quanh property names và values  
+        if (!fixedJson.includes('"id"') && fixedJson.includes('id:')) {
+          fixedJson = fixedJson
+            // Thêm dấu ngoặc kép quanh property names
+            .replace(/(\w+):/g, '"$1":')
+            // Thêm dấu ngoặc kép quanh values (trừ boolean và number)
+            .replace(/:([^,}\]]+)/g, (match, value) => {
+              const trimmed = value.trim();
+              // Không thêm ngoặc kép nếu đã có hoặc là boolean/number
+              if (trimmed.startsWith('"') || trimmed === 'true' || trimmed === 'false' || !isNaN(Number(trimmed))) {
+                return ':' + trimmed;
+              }
+              return ':"' + trimmed + '"';
+            })
+            // Replace single quotes với double quotes
+            .replace(/'/g, '"');
+        }
+        
+        console.log('Fixed JSON string:', fixedJson);
+        const parsed = JSON.parse(fixedJson);
+        console.log('Successfully parsed fixed JSON:', parsed);
+        return parsed;
+        
+      } catch (secondError) {
+        console.error('Failed to parse even after fixing:', secondError);
+        
+        // Fallback: extract text content từ malformed JSON
+        try {
+          const textMatches = this.options.match(/text:([^,}]+)/g);
+          if (textMatches) {
+            return textMatches.map((match, index) => {
+              const text = match.replace('text:', '').trim();
+              return {
+                id: index + 1,
+                text: text,
+                isCorrect: false,
+                feedback: '',
+                orderIndex: index
+              };
+            });
+          }
+        } catch (finalError) {
+          console.error('Final fallback also failed:', finalError);
+        }
+        
+        // Final fallback
+        return [];
+      }
+    }
   }
 
   get correctAnswerJson() {
@@ -144,7 +204,21 @@ export class Question extends BaseEntity {
   }
 
   get tagsJson() {
-    return this.tags ? JSON.parse(this.tags) : [];
+    if (!this.tags) return [];
+    
+    try {
+      return JSON.parse(this.tags);
+    } catch (error) {
+      console.log('Failed to parse tags JSON:', error);
+      console.log('Original tags string:', this.tags);
+      
+      // Fallback: split by comma if it looks like a comma-separated string
+      if (typeof this.tags === 'string' && !this.tags.startsWith('[')) {
+        return this.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      }
+      
+      return [];
+    }
   }
 
   get attachmentsJson() {

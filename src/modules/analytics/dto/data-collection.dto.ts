@@ -15,9 +15,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ActivityType, DeviceType } from '@/common/enums/analytics.enums';
 
 export class CreateActivityDto {
-  @ApiProperty({ description: 'Student user ID' })
+  @ApiPropertyOptional({ description: 'Student user ID (auto-assigned from JWT if not provided)' })
+  @IsOptional()
   @IsString()
-  studentId: string;
+  studentId?: string;
 
   @ApiPropertyOptional({ description: 'Course ID if activity is course-related' })
   @IsOptional()
@@ -131,6 +132,16 @@ export class CreateSessionDto {
   @ApiProperty({ description: 'Unique session identifier' })
   @IsString()
   sessionId: string;
+
+  @ApiPropertyOptional({ description: 'Course ID if session is course-related' })
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
+  @ApiPropertyOptional({ description: 'Lesson ID if session is lesson-related' })
+  @IsOptional()
+  @IsString()
+  lessonId?: string;
 
   @ApiPropertyOptional({ enum: DeviceType, description: 'Primary device type used in session' })
   @IsOptional()

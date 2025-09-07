@@ -130,6 +130,9 @@ export class CreateNotificationDto {
     content?: string;
     points?: number;
     relatedId?: string;
+    gradeId?: string;
+    score?: number;
+    percentage?: number;
   };
 
   @ApiPropertyOptional({ description: 'Template variables' })

@@ -1,10 +1,18 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { DataSource } from 'typeorm';
 import { UserService } from '../../user/services/user.service';
 import { AuditLogService } from '../../system/services/audit-log.service';
 import { RESOURCE_KEY } from '../decorators/resource.decorator';
 import { PermissionAction, PermissionResource } from '@/common/enums/user.enums';
 import { AuditAction, AuditLevel } from '@/common/enums/system.enums';
+import { Course } from '../../course/entities/course.entity';
 
 export interface ResourceDefinition {
   resource: PermissionResource;
@@ -16,10 +24,13 @@ export interface ResourceDefinition {
 
 @Injectable()
 export class ResourceGuard implements CanActivate {
+  private readonly logger = new Logger(ResourceGuard.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly userService: UserService,
     private readonly auditLogService: AuditLogService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -85,7 +96,7 @@ export class ResourceGuard implements CanActivate {
     try {
       switch (resourceDef.resource) {
         case PermissionResource.COURSE:
-          return await this.checkCourseOwnership(userId, resourceId);
+          return (await this.checkCourseOwnership(userId, resourceId)) || false;
         case PermissionResource.LESSON:
           return await this.checkLessonOwnership(userId, resourceId);
         case PermissionResource.ASSESSMENT:
@@ -98,10 +109,23 @@ export class ResourceGuard implements CanActivate {
     }
   }
 
-  private async checkCourseOwnership(_userId: string, _courseId: string): Promise<boolean> {
-    // This would use CourseService to check if user owns the course
-    // For now, we'll return false as CourseService isn't implemented yet
-    return false;
+  private async checkCourseOwnership(userId: string, courseId: string): Promise<boolean | null> {
+    try {
+      const courseRepository = this.dataSource.getRepository(Course);
+      const course = await courseRepository.findOne({
+        where: { id: courseId },
+        select: ['id', 'teacherId'],
+      });
+
+      this.logger.debug(
+        `Checking course ownership: userId=${userId}, courseId=${courseId}, course.teacherId=${course?.teacherId}`,
+      );
+
+      return course && course.teacherId === userId;
+    } catch (error) {
+      this.logger.error(`Error checking course ownership: ${error.message}`);
+      return false;
+    }
   }
 
   private async checkLessonOwnership(_userId: string, _lessonId: string): Promise<boolean> {

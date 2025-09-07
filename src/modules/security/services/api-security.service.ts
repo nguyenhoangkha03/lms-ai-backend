@@ -203,7 +203,9 @@ export class ApiSecurityService {
     if (this.bannedIps.has(ip)) {
       return { allowed: false, reason: 'IP banned', riskLevel: 100 };
     }
-    const ipData = await this.redis.hgetall(`ip_security:${ip}`);
+
+    try {
+      const ipData = await this.redis.hgetall(`ip_security:${ip}`);
 
     if (ipData?.banned === 'true') {
       return { allowed: false, reason: 'IP banned in Redis', riskLevel: 100 };
@@ -220,27 +222,38 @@ export class ApiSecurityService {
     else if (recentFailures > 2) riskLevel += 10;
     if (now - lastActivity < 1000) riskLevel += 20;
 
-    const isMalicious = await this.checkMaliciousIpDatabase(ip);
-    if (isMalicious) riskLevel += 75;
+      const isMalicious = await this.checkMaliciousIpDatabase(ip);
+      if (isMalicious) riskLevel += 75;
 
-    return { allowed: riskLevel < 80, riskLevel };
+      return { allowed: riskLevel < 80, riskLevel };
+    } catch (error) {
+      this.logger.error('Redis IP security check failed:', error);
+      // Return safe defaults when Redis is unavailable
+      return { allowed: true, reason: 'Redis unavailable', riskLevel: 0 };
+    }
   }
 
   async recordSecurityFailure(ip: string, type: 'auth' | 'validation' | 'abuse'): Promise<void> {
-    const key = `ip_security:${ip}`;
-    const failures = await this.redis.hincrby(key, 'failures', 1);
-    await this.redis.hset(key, 'lastFailure', Date.now().toString());
-    await this.redis.hset(key, 'lastActivity', Date.now().toString());
-    await this.redis.expire(key, 3600);
+    try {
+      const key = `ip_security:${ip}`;
+      const failures = await this.redis.hincrby(key, 'failures', 1);
+      await this.redis.hset(key, 'lastFailure', Date.now().toString());
+      await this.redis.hset(key, 'lastActivity', Date.now().toString());
+      await this.redis.expire(key, 3600);
 
-    if (failures >= 20) {
-      await this.banIp(ip, '24h', `Too many security failures: ${failures}`);
-    } else if (failures >= 10) {
-      await this.redis.hset(key, 'banned', 'true');
-      await this.redis.expire(key, 1800);
+      if (failures >= 20) {
+        await this.banIp(ip, '24h', `Too many security failures: ${failures}`);
+      } else if (failures >= 10) {
+        await this.redis.hset(key, 'banned', 'true');
+        await this.redis.expire(key, 1800);
+      }
+
+      this.logger.warn(`Security failure recorded for IP ${ip}: ${type} ${failures}`);
+    } catch (error) {
+      this.logger.error('Failed to record security failure to Redis:', error);
+      // Continue without Redis - log to file/memory
+      this.logger.warn(`Security failure recorded for IP ${ip}: ${type} (Redis unavailable)`);
     }
-
-    this.logger.warn(`Security failure recorded for IP ${ip}: ${type} ${failures}`);
   }
 
   async handleCspReport(report: any, req: Request): Promise<void> {

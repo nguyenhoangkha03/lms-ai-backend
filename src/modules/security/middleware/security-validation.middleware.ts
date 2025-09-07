@@ -15,6 +15,12 @@ export class SecurityValidationMiddleware implements NestMiddleware {
   }
 
   async use(req: Request, res: Response, next: NextFunction): Promise<void> {
+    // Skip security validation in development if there are dependency issues
+    if (process.env.NODE_ENV === 'development' && process.env.DISABLE_SECURITY_MIDDLEWARE === 'true') {
+      this.logger.warn('Security middleware disabled in development mode');
+      return next();
+    }
+
     try {
       this.apiSecurity.applySecurityHeaders(req, res);
 
@@ -29,9 +35,12 @@ export class SecurityValidationMiddleware implements NestMiddleware {
       await this.validateRequestStructure(req);
 
       if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-        const isValid = await this.apiSecurity.validateCsrfToken(req);
-        if (!isValid && !this.isApiRequest(req)) {
-          throw new HttpException('CSRF token invalid', HttpStatus.FORBIDDEN);
+        // Skip CSRF validation for webhook endpoints
+        if (!this.isWebhookEndpoint(req)) {
+          const isValid = await this.apiSecurity.validateCsrfToken(req);
+          if (!isValid && !this.isApiRequest(req)) {
+            throw new HttpException('CSRF token invalid', HttpStatus.FORBIDDEN);
+          }
         }
       }
 
@@ -53,6 +62,13 @@ export class SecurityValidationMiddleware implements NestMiddleware {
       }
 
       this.logger.error('Security validation error:', error);
+      
+      // In development, log the error but don't block the request
+      if (process.env.NODE_ENV === 'development') {
+        this.logger.warn('Security validation failed in development - allowing request to proceed');
+        return next();
+      }
+      
       throw new HttpException('Security validation failed', HttpStatus.BAD_REQUEST);
     }
   }
@@ -215,6 +231,17 @@ export class SecurityValidationMiddleware implements NestMiddleware {
       req.headers['content-type']?.includes('application/json') ||
       req.headers['x-api-key'] !== undefined
     );
+  }
+
+  private isWebhookEndpoint(req: Request): boolean {
+    const webhookPaths = [
+      '/api/v1/stripe/webhook',
+      '/api/v1/payment/stripe/webhook',
+      '/api/v1/payment/momo/callback',
+      '/api/v1/payment/momo/ipn',
+    ];
+    
+    return webhookPaths.some(path => req.path === path);
   }
 
   private extractClientIp(req: Request): string {

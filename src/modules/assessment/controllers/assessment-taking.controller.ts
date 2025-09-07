@@ -14,6 +14,7 @@ import { RolesGuard } from '@/modules/auth/guards/roles.guard';
 import { Authorize } from '@/modules/auth/decorators/authorize.decorator';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
 import { User } from '@/modules/user/entities/user.entity';
+import { UserType } from '@/common/enums/user.enums';
 import { AssessmentTakingService } from '../services/assessment-taking.service';
 import {
   StartAssessmentDto,
@@ -37,7 +38,9 @@ export class AssessmentTakingController {
   // ================================
 
   @Post(':id/start')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Start assessment session' })
   @ApiParam({ name: 'id', description: 'Assessment ID' })
   @ApiResponse({ status: 201, description: 'Assessment session started successfully' })
@@ -56,7 +59,9 @@ export class AssessmentTakingController {
   }
 
   @Get('sessions/:sessionToken')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Get current session status' })
   @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Session status retrieved successfully' })
@@ -70,7 +75,9 @@ export class AssessmentTakingController {
   }
 
   @Post('sessions/:sessionToken/submit')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Submit final assessment' })
   @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Assessment submitted successfully' })
@@ -88,7 +95,9 @@ export class AssessmentTakingController {
   // ================================
 
   @Post('sessions/:sessionToken/answers')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Submit answer for a question' })
   @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Answer submitted successfully' })
@@ -106,11 +115,81 @@ export class AssessmentTakingController {
   }
 
   // ================================
+  // STUDENT ACCESS ENDPOINTS
+  // ================================
+
+  @Get(':id/attempts')
+  @Authorize({ roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN] })
+  @ApiOperation({ summary: 'Get assessment attempts for current user' })
+  @ApiParam({ name: 'id', description: 'Assessment ID' })
+  @ApiResponse({ status: 200, description: 'Assessment attempts retrieved successfully' })
+  async getAssessmentAttempts(
+    @Param('id', ParseUUIDPipe) assessmentId: string,
+    @CurrentUser() user: User,
+  ) {
+    const attempts = await this.takingService.getAssessmentAttempts(assessmentId, user);
+    return {
+      message: 'Assessment attempts retrieved successfully',
+      data: attempts,
+    };
+  }
+
+  @Get('course/:courseId')
+  @Authorize({ roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN] })
+  @ApiOperation({ summary: 'Get assessments for a course' })
+  @ApiParam({ name: 'courseId', description: 'Course ID' })
+  @ApiResponse({ status: 200, description: 'Course assessments retrieved successfully' })
+  async getCourseAssessments(
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @CurrentUser() user: User,
+  ) {
+    const assessments = await this.takingService.getCourseAssessments(courseId, user);
+    return {
+      message: 'Course assessments retrieved successfully',
+      data: assessments,
+    };
+  }
+
+  @Get('lesson/:lessonId')
+  @Authorize({ roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN] })
+  @ApiOperation({ summary: 'Get assessments for a lesson' })
+  @ApiParam({ name: 'lessonId', description: 'Lesson ID' })
+  @ApiResponse({ status: 200, description: 'Lesson assessments retrieved successfully' })
+  async getLessonAssessments(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @CurrentUser() user: User,
+  ) {
+    const assessments = await this.takingService.getLessonAssessments(lessonId, user);
+    return {
+      message: 'Lesson assessments retrieved successfully',
+      data: assessments,
+    };
+  }
+
+  @Get(':id/availability')
+  @Authorize({ roles: [UserType.STUDENT, UserType.TEACHER, UserType.ADMIN] })
+  @ApiOperation({ summary: 'Check assessment availability for current user' })
+  @ApiParam({ name: 'id', description: 'Assessment ID' })
+  @ApiResponse({ status: 200, description: 'Assessment availability checked successfully' })
+  async checkAssessmentAvailability(
+    @Param('id', ParseUUIDPipe) assessmentId: string,
+    @CurrentUser() user: User,
+  ) {
+    const availability = await this.takingService.checkAssessmentAvailability(assessmentId, user);
+    return {
+      message: 'Assessment availability checked successfully',
+      data: availability,
+    };
+  }
+
+  // ================================
   // PROGRESS TRACKING
   // ================================
 
   @Patch('sessions/:sessionToken/progress')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Update session progress' })
   @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Progress updated successfully' })
@@ -127,7 +206,9 @@ export class AssessmentTakingController {
   }
 
   @Post('sessions/:sessionToken/heartbeat')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Session heartbeat for connectivity monitoring' })
   @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Heartbeat acknowledged' })
@@ -148,7 +229,9 @@ export class AssessmentTakingController {
   // ================================
 
   @Post('sessions/:sessionToken/pause')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Pause assessment session' })
   @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Session paused successfully' })
@@ -166,7 +249,9 @@ export class AssessmentTakingController {
   }
 
   @Post('sessions/:sessionToken/resume')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Resume assessment session' })
   @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Session resumed successfully' })
@@ -188,7 +273,9 @@ export class AssessmentTakingController {
   // ================================
 
   @Post('sessions/:sessionToken/security-events')
-  @Authorize({ permissions: ['take:assessment'] })
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Report security event' })
   @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Security event reported successfully' })
@@ -205,17 +292,21 @@ export class AssessmentTakingController {
     };
   }
 
-  @Get('sessions/:sessionId/analytics')
-  @Authorize({ permissions: ['view:assessment', 'view:statistics'] })
+  @Get('sessions/:sessionToken/analytics')
+  @Authorize({
+    roles: [UserType.STUDENT, UserType.ADMIN, UserType.TEACHER],
+  })
   @ApiOperation({ summary: 'Get session analytics for monitoring' })
-  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  @ApiParam({ name: 'sessionToken', description: 'Session Token' })
   @ApiResponse({ status: 200, description: 'Session analytics retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Access denied' })
   async getSessionAnalytics(
-    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @Param('sessionToken') sessionToken: string,
     @CurrentUser() user: User,
   ) {
-    const analytics = await this.takingService.getSessionAnalytics(sessionId, user);
+    // Convert sessionToken to sessionId for service
+    const session = await this.takingService.getSessionByToken(sessionToken, user.id);
+    const analytics = await this.takingService.getSessionAnalytics(session.id, user);
     return {
       message: 'Session analytics retrieved successfully',
       data: analytics,

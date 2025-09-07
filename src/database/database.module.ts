@@ -55,6 +55,9 @@ import { DatabaseMonitoringService } from './services/monitoring.service';
 
           // Timezone handling
           timezone: '+00:00',
+          
+          // Date transformation
+          dateStrings: false,
 
           // Performance optimizations
           cache: {

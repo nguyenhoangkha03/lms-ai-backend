@@ -1,5 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, MaxLength, MinLength, Matches, IsEmail } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  MaxLength,
+  MinLength,
+  Matches,
+  IsEmail,
+  IsEnum,
+} from 'class-validator';
+import { UserStatus } from '@/common/enums/user.enums';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({
@@ -8,13 +17,14 @@ export class UpdateUserDto {
     minLength: 3,
     maxLength: 50,
   })
+  @IsOptional()
   @IsString()
   @MinLength(3, { message: 'Username must be at least 3 characters long' })
   @MaxLength(50, { message: 'Username must not exceed 50 characters' })
   @Matches(/^[a-zA-Z0-9_-]+$/, {
     message: 'Username can only contain letters, numbers, underscores, and hyphens',
   })
-  username: string;
+  username?: string;
 
   @ApiPropertyOptional({
     description: 'Email address',
@@ -25,15 +35,15 @@ export class UpdateUserDto {
   @MaxLength(255, { message: 'Email must not exceed 255 characters' })
   email?: string;
 
-  //   @ApiPropertyOptional({
-  //     description: 'Password (min 6 chars)',
-  //     example: 'StrongP@ssw0rd',
-  //   })
-  //   @IsOptional()
-  //   @IsString()
-  //   @MinLength(6, { message: 'Password must be at least 6 characters long' })
-  //   @MaxLength(100, { message: 'Password must not exceed 100 characters' })
-  //   password?: string;
+  @ApiPropertyOptional({
+    description: 'Password (min 6 chars)',
+    example: 'StrongP@ssw0rd',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @MaxLength(100, { message: 'Password must not exceed 100 characters' })
+  password?: string;
 
   @ApiPropertyOptional({
     description: 'First name',
@@ -113,4 +123,12 @@ export class UpdateUserDto {
   })
   @IsOptional()
   preferences?: Record<string, any>;
+
+  @ApiPropertyOptional({
+    description: 'User status',
+    enum: UserStatus,
+  })
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 }

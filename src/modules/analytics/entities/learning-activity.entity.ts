@@ -173,11 +173,20 @@ export class LearningActivity extends BaseEntity {
   get isEngagementActivity(): boolean {
     return [
       ActivityType.VIDEO_PLAY,
+      ActivityType.VIDEO_START,
+      ActivityType.VIDEO_RESUME,
       ActivityType.VIDEO_PAUSE,
+      ActivityType.VIDEO_SEEK,
+      ActivityType.VIDEO_SPEED_CHANGE,
+      ActivityType.VIDEO_QUALITY_CHANGE,
       ActivityType.QUIZ_START,
       ActivityType.QUIZ_SUBMIT,
       ActivityType.DISCUSSION_POST,
       ActivityType.CHAT_MESSAGE,
+      ActivityType.INTERACTIVE_COMPLETED,
+      ActivityType.NOTE_CREATE,
+      ActivityType.NOTE_UPDATED,
+      ActivityType.BOOKMARK_CREATED,
     ].includes(this.activityType);
   }
 
@@ -185,8 +194,13 @@ export class LearningActivity extends BaseEntity {
     return [
       ActivityType.LESSON_START,
       ActivityType.LESSON_COMPLETE,
+      ActivityType.LESSON_PROGRESS,
       ActivityType.COURSE_COMPLETE,
+      ActivityType.VIDEO_COMPLETE,
       ActivityType.QUIZ_SUBMIT,
+      ActivityType.QUIZ_COMPLETE,
+      ActivityType.ASSIGNMENT_SUBMIT,
+      ActivityType.INTERACTIVE_COMPLETED,
     ].includes(this.activityType);
   }
 }

@@ -5,8 +5,8 @@ import { BaseEntity } from '@/common/entities/base.entity';
 
 @Entity('chat_files')
 export class ChatFile extends BaseEntity {
-  @Column({ type: 'varchar', length: 36 })
-  messageId: string;
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  messageId?: string;
 
   @Column({ type: 'varchar', length: 36 })
   uploadedBy: string;
@@ -127,9 +127,9 @@ export class ChatFile extends BaseEntity {
   description?: string;
 
   // Relationships
-  @ManyToOne(() => ChatMessage, message => message.files)
+  @ManyToOne(() => ChatMessage, message => message.files, { nullable: true })
   @JoinColumn({ name: 'messageId' })
-  message: ChatMessage;
+  message?: ChatMessage;
 
   @ManyToOne(() => User, user => user.id)
   @JoinColumn({ name: 'uploadedBy' })

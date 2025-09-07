@@ -39,7 +39,7 @@ export class ChatController {
     private readonly fileService: ChatFileService,
   ) {}
 
-  @Get('messages/:roomId')
+  @Get('rooms/:roomId/messages')
   @ApiOperation({ summary: 'Get messages from a chat room' })
   @ApiResponse({ status: 200, description: 'Messages retrieved successfully' })
   async getMessages(
@@ -66,12 +66,17 @@ export class ChatController {
     };
   }
 
-  @Post('messages')
+  @Post('rooms/:roomId/messages')
   @ApiOperation({ summary: 'Send a message to a chat room' })
   @ApiResponse({ status: 201, description: 'Message sent successfully' })
-  async sendMessage(@Body() sendMessageDto: SendMessageDto, @Request() req) {
+  async sendMessage(
+    @Param('roomId', ParseUUIDPipe) roomId: string,
+    @Body() sendMessageDto: SendMessageDto, 
+    @Request() req
+  ) {
     const message = await this.messageService.createMessage({
       ...sendMessageDto,
+      roomId,
       senderId: req.user.id,
     });
 
@@ -201,7 +206,7 @@ export class ChatController {
   @Post('search')
   @ApiOperation({ summary: 'Search messages in a room' })
   @ApiResponse({ status: 200, description: 'Search results retrieved successfully' })
-  async searchMessages(@Body() searchDto: SearchMessagesDto, @Request() req) {
+  async searchMessagesPost(@Body() searchDto: SearchMessagesDto, @Request() req) {
     const hasAccess = await this.chatService.checkUserAccess(searchDto.roomId, req.user.id);
     if (!hasAccess) {
       throw new BadRequestException('Access denied to chat room');
@@ -209,9 +214,11 @@ export class ChatController {
 
     const result = await this.messageService.searchMessages(
       searchDto.roomId,
-      searchDto.query,
-      searchDto.limit,
-      searchDto.offset,
+      {
+        query: searchDto.query,
+        limit: searchDto.limit || 50,
+        offset: searchDto.offset || 0,
+      }
     );
 
     return {
@@ -254,6 +261,9 @@ export class ChatController {
     const file = await this.fileService.getFileById(fileId);
 
     // Check if user has access to the room containing this file
+    if (!file.messageId) {
+      throw new BadRequestException('File is not associated with any message');
+    }
     const message = await this.messageService.findById(file.messageId);
     const hasAccess = await this.chatService.checkUserAccess(message.roomId, req.user.id);
 
@@ -302,6 +312,43 @@ export class ChatController {
     return {
       success: true,
       message: 'File deleted successfully',
+    };
+  }
+
+  @Get('rooms/:roomId/messages/search')
+  @ApiOperation({ summary: 'Search messages in a chat room' })
+  @ApiResponse({ status: 200, description: 'Messages search completed' })
+  async searchMessages(
+    @Request() req,
+    @Param('roomId', ParseUUIDPipe) roomId: string,
+    @Query('query') query: string,
+    @Query('senderId') senderId?: string,
+    @Query('messageType') messageType?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('limit') limit: number = 50,
+    @Query('offset') offset: number = 0,
+  ) {
+    const hasAccess = await this.chatService.checkUserAccess(roomId, req.user.id);
+    if (!hasAccess) {
+      throw new BadRequestException('Access denied to chat room');
+    }
+
+    const searchParams = {
+      query,
+      senderId,
+      messageType,
+      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+      dateTo: dateTo ? new Date(dateTo) : undefined,
+      limit,
+      offset,
+    };
+
+    const result = await this.messageService.searchMessages(roomId, searchParams);
+
+    return {
+      success: true,
+      data: result,
     };
   }
 

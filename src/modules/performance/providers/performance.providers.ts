@@ -23,10 +23,11 @@ export const performanceProviders: Provider[] = [
     provide: APP_INTERCEPTOR,
     useClass: PerformanceInterceptor,
   },
-  {
-    provide: APP_INTERCEPTOR,
-    useClass: CachingInterceptor,
-  },
+  // Temporarily disable caching interceptor to test date serialization
+  // {
+  //   provide: APP_INTERCEPTOR,
+  //   useClass: CachingInterceptor,
+  // },
 
   {
     provide: APP_FILTER,

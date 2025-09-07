@@ -139,7 +139,7 @@ export class Category extends BaseEntity {
     comment:
       'Khóa ngoại tự tham chiếu đến id của chính bảng này, dùng để tạo cấu trúc cây danh mục. Nếu là NULL, đây là danh mục gốc',
   })
-  parentId?: string;
+  parentId?: string | null;
 
   // Course relationships
   @OneToMany(() => Course, course => course.category)

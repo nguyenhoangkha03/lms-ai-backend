@@ -1,12 +1,20 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
+import { ConfigModule } from '@nestjs/config';
 
 // Service
 import { CourseService } from './services/course.service';
+import { CartService } from './services/cart.service';
+import { WishlistService } from './services/wishlist.service';
 
 // Controller
 import { CourseController } from './controllers/course.controller';
+import { CategoryController } from './controllers/category.controller';
+import { CartController } from './controllers/cart.controller';
+import { EnrollmentController } from './controllers/enrollment.controller';
+import { WishlistController } from './controllers/wishlist.controller';
+import { StudentController } from './controllers/student.controller';
 
 // Entities
 import { Category } from './entities/category.entity';
@@ -16,19 +24,25 @@ import { Lesson } from './entities/lesson.entity';
 import { FileUpload } from './entities/file-upload.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { LessonProgress } from './entities/lesson-progress.entity';
+import { Cart } from './entities/cart.entity';
+import { Wishlist } from './entities/wishlist.entity';
 
 // Modules
 import { CustomCacheModule } from '@/cache/cache.module';
 import { UserModule } from '../user/user.module';
 import { WinstonModule } from '@/logger/winston.module';
 import { SystemModule } from '../system/system.module';
+import { FileManagementModule } from '../file-management/file-management.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { AuthModule } from '../auth/auth.module';
 import { CategoryService } from './services/category.service';
 import { ContentVersion } from './entities/content-version.entity';
 import { LessonController } from './controllers/lesson.controller';
+import { SectionController } from './controllers/section.controller';
 import { FileUploadService } from './services/file-upload.service';
 import { LessonService } from './services/lesson.service';
+import { SectionService } from './services/section.service';
+import { S3UploadService } from './services/s3-upload.service';
 
 @Module({
   imports: [
@@ -41,6 +55,8 @@ import { LessonService } from './services/lesson.service';
       Enrollment,
       LessonProgress,
       ContentVersion,
+      Cart,
+      Wishlist,
     ]),
     // Multer for file uploads
     MulterModule.registerAsync({
@@ -117,17 +133,23 @@ import { LessonService } from './services/lesson.service';
         },
       },
     ),
+    ConfigModule, // For AWS configuration
     CustomCacheModule,
     forwardRef(() => UserModule),
     forwardRef(() => AuthModule),
+    FileManagementModule,
     WinstonModule,
     SystemModule,
   ],
   controllers: [
     CourseController,
     LessonController,
-    // CategoryController,
-    // CourseSectionController,
+    SectionController,
+    CategoryController,
+    CartController,
+    EnrollmentController,
+    WishlistController,
+    StudentController,
     // FileUploadController,
   ],
   providers: [
@@ -135,8 +157,11 @@ import { LessonService } from './services/lesson.service';
     CourseService,
     CategoryService,
     LessonService,
+    SectionService,
     FileUploadService,
-    // CourseSectionService,
+    S3UploadService, // Add S3 upload service
+    CartService,
+    WishlistService,
     // ContentModerationService,
     // VideoProcessingService,
 
@@ -148,8 +173,11 @@ import { LessonService } from './services/lesson.service';
     CourseService,
     CategoryService,
     LessonService,
-    // CourseSectionService,
+    SectionService,
     FileUploadService,
+    S3UploadService, // Export S3 service for other modules
+    CartService,
+    WishlistService,
     // ContentModerationService,
     // VideoProcessingService,
     TypeOrmModule,

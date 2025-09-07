@@ -6,6 +6,7 @@ import { ChatParticipant } from '../entities/chat-participant.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CacheService } from '@/cache/cache.service';
 import { WinstonService } from '@/logger/winston.service';
+import { ParticipantStatus } from '@/common/enums/communication.enums';
 
 @Injectable()
 export class ChatService {
@@ -22,24 +23,27 @@ export class ChatService {
   }
 
   async checkUserAccess(roomId: string, userId: string): Promise<boolean | null> {
-    const cacheKey = `room_access:${roomId}:${userId}`;
-
-    const cached = await this.cacheService.get<boolean>(cacheKey);
-    if (cached !== undefined) {
-      return cached;
-    }
+    // Temporarily disable cache to debug
+    console.log(`🔍 Checking DB directly for room access: ${roomId}:${userId}`);
 
     const participant = await this.participantRepository.findOne({
       where: {
         roomId,
         userId,
-        isActive: true,
+        status: ParticipantStatus.ACTIVE,
       },
     });
 
-    const hasAccess = !!participant;
+    console.log(`🔍 Direct DB check for room access: ${roomId}:${userId}`, {
+      participant: participant ? {
+        id: participant.id,
+        isActive: participant.isActive,
+        role: participant.role,
+        joinedAt: participant.joinedAt
+      } : 'NOT_FOUND'
+    });
 
-    await this.cacheService.set(cacheKey, hasAccess, 300);
+    const hasAccess = !!participant;
 
     return hasAccess;
   }
@@ -48,7 +52,7 @@ export class ChatService {
     const participants = await this.participantRepository.find({
       where: {
         userId,
-        isActive: true,
+        status: ParticipantStatus.ACTIVE,
       },
       select: ['roomId'],
     });
@@ -60,7 +64,7 @@ export class ChatService {
     const participants = await this.participantRepository.find({
       where: {
         roomId,
-        isActive: true,
+        status: ParticipantStatus.ACTIVE,
       },
       select: ['userId'],
     });

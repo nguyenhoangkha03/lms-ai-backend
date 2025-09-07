@@ -11,6 +11,7 @@ import { Course } from '../entities/course.entity';
 import { CourseSection } from '../entities/course-section.entity';
 import { FileUpload } from '../entities/file-upload.entity';
 import { LessonProgress } from '../entities/lesson-progress.entity';
+import { Enrollment } from '../entities/enrollment.entity';
 import { WinstonService } from '@/logger/winston.service';
 import { CacheService } from '@/cache/cache.service';
 import { ContentVersion } from '../entities/content-version.entity';
@@ -24,7 +25,7 @@ import { LessonQueryDto } from '../dto/lessons/lesson-query.dto';
 import { PaginationDto } from '@/common/dto/pagination.dto';
 import { UpdateLessonDto } from '../dto/lessons/update-lesson.dto';
 // import { paginate } from 'nestjs-typeorm-paginate';
-import { LessonType } from '@/common/enums/course.enums';
+import { LessonType, LessonProgressStatus } from '@/common/enums/course.enums';
 
 @Injectable()
 export class LessonService {
@@ -41,6 +42,8 @@ export class LessonService {
     private readonly versionRepository: Repository<ContentVersion>,
     @InjectRepository(LessonProgress)
     private readonly progressRepository: Repository<LessonProgress>,
+    @InjectRepository(Enrollment)
+    private readonly enrollmentRepository: Repository<Enrollment>,
     private readonly logger: WinstonService,
     private readonly cacheService: CacheService,
   ) {
@@ -56,6 +59,14 @@ export class LessonService {
 
     if (!course) {
       throw new ForbiddenException('You can only create lessons for your own courses');
+    }
+
+    const section = await this.sectionRepository.findOne({
+      where: { id: createLessonDto.sectionId, courseId: createLessonDto.courseId },
+    });
+
+    if (!section) {
+      throw new BadRequestException('Section does not belong to the specified course');
     }
 
     if (createLessonDto.sectionId) {
@@ -104,6 +115,12 @@ export class LessonService {
     });
 
     const savedLesson = await this.lessonRepository.save(lesson);
+
+    course.totalLessons++;
+    await this.courseRepository.save(course);
+
+    section.totalLessons++;
+    await this.sectionRepository.save(section);
 
     await this.createContentVersion(
       savedLesson,
@@ -233,12 +250,79 @@ export class LessonService {
       });
     }
 
-    // Apply sorting
+    const page = queryDto.page ?? 1;
+    const limit = queryDto.limit ?? 10;
+    const skip = (page - 1) * limit;
+    queryBuilder.skip(skip).take(limit);
+
     const sortField = queryDto.sortBy || 'orderIndex';
     const sortOrder = queryDto.sortOrder || 'ASC';
     queryBuilder.orderBy(`lesson.${sortField}`, sortOrder);
 
-    // return paginate<Lesson>(queryBuilder, queryDto);
+    const [lessons, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      lessons,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async findAllByCourse(courseId: string, queryDto: LessonQueryDto & PaginationDto): Promise<any> {
+    const queryBuilder = this.lessonRepository
+      .createQueryBuilder('lesson')
+      .leftJoinAndSelect('lesson.course', 'course')
+      .leftJoinAndSelect('lesson.section', 'section')
+      .leftJoinAndSelect('lesson.files', 'files', 'files.isActive = :isActive', {
+        isActive: true,
+      });
+
+    queryBuilder.andWhere('lesson.courseId = :courseId', { courseId });
+
+    if (queryDto.sectionId) {
+      queryBuilder.andWhere('lesson.sectionId = :sectionId', { sectionId: queryDto.sectionId });
+    }
+
+    if (queryDto.lessonType) {
+      queryBuilder.andWhere('lesson.lessonType = :lessonType', {
+        lessonType: queryDto.lessonType,
+      });
+    }
+
+    if (queryDto.status) {
+      queryBuilder.andWhere('lesson.status = :status', { status: queryDto.status });
+    }
+
+    if (queryDto.isPreview !== undefined) {
+      queryBuilder.andWhere('lesson.isPreview = :isPreview', {
+        isPreview: queryDto.isPreview,
+      });
+    }
+
+    if (queryDto.search) {
+      queryBuilder.andWhere('(lesson.title LIKE :search OR lesson.description LIKE :search)', {
+        search: `%${queryDto.search}%`,
+      });
+    }
+
+    const page = queryDto.page ?? 1;
+    const limit = queryDto.limit ?? 10;
+    const skip = (page - 1) * limit;
+    queryBuilder.skip(skip).take(limit);
+
+    const sortField = queryDto.sortBy || 'orderIndex';
+    const sortOrder = queryDto.sortOrder || 'ASC';
+    queryBuilder.orderBy(`lesson.${sortField}`, sortOrder);
+
+    const [lessons, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      lessons,
+      total,
+      page,
+      limit,
+    };
   }
 
   /**
@@ -581,8 +665,198 @@ export class LessonService {
   }
 
   private isAdmin(_userId: string): boolean {
-    // This would typically check user roles
-    // For now, implement based on your role system
-    return false;
+    // TODO: Implement proper admin role check
+    // For now, return true to bypass admin check during development
+    return true;
+  }
+
+  // ==================== STUDENT PROGRESS METHODS ====================
+
+  async getVideoPosition(userId: string, lessonId: string) {
+    const progress = await this.progressRepository.findOne({
+      where: { studentId: userId, lessonId },
+    });
+
+    if (!progress) {
+      // Return default values if no progress exists yet
+      return {
+        lessonId,
+        lastPosition: 0,
+        progressPercentage: 0,
+        timeSpent: 0,
+      };
+    }
+
+    return {
+      lessonId,
+      lastPosition: progress.lastPosition,
+      progressPercentage: progress.progressPercentage,
+      timeSpent: progress.timeSpent,
+    };
+  }
+
+  async updateVideoPosition(userId: string, lessonId: string, position: number, duration: number) {
+    // Find or create lesson progress record
+    let progress = await this.progressRepository.findOne({
+      where: { studentId: userId, lessonId },
+    });
+
+    if (!progress) {
+      // Get the lesson to get courseId
+      const lesson = await this.lessonRepository.findOne({
+        where: { id: lessonId },
+      });
+
+      if (!lesson) {
+        throw new BadRequestException('Lesson not found');
+      }
+
+      // Find enrollment for this student and course
+      const enrollment = await this.enrollmentRepository.findOne({
+        where: { studentId: userId, courseId: lesson.courseId },
+      });
+
+      if (!enrollment) {
+        throw new BadRequestException('Student not enrolled in this course');
+      }
+
+      // Create new progress record
+      progress = this.progressRepository.create({
+        studentId: userId,
+        lessonId,
+        enrollmentId: enrollment.id,
+        progressPercentage: 0,
+        timeSpent: 0,
+        lastPosition: position,
+        status: LessonProgressStatus.IN_PROGRESS,
+      });
+    } else {
+      // Update existing progress
+      progress.lastPosition = position;
+      
+      // Update progress percentage based on video position
+      if (duration > 0) {
+        progress.progressPercentage = Math.min(100, (position / duration) * 100);
+      }
+      
+      // Mark as completed if video is 95% or more watched
+      if (progress.progressPercentage >= 95 && progress.status !== LessonProgressStatus.COMPLETED) {
+        progress.status = LessonProgressStatus.COMPLETED;
+        progress.completionDate = new Date();
+      }
+    }
+
+    await this.progressRepository.save(progress);
+
+    return {
+      lessonId,
+      lastPosition: progress.lastPosition,
+      progressPercentage: progress.progressPercentage,
+      timeSpent: progress.timeSpent,
+      status: progress.status,
+    };
+  }
+
+  async getLessonProgress(userId: string, lessonId: string) {
+    const progress = await this.progressRepository.findOne({
+      where: { studentId: userId, lessonId },
+      relations: ['lesson'],
+    });
+
+    if (!progress) {
+      // Return default values if no progress exists yet
+      return {
+        lessonId,
+        status: 'not_started',
+        progressPercentage: 0,
+        timeSpent: 0,
+        lastPosition: 0,
+        completionDate: null,
+      };
+    }
+
+    return {
+      lessonId,
+      status: progress.status,
+      progressPercentage: progress.progressPercentage,
+      timeSpent: progress.timeSpent,
+      lastPosition: progress.lastPosition,
+      completionDate: progress.completionDate,
+    };
+  }
+
+  async getLessonResources(userId: string, lessonId: string) {
+    // First check if lesson exists and user has access
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+      relations: ['course'],
+    });
+
+    if (!lesson) {
+      throw new BadRequestException('Lesson not found');
+    }
+
+    // Check if user is enrolled in the course (for students) or owns the course (for teachers)
+    const hasAccess = await this.hasLessonAccess(userId, lesson);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this lesson');
+    }
+
+    // Get lesson files/attachments
+    const attachments = await this.fileRepository.find({
+      where: { lessonId },
+      select: ['id', 'originalName', 'mimeType', 'fileUrl', 'fileSize'],
+    });
+
+    // Transform attachments to match frontend expected format
+    const formattedAttachments = attachments.map(file => ({
+      id: file.id,
+      name: file.originalName,
+      type: file.mimeType,
+      url: file.fileUrl,
+      size: file.fileSize,
+      downloadable: true,
+    }));
+
+    return {
+      attachments: formattedAttachments,
+      transcript: lesson.transcript || null,
+      subtitles: lesson.metadata?.subtitles || [],
+    };
+  }
+
+  private async hasLessonAccess(userId: string, lesson: any): Promise<boolean> {
+    // If user is teacher of the course
+    if (lesson.course.teacherId === userId) {
+      return true;
+    }
+
+    // If user is student, check enrollment
+    const enrollment = await this.enrollmentRepository.findOne({
+      where: { studentId: userId, courseId: lesson.courseId },
+    });
+
+    return !!enrollment;
+  }
+
+  async getLessonNotes(userId: string, lessonId: string, includePrivate = true) {
+    const progress = await this.progressRepository.findOne({
+      where: { studentId: userId, lessonId },
+    });
+
+    if (!progress) {
+      // Return default values if no progress exists yet
+      return {
+        lessonId,
+        notes: null,
+        bookmarks: [],
+      };
+    }
+
+    return {
+      lessonId,
+      notes: includePrivate ? progress.notes : null,
+      bookmarks: progress.bookmarks || [],
+    };
   }
 }

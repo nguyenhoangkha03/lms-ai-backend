@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
@@ -16,7 +17,43 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class AttachmentDto {
+  @ApiProperty({
+    description: 'Original filename',
+    example: 'lecture-notes.pdf',
+  })
+  @IsString()
+  @IsNotEmpty()
+  filename: string;
+
+  @ApiProperty({
+    description: 'File URL',
+    example: 'https://s3.amazonaws.com/bucket/files/lecture-notes.pdf',
+  })
+  @IsString()
+  @IsUrl()
+  url: string;
+
+  @ApiProperty({
+    description: 'File size in bytes',
+    example: 1048576,
+  })
+  @IsNumber()
+  @Min(1)
+  fileSize: number;
+
+  @ApiProperty({
+    description: 'MIME type',
+    example: 'application/pdf',
+  })
+  @IsString()
+  @IsNotEmpty()
+  mimeType: string;
+}
 
 export class CreateLessonDto {
   @ApiProperty({
@@ -264,4 +301,22 @@ export class CreateLessonDto {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any>;
+
+  @ApiPropertyOptional({
+    description: 'Lesson attachments (documents, files)',
+    example: [
+      {
+        filename: 'lecture-notes.pdf',
+        url: 'https://s3.amazonaws.com/bucket/files/lecture-notes.pdf',
+        fileSize: 1048576,
+        mimeType: 'application/pdf',
+      },
+    ],
+    type: [AttachmentDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AttachmentDto)
+  attachments?: AttachmentDto[];
 }

@@ -39,12 +39,12 @@ export class PaginationDto {
   @ApiPropertyOptional({
     description: 'Sort order',
     example: 'DESC',
-    enum: ['ASC', 'DESC'],
+    enum: ['ASC', 'DESC', 'asc', 'desc'],
     default: 'DESC',
   })
   @IsOptional()
-  @IsEnum(['ASC', 'DESC'], { message: 'Sort order must be either ASC or DESC' })
-  sortOrder?: 'ASC' | 'DESC' = 'DESC';
+  @IsEnum(['ASC', 'DESC', 'asc', 'desc'], { message: 'Sort order must be either ASC, DESC, asc, or desc' })
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc' = 'DESC';
 }
 
 export interface PaginationMeta {

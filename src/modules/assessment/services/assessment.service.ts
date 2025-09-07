@@ -203,7 +203,7 @@ export class AssessmentService {
       queryBuilder.andWhere('assessment.availableUntil <= :availableUntil', { availableUntil });
     }
 
-    queryBuilder.orderBy(`assessment.${sortBy}`, sortOrder);
+    queryBuilder.orderBy(`assessment.${sortBy}`, sortOrder?.toUpperCase() as 'ASC' | 'DESC');
 
     const offset = (page - 1) * limit;
     queryBuilder.skip(offset).take(limit);
@@ -615,6 +615,9 @@ export class AssessmentService {
       throw new ForbiddenException('You can only add questions to your own assessments');
     }
 
+    // Clear existing questions first to prevent duplicates
+    await this.questionRepository.delete({ assessmentId });
+
     const savedQuestions: Question[] = [];
 
     for (const [index, questionData] of questions.entries()) {
@@ -622,7 +625,26 @@ export class AssessmentService {
         ...questionData,
         assessmentId,
         orderIndex: questionData.orderIndex ?? index,
-        options: questionData.options ? JSON.stringify(questionData.options) : null,
+        options: (() => {
+          console.log('=== BACKEND: Processing question options ===');
+          console.log('Received questionData.options:', questionData.options);
+          console.log('Type of questionData.options:', typeof questionData.options);
+          
+          if (!questionData.options) {
+            console.log('Options is null/undefined');
+            return null;
+          }
+          
+          if (typeof questionData.options === 'string') {
+            console.log('Options already string, using as-is:', questionData.options);
+            return questionData.options;
+          } else {
+            console.log('Options is not string, stringifying:', questionData.options);
+            const stringified = JSON.stringify(questionData.options);
+            console.log('Stringified result:', stringified);
+            return stringified;
+          }
+        })(),
         correctAnswer: JSON.stringify(questionData.correctAnswer),
         tags: questionData.tags ? JSON.stringify(questionData.tags) : null,
         attachments: questionData.attachments ? JSON.stringify(questionData.attachments) : null,
@@ -638,9 +660,18 @@ export class AssessmentService {
       savedQuestions.push(savedQuestion);
     }
 
-    const totalPoints = savedQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
+    // Calculate total points from all saved questions
+    const totalPoints = savedQuestions.reduce((sum, q) => {
+      const points = Number(q.points || 0);
+      if (isNaN(points)) {
+        throw new BadRequestException(`Invalid point value in question: ${q.points}`);
+      }
+      return sum + points;
+    }, 0);
+
+    // Set total points to the sum of all questions (not adding to existing)
     await this.assessmentRepository.update(assessmentId, {
-      totalPoints: totalPoints + (assessment.totalPoints || 0),
+      totalPoints: parseFloat(totalPoints.toFixed(2)),
       updatedBy: user.id,
     });
 

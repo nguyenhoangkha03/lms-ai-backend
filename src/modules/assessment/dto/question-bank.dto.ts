@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsOptional,
@@ -10,6 +11,8 @@ import {
   Length,
   Min,
   Max,
+  ValidateIf,
+  IsInt,
 } from 'class-validator';
 import { PaginationDto } from '@/common/dto/pagination.dto';
 import { QuestionType, DifficultyLevel } from '@/common/enums/assessment.enums';
@@ -90,10 +93,27 @@ export class CreateQuestionBankDto {
 }
 
 export class QuestionBankQueryDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Filter by course ID' })
+  @ValidateIf((o) => o.courseId !== undefined && o.courseId !== null && o.courseId !== '')
+  @IsUUID(4, { message: 'courseId must be a valid UUID' })
+  courseId?: string;
+  
   @ApiPropertyOptional({ description: 'Search in question text' })
-  @IsOptional()
+  @ValidateIf((o) => o.search !== undefined && o.search !== null && o.search !== '')
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Search query (alias for search)' })
+  @ValidateIf((o) => o.searchQuery !== undefined && o.searchQuery !== null && o.searchQuery !== '')
+  @IsString()
+  searchQuery?: string;
+
+  @ApiPropertyOptional({ description: 'Offset for pagination' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Offset must be an integer' })
+  @Min(0, { message: 'Offset must be at least 0' })
+  offset?: number;
 
   @ApiPropertyOptional({
     description: 'Filter by question type',
@@ -122,12 +142,12 @@ export class QuestionBankQueryDto extends PaginationDto {
   topic?: string;
 
   @ApiPropertyOptional({ description: 'Filter by tags (comma-separated)' })
-  @IsOptional()
+  @ValidateIf((o) => o.tags !== undefined && o.tags !== null && o.tags !== '')
   @IsString()
   tags?: string;
 
   @ApiPropertyOptional({ description: 'Filter by creator' })
-  @IsOptional()
+  @ValidateIf((o) => o.createdBy !== undefined && o.createdBy !== null && o.createdBy !== '')
   @IsUUID()
   createdBy?: string;
 

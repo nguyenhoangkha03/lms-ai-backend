@@ -15,6 +15,7 @@ import { FileStorageService } from './file-storage.service';
 import { FileUpload } from '../../course/entities/file-upload.entity';
 import { User } from '../../user/entities/user.entity';
 import { FileType, FileAccessLevel } from '@/common/enums/file.enums';
+import { FileRelatedType } from '@/common/enums/course.enums';
 import { UploadFileDto } from '../dto/upload-file.dto';
 import { FileQueryDto } from '../dto/file-query.dto';
 import { UpdateFileDto } from '../dto/update-file.dto';
@@ -149,6 +150,9 @@ export class FileManagementService {
         'text/plain',
         'text/csv',
         'text/rtf',
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
       ],
       allowedExtensions: [
         '.pdf',
@@ -161,8 +165,11 @@ export class FileManagementService {
         '.txt',
         '.csv',
         '.rtf',
+        '.jpg',
+        '.jpeg',
+        '.png',
       ],
-      requireAuth: true,
+      requireAuth: false,
       virusScan: true,
     });
 
@@ -199,7 +206,55 @@ export class FileManagementService {
       uploaderId,
     );
 
-    const fileHash = this.fileStorageService.calculateFileHash(file.buffer);
+    // If buffer is not a proper Buffer, try to convert it
+    let buffer: Buffer;
+    if (Buffer.isBuffer(file.buffer)) {
+      buffer = file.buffer;
+      this.logger.log('Using existing Buffer');
+    } else if (
+      file.buffer &&
+      typeof file.buffer === 'object' &&
+      (file.buffer as any).type === 'Buffer' &&
+      Array.isArray((file.buffer as any).data)
+    ) {
+      buffer = Buffer.from((file.buffer as any).data);
+      this.logger.log('Converted serialized buffer to Buffer');
+    } else if (
+      file.buffer &&
+      typeof file.buffer === 'object' &&
+      (file.buffer as any).constructor?.name === 'Object'
+    ) {
+      const keys = Object.keys(file.buffer as any);
+      const isArrayLike = keys.every(key => /^\d+$/.test(key));
+      if (isArrayLike) {
+        const values = keys.map(key => (file.buffer as any)[key]);
+        buffer = Buffer.from(values);
+        this.logger.log('Converted array-like object to Buffer');
+      } else {
+        this.logger.error(
+          `Cannot process file buffer. Type: ${typeof file.buffer}, Constructor: ${(file.buffer as any)?.constructor?.name}`,
+        );
+        throw new Error(
+          `Invalid file buffer type: ${typeof file.buffer}. File upload may have been corrupted by middleware.`,
+        );
+      }
+    } else if (
+      file.buffer &&
+      ((file.buffer as any) instanceof Uint8Array ||
+        (file.buffer as any).constructor?.name === 'Uint8Array')
+    ) {
+      buffer = Buffer.from(file.buffer as Uint8Array);
+      this.logger.log('Converted Uint8Array to Buffer');
+    } else {
+      this.logger.error(
+        `Cannot process file buffer. Type: ${typeof file.buffer}, Constructor: ${(file.buffer as any)?.constructor?.name}, Keys: ${file.buffer ? Object.keys(file.buffer as any) : 'none'}`,
+      );
+      throw new Error(
+        `Invalid file buffer type: ${typeof file.buffer}. File upload may have been corrupted by middleware.`,
+      );
+    }
+
+    const fileHash = this.fileStorageService.calculateFileHash(buffer);
 
     const existingFile = await this.findByHash(fileHash, uploaderId);
     if (existingFile && uploadDto.allowDuplicates !== true) {
@@ -207,7 +262,7 @@ export class FileManagementService {
       return existingFile;
     }
 
-    const _storageFile = await this.fileStorageService.uploadFile(file, fileKey, {
+    const storageFile = await this.fileStorageService.uploadFile(file, fileKey, {
       acl: uploadDto.accessLevel === FileAccessLevel.PUBLIC ? 'public-read' : 'private',
       metadata: {
         originalName: file.originalname,
@@ -228,9 +283,11 @@ export class FileManagementService {
       originalName: file.originalname,
       storedName: path.basename(fileKey),
       filePath: fileKey,
+      fileUrl: storageFile.url, // Use actual URL from storage service
       fileSize: file.size,
       mimeType: file.mimetype,
       fileType: uploadDto.fileType,
+      relatedType: uploadDto.relatedType,
       accessLevel: uploadDto.accessLevel || FileAccessLevel.PRIVATE,
       checksum: fileHash,
       lessonId: uploadDto.lessonId,
@@ -241,6 +298,7 @@ export class FileManagementService {
         uploadedAt: new Date(),
         ipAddress: uploadDto.ipAddress,
         userAgent: uploadDto.userAgent,
+        relatedId: uploadDto.relatedId, // Store relatedId in metadata instead
         ...this.extractFileMetadata(file),
       },
     });
@@ -510,8 +568,47 @@ export class FileManagementService {
    * Perform security checks on file
    */
   private async performSecurityChecks(file: Express.Multer.File): Promise<void> {
+    // Get proper buffer
+    let buffer: Buffer;
+    if (Buffer.isBuffer(file.buffer)) {
+      buffer = file.buffer;
+    } else if (
+      file.buffer &&
+      typeof file.buffer === 'object' &&
+      (file.buffer as any).type === 'Buffer' &&
+      Array.isArray((file.buffer as any).data)
+    ) {
+      // Handle serialized buffer
+      buffer = Buffer.from((file.buffer as any).data);
+    } else if (
+      file.buffer &&
+      typeof file.buffer === 'object' &&
+      (file.buffer as any).constructor?.name === 'Object'
+    ) {
+      // Handle array-like object (Uint8Array converted to plain object)
+      const keys = Object.keys(file.buffer as any);
+      const isArrayLike = keys.every(key => /^\d+$/.test(key));
+      if (isArrayLike) {
+        const values = keys.map(key => (file.buffer as any)[key]);
+        buffer = Buffer.from(values);
+      } else {
+        this.logger.warn(`File buffer is missing or invalid: ${file.originalname}`);
+        return;
+      }
+    } else if (
+      file.buffer &&
+      ((file.buffer as any) instanceof Uint8Array ||
+        (file.buffer as any).constructor?.name === 'Uint8Array')
+    ) {
+      // Handle Uint8Array
+      buffer = Buffer.from(file.buffer as Uint8Array);
+    } else {
+      this.logger.warn(`File buffer is missing or invalid: ${file.originalname}`);
+      return;
+    }
+
     // Check for null bytes (potential security issue)
-    if (file.buffer.includes(0)) {
+    if (buffer.indexOf(0) !== -1) {
       this.logger.warn(`File contains null bytes: ${file.originalname}`);
     }
 
@@ -528,7 +625,46 @@ export class FileManagementService {
    * Validate file header/magic numbers
    */
   private async validateFileHeader(file: Express.Multer.File): Promise<void> {
-    const header = file.buffer.slice(0, 8);
+    // Get proper buffer
+    let buffer: Buffer;
+    if (Buffer.isBuffer(file.buffer)) {
+      buffer = file.buffer;
+    } else if (
+      file.buffer &&
+      typeof file.buffer === 'object' &&
+      (file.buffer as any).type === 'Buffer' &&
+      Array.isArray((file.buffer as any).data)
+    ) {
+      // Handle serialized buffer
+      buffer = Buffer.from((file.buffer as any).data);
+    } else if (
+      file.buffer &&
+      typeof file.buffer === 'object' &&
+      (file.buffer as any).constructor?.name === 'Object'
+    ) {
+      // Handle array-like object (Uint8Array converted to plain object)
+      const keys = Object.keys(file.buffer as any);
+      const isArrayLike = keys.every(key => /^\d+$/.test(key));
+      if (isArrayLike) {
+        const values = keys.map(key => (file.buffer as any)[key]);
+        buffer = Buffer.from(values);
+      } else {
+        this.logger.warn(`Cannot validate file header - invalid buffer: ${file.originalname}`);
+        return;
+      }
+    } else if (
+      file.buffer &&
+      ((file.buffer as any) instanceof Uint8Array ||
+        (file.buffer as any).constructor?.name === 'Uint8Array')
+    ) {
+      // Handle Uint8Array
+      buffer = Buffer.from(file.buffer as Uint8Array);
+    } else {
+      this.logger.warn(`Cannot validate file header - invalid buffer: ${file.originalname}`);
+      return;
+    }
+
+    const header = buffer.slice(0, 8);
     const extension = path.extname(file.originalname).toLowerCase();
 
     // Define magic number patterns
@@ -835,6 +971,8 @@ export class FileManagementService {
 
     const uploadDto: UploadFileDto = {
       fileType: this.getFileTypeFromMimeType(mimeType),
+      relatedType: FileRelatedType.VIDEO_RECORDING,
+      relatedId: options.sessionId,
       accessLevel: options.accessLevel || FileAccessLevel.PRIVATE,
       allowDuplicates: true,
       courseId: options.courseId,

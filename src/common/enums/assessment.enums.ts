@@ -48,6 +48,7 @@ export enum GradingStatus {
   GRADED = 'graded',
   REVIEWING = 'reviewing',
   DISPUTED = 'disputed',
+  IN_PROGRESS = 'in_progress',
 }
 
 export enum GradingMethod {

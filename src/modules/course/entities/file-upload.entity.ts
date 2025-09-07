@@ -343,7 +343,7 @@ export class FileUpload extends BaseEntity {
   uploadedAt: Date;
 
   // Relationships
-  @ManyToOne(() => User, user => user.id, { eager: false })
+  @ManyToOne(() => User, user => user.id, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'uploaderId' })
   uploader: User;
 
@@ -355,11 +355,11 @@ export class FileUpload extends BaseEntity {
   @JoinColumn({ name: 'lessonId' })
   lesson?: Lesson;
 
-  @ManyToOne(() => User, { eager: false })
+  @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'updatedBy' })
   updater?: User;
 
-  @ManyToOne(() => User, { eager: false })
+  @ManyToOne(() => User, { eager: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'moderatedBy' })
   moderator?: User;
 

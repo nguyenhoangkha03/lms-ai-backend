@@ -15,14 +15,21 @@ import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { WinstonService } from '@/logger/winston.service';
-import { UserType } from '@/common/enums/user.enums';
+import { UserType, UserStatus } from '@/common/enums/user.enums';
 import { DeviceInfo } from '../interfaces/device-info.interface';
 import { EmailVerificationService } from './email-verification.service';
 import { SessionService } from './session.service';
+import { EmailService } from './email.service';
 import { LoginAttempt } from '../interfaces/login-attempt.interface';
 import { AuditLogService } from '@/modules/system/services/audit-log.service';
 import { TwoFactorService } from './two-factor.service';
 import { AuditAction } from '@/common/enums/system.enums';
+import { User } from '@/modules/user/entities/user.entity';
+import { TeacherProfile } from '@/modules/user/entities/teacher-profile.entity';
+import { StudentProfile } from '@/modules/user/entities/student-profile.entity';
+import { Repository } from 'typeorm';
+import { UserProfile } from '@/modules/user/entities/user-profile.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class AuthService {
@@ -42,6 +49,11 @@ export class AuthService {
     private readonly auditLogService: AuditLogService,
     private readonly sessionService: SessionService,
     private readonly twoFactorService: TwoFactorService,
+    private readonly emailService: EmailService,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(UserProfile) private readonly userProfileRepository: Repository<UserProfile>,
+    @InjectRepository(TeacherProfile)
+    private readonly teacherProfileRepository: Repository<TeacherProfile>,
   ) {
     this.logger.setContext(AuthService.name);
   }
@@ -84,6 +96,9 @@ export class AuthService {
   async login(loginDto: LoginDto, deviceInfo: DeviceInfo): Promise<LoginResponse> {
     const { email, password, rememberMe } = loginDto;
 
+    let teacherProfile: TeacherProfile | null = null;
+    let studentProfile: StudentProfile | null = null;
+
     this.logger.log(`Login attempt for email: ${email}`);
 
     await this.checkAccountLockout(email);
@@ -114,6 +129,22 @@ export class AuthService {
         throw new ForbiddenException('Account is inactive');
       }
 
+      if (user.userType === UserType.TEACHER) {
+        // teacherProfile = await this.userService.getTeacherProfile(user.id);
+        teacherProfile = user.teacherProfile!;
+        if (!teacherProfile) {
+          await this.recordFailedLoginAttempt(email, deviceInfo, 'Teacher profile not found');
+          throw new ForbiddenException('Teacher profile not found');
+        }
+      } else if (user.userType === UserType.STUDENT) {
+        // studentProfile = await this.userService.getStudentProfile(user.id);
+        studentProfile = user.studentProfile!;
+        if (!studentProfile) {
+          this.logger.warn(`Student profile not found for user ${user.id}, creating one`);
+          // Optionally create student profile here or just continue
+        }
+      }
+
       if (user.twoFactorEnabled) {
         const tempToken = await this.generate2FAToken(user.id);
 
@@ -134,6 +165,8 @@ export class AuthService {
             email: user.email,
             username: user.username,
             userType: user.userType,
+            teacherProfile: teacherProfile,
+            studentProfile: studentProfile,
           },
           requires2FA: true,
           tempToken,
@@ -177,9 +210,17 @@ export class AuthService {
           username: user.username,
           userType: user.userType,
           firstName: user.firstName,
+          displayName: user.displayName,
+          phone: user.phone,
           lastName: user.lastName,
-          avatar: user.avatarUrl,
+          avatarUrl: user.avatarUrl,
+          coverUrl: user.coverUrl,
+          userProfile: user.userProfile,
+          teacherProfile: teacherProfile,
+          studentProfile: studentProfile,
+          socials: user.socials ? user.socials : [],
         },
+        twoFactorEnabled: user.twoFactorEnabled,
         sessionId,
       };
     } catch (error) {
@@ -247,10 +288,241 @@ export class AuthService {
         userType: user.userType,
         firstName: user.firstName,
         lastName: user.lastName,
-        avatar: user.avatarUrl,
+        avatarUrl: user.avatarUrl,
+        coverUrl: user.coverUrl,
       },
       sessionId,
     };
+  }
+
+  async registerTeacher(
+    teacherData: any,
+    deviceInfo: DeviceInfo,
+  ): Promise<{
+    user: any;
+    tokens: AuthTokens;
+    sessionId: string;
+    message: string;
+    applicationId: string;
+  }> {
+    this.logger.log(`teacherDataaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ${teacherData}`);
+
+    let user: User | null = null;
+    let teacherProfile: TeacherProfile | null = null;
+
+    const existingUser = await this.userService.findByEmail(teacherData.personalInfo.email);
+
+    if (existingUser) {
+      throw new ConflictException('Teacher application already exists for this email');
+    }
+
+    const passwordValidation = this.passwordService.validatePasswordStrength(teacherData.password);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    const passwordHash = await this.passwordService.hashPassword(teacherData.password);
+
+    const userData = {
+      email: teacherData.personalInfo.email,
+      username: `teacher_${Date.now()}`,
+      passwordHash,
+      firstName: teacherData.personalInfo.firstName,
+      lastName: teacherData.personalInfo.lastName,
+      phone: teacherData.personalInfo.phone,
+      userType: UserType.TEACHER,
+      status: UserStatus.PENDING,
+      emailVerified: false,
+      timezone: teacherData.personalInfo.timezone,
+    };
+
+    try {
+      const savedUser = this.userRepository.create({
+        ...userData,
+      });
+
+      user = await this.userRepository.save(savedUser);
+
+      const userProfile = this.userProfileRepository.create({
+        userId: user.id,
+        country: teacherData.personalInfo.country,
+        isPublic: true,
+        isSearchable: true,
+      });
+
+      await this.userProfileRepository.save(userProfile);
+
+      const teacherProfileData = {
+        userId: user.id,
+        teacherCode: await this.generateTeacherCode(),
+        applicationDate: new Date(),
+        isApproved: false,
+        acceptingStudents: false,
+        specializations: teacherData.experience.subjectAreas.join(', '),
+        qualifications: `${teacherData.education.highestDegree} in ${teacherData.education.fieldOfStudy} from ${teacherData.education.institution} (${teacherData.education.graduationYear})`,
+        yearsExperience: this.mapExperienceToYears(teacherData.experience.teachingExperience),
+        subjects: teacherData.experience.subjectAreas,
+        isActive: false,
+        isVerified: false,
+        applicationData: {
+          motivation: teacherData.motivation,
+          education: teacherData.education,
+          experience: teacherData.experience,
+          availability: teacherData.availability,
+          documents: teacherData.documents,
+          agreements: teacherData.agreements,
+          submittedAt: new Date(),
+          applicationMetadata: {
+            ipAddress: deviceInfo.ip,
+            userAgent: deviceInfo.userAgent,
+            source: 'web_application',
+          },
+        },
+      };
+
+      teacherProfile = await this.userService.createTeacherProfile(user.id, teacherProfileData);
+      this.logger.log(`Teacher profile created successfully: ${teacherProfile.id}`);
+    } catch (error) {
+      this.logger.error(`Error creating user or teacher profile:`, error);
+
+      if (user && !teacherProfile) {
+        this.logger.warn(`User ${user.id} was created but teacher profile creation failed`);
+      }
+
+      throw error;
+    }
+
+    const verificationToken = await this.emailVerificationService.generateEmailVerificationToken(
+      user.id,
+      user.email,
+    );
+
+    await this.emailService.sendTeacherApplicationVerificationEmail(user.email, verificationToken, {
+      firstName: user.firstName || 'Teacher',
+      lastName: user.lastName || 'User',
+    });
+
+    await this.auditLogService.createAuditLog({
+      userId: user.id,
+      action: AuditAction.TEACHER_APPLICATION_SUBMITTED,
+      entityType: 'teacher_application',
+      entityId: teacherProfile.id,
+      metadata: {
+        email: user.email,
+        deviceInfo,
+        applicationData: teacherProfile.applicationData,
+      },
+    });
+
+    const sessionId = await this.sessionService.createSession(
+      user.id,
+      user.userType,
+      {
+        email: user.email,
+        username: user.username,
+        roles: [],
+        permissions: [],
+      },
+      deviceInfo,
+      'local',
+    );
+
+    const tokens = await this.generateTokens(user);
+    await this.userService.storeRefreshToken(user.id, tokens.refreshToken);
+
+    this.logger.log(`Teacher application submitted successfully: ${user.email}`);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        userType: user.userType,
+      },
+      tokens,
+      sessionId,
+      message:
+        'Teacher application submitted successfully. Please check your email to verify your account.',
+      applicationId: teacherProfile.id,
+    };
+  }
+
+  async getTeacherApplicationStatus(userId: string): Promise<{
+    status: 'pending' | 'under_review' | 'approved' | 'rejected';
+    message: string;
+    submittedAt: Date;
+    reviewedAt?: Date;
+    reviewNotes?: string;
+  }> {
+    this.logger.log(`Getting teacher application status for user: ${userId}`);
+
+    const teacherProfile = await this.userService.getTeacherProfile(userId);
+    if (!teacherProfile) {
+      throw new Error('Teacher application not found');
+    }
+
+    // Determine status based on profile data
+    let status: 'pending' | 'under_review' | 'approved' | 'rejected';
+    let message: string;
+
+    if (teacherProfile.isApproved) {
+      status = 'approved';
+      message =
+        'Congratulations! Your application has been approved. You can now access all teacher features.';
+    } else if (teacherProfile.reviewNotes) {
+      status = 'rejected';
+      message = 'Your application requires some revisions before it can be approved.';
+    } else {
+      // Check if it's been submitted recently (under review) or just pending
+      const daysSinceSubmission = teacherProfile.applicationDate
+        ? Math.floor(
+            (Date.now() - new Date(teacherProfile.applicationDate).getTime()) /
+              (1000 * 60 * 60 * 24),
+          )
+        : 0;
+
+      if (daysSinceSubmission > 1) {
+        status = 'under_review';
+        message =
+          'Your application is currently being reviewed by our team. We appreciate your patience.';
+      } else {
+        status = 'pending';
+        message = 'Your application has been received and is in our review queue.';
+      }
+    }
+
+    return {
+      status,
+      message,
+      submittedAt: teacherProfile.applicationDate || teacherProfile.createdAt,
+      reviewedAt: teacherProfile.approvedAt,
+      reviewNotes: teacherProfile.reviewNotes,
+    };
+  }
+
+  private async generateTeacherCode(): Promise<string> {
+    const year = new Date().getFullYear();
+    const count = await this.teacherProfileRepository.count();
+    return `TCH${year}${String(count + 1).padStart(6, '0')}`;
+  }
+
+  private mapExperienceToYears(experience: string): number {
+    switch (experience) {
+      case 'entry':
+        return 1;
+      case 'intermediate':
+        return 4;
+      case 'experienced':
+        return 8;
+      case 'expert':
+        return 15;
+      default:
+        return 0;
+    }
   }
 
   async register(registerDto: RegisterDto, deviceInfo: DeviceInfo): Promise<LoginResponse> {
@@ -262,7 +534,6 @@ export class AuthService {
     }
 
     const passwordValidation = this.passwordService.validatePasswordStrength(registerDto.password);
-    // const passwordValidation = registerDto.password;
 
     if (!passwordValidation.isValid) {
       throw new BadRequestException({
@@ -290,7 +561,7 @@ export class AuthService {
       user.id,
       user.email,
     );
-    await this.sendVerificationEmail(user.email, verificationToken);
+    await this.emailService.sendVerificationEmail(user.email, verificationToken);
 
     await this.auditLogService.createAuditLog({
       userId: user.id,
@@ -331,7 +602,8 @@ export class AuthService {
         userType: user.userType,
         firstName: user.firstName,
         lastName: user.lastName,
-        avatar: user.avatarUrl,
+        avatarUrl: user.avatarUrl,
+        coverUrl: user.coverUrl,
       },
       requiresEmailVerification: true,
       sessionId,
@@ -466,7 +738,7 @@ export class AuthService {
   async forgotPassword(email: string): Promise<void> {
     const resetToken = await this.emailVerificationService.generatePasswordResetToken(email);
     if (resetToken) {
-      await this.sendPasswordResetEmail(email, resetToken);
+      await this.emailService.sendPasswordResetEmail(email, resetToken);
 
       // Log password reset request
       const user = await this.userService.findByEmail(email);
@@ -520,8 +792,27 @@ export class AuthService {
     this.logger.log(`Password reset completed for user: ${tokenData.userId}`);
   }
 
-  async verifyEmail(token: string): Promise<void> {
+  async verifyEmail(
+    token: string,
+    deviceInfo?: DeviceInfo,
+  ): Promise<{
+    userId: string;
+    email: string;
+    user?: any;
+    accessToken?: string;
+    refreshToken?: string;
+    sessionId?: string;
+  }> {
     const verificationData = await this.emailVerificationService.verifyEmailToken(token);
+
+    // For teachers, update user status to active after email verification
+    // They can login but will be redirected to pending approval if not approved
+    if (verificationData.user && verificationData.user.userType === UserType.TEACHER) {
+      await this.userService.activateUser(verificationData.userId);
+      this.logger.log(
+        `Teacher user status updated to ACTIVE after email verification: ${verificationData.userId}`,
+      );
+    }
 
     // Log email verification
     await this.auditLogService.createAuditLog({
@@ -532,6 +823,40 @@ export class AuthService {
     });
 
     this.logger.log(`Email verified for user: ${verificationData.userId}`);
+
+    // Auto-login user after email verification
+    if (verificationData.user && deviceInfo) {
+      const sessionId = await this.sessionService.createSession(
+        verificationData.user.id,
+        verificationData.user.userType,
+        {
+          email: verificationData.user.email,
+          username: verificationData.user.username,
+          roles: [],
+          permissions: [],
+        },
+        deviceInfo,
+        'email_verify',
+      );
+
+      const tokens = await this.generateTokens(verificationData.user);
+      await this.userService.storeRefreshToken(verificationData.user.id, tokens.refreshToken);
+
+      return {
+        userId: verificationData.userId,
+        email: verificationData.email,
+        user: verificationData.user,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        sessionId,
+      };
+    }
+
+    return {
+      userId: verificationData.userId,
+      email: verificationData.email,
+      user: verificationData.user,
+    };
   }
 
   async resendVerificationEmail(email: string): Promise<void> {
@@ -547,7 +872,7 @@ export class AuthService {
     }
 
     const verificationToken = await this.emailVerificationService.resendVerificationEmail(user.id);
-    await this.sendVerificationEmail(email, verificationToken);
+    await this.emailService.sendVerificationEmail(email, verificationToken);
 
     // Log resend verification
     await this.auditLogService.createAuditLog({
@@ -650,20 +975,6 @@ export class AuthService {
   private async clearLoginAttempts(email: string): Promise<void> {
     const attemptsKey = `${this.LOGIN_ATTEMPTS_PREFIX}${email}`;
     await this.cacheService.del(attemptsKey);
-  }
-
-  private async sendVerificationEmail(email: string, token: string): Promise<void> {
-    // TODO: Implement with email service
-    const verificationUrl = `${this.configService.get<string>('frontend.url')}/verify-email?token=${token}`;
-
-    this.logger.log(`Verification email would be sent to ${email} with URL: ${verificationUrl}`);
-  }
-
-  private async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    // TODO: Implement with email service
-    const resetUrl = `${this.configService.get<string>('frontend.url')}/reset-password?token=${token}`;
-
-    this.logger.log(`Password reset email would be sent to ${email} with URL: ${resetUrl}`);
   }
 
   private async checkAccountLockout(email: string): Promise<void> {

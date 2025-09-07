@@ -49,8 +49,11 @@ export class DataCollectionController {
   @Roles('student', 'teacher', 'admin')
   async trackActivity(@Body() createActivityDto: CreateActivityDto, @CurrentUser() user: any) {
     try {
-      // Verify student ID matches current user or user has permission
-      if (createActivityDto.studentId !== user.id && !['teacher', 'admin'].includes(user.role)) {
+      // Auto-assign studentId from JWT token if not provided or user is tracking their own activity
+      if (!createActivityDto.studentId || createActivityDto.studentId === user.id) {
+        createActivityDto.studentId = user.id;
+      } else if (!['teacher', 'admin'].includes(user.role)) {
+        // Only teacher/admin can track activities for other users
         throw new BadRequestException('Cannot track activity for another user');
       }
 

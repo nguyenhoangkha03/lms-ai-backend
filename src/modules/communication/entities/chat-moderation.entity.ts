@@ -87,7 +87,7 @@ export class ChatModeration extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     nullable: true,
     comment: 'AI confidence score for automated actions',

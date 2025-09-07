@@ -4,7 +4,7 @@ import { DeliveryChannel } from '@/common/enums/notification.enums';
 import { User } from '../../user/entities/user.entity';
 
 @Entity('notification_subscriptions')
-@Unique(['userId', 'channel', 'endpoint'])
+@Unique(['userId', 'channel'])
 @Index(['userId'])
 @Index(['channel'])
 @Index(['isActive'])

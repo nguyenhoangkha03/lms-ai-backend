@@ -29,6 +29,7 @@ import { UserService } from '../services/user.service';
 import { RoleService } from '../services/role.service';
 import { PermissionService } from '../services/permission.service';
 import { FileUploadService } from '../services/file-upload.service';
+import { FileManagementService } from '../../file-management/services/file-management.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
@@ -49,6 +50,8 @@ import {
 } from '../dto/bulk-user-operations.dto';
 import { User } from '../entities/user.entity';
 import { PermissionAction, PermissionResource, UserType } from '@/common/enums/user.enums';
+import { FileRelatedType, FileType } from '@/common/enums/course.enums';
+import { FileAccessLevel } from '@/common/enums/file.enums';
 import { WinstonService } from '@/logger/winston.service';
 import { SecurityEventInterceptor } from '../../auth/interceptors/security-event.interceptor';
 import { Authorize } from '../../auth/decorators/authorize.decorator';
@@ -66,6 +69,7 @@ export class UserController {
     private readonly roleService: RoleService,
     private readonly permissionService: PermissionService,
     private readonly fileUploadService: FileUploadService,
+    private readonly fileManagementService: FileManagementService,
     private readonly logger: WinstonService,
   ) {
     this.logger.setContext(UserController.name);
@@ -162,7 +166,61 @@ export class UserController {
     return this.userService.update(id, updateUserDto);
   }
 
-  // Owner-only access for profile updates
+  // Admin access to get user profiles
+  @Get(':id/profile')
+  //   @UseGuards(PermissionsGuard)
+  //   @Permissions('read:user')
+  @Authorize({
+    roles: [UserType.ADMIN, UserType.TEACHER, UserType.STUDENT],
+  })
+  @ApiOperation({ summary: 'Get user profile by ID (Admin only)' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User profile not found' })
+  async getUserProfile(@Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.getUserProfile(id);
+  }
+
+  @Get('username/:username')
+  //   @UseGuards(PermissionsGuard)
+  //   @Permissions('read:user')
+  @Authorize({
+    roles: [UserType.ADMIN, UserType.TEACHER, UserType.STUDENT],
+  })
+  @ApiOperation({ summary: 'Get user profile by username' })
+  @ApiParam({ name: 'username', description: 'User username' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User profile not found' })
+  async getUserProfileByUsername(@Param('username') username: string) {
+    return this.userService.getUserByUsername(username);
+  }
+
+  @Get(':id/student-profile')
+  //   @UseGuards(PermissionsGuard)
+  //   @Permissions('read:user')
+  @Authorize({
+    roles: [UserType.ADMIN, UserType.TEACHER, UserType.STUDENT],
+  })
+  @ApiOperation({ summary: 'Get student profile by user ID (Admin only)' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Student profile retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Student profile not found' })
+  async getStudentProfile(@Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.getStudentProfile(id);
+  }
+
+  @Get(':id/teacher-profile')
+  @UseGuards(PermissionsGuard)
+  @Permissions('read:user')
+  @ApiOperation({ summary: 'Get teacher profile by user ID (Admin only)' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Teacher profile retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Teacher profile not found' })
+  async getTeacherProfile(@Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.getTeacherProfile(id);
+  }
+
+  // Admin access for profile updates
   @Patch(':id/profile')
   @OwnerOnly({
     entityType: 'User',
@@ -170,11 +228,51 @@ export class UserController {
     userField: 'id', // User can only update their own profile
     allowedRoles: [UserType.ADMIN], // Admins can update any profile
   })
+  @ApiOperation({ summary: 'Update user profile by ID (Admin or owner only)' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'User profile updated successfully' })
+  @ApiResponse({ status: 404, description: 'User profile not found' })
   async updateProfileOwner(
     @Param('id') id: string,
     @Body() updateProfileDto: UpdateUserProfileDto,
   ) {
     return this.userService.updateUserProfile(id, updateProfileDto);
+  }
+
+  @Patch(':id/student-profile')
+  @OwnerOnly({
+    entityType: 'User',
+    entityField: 'id',
+    userField: 'id',
+    allowedRoles: [UserType.ADMIN],
+  })
+  @ApiOperation({ summary: 'Update student profile by user ID (Admin or owner only)' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Student profile updated successfully' })
+  @ApiResponse({ status: 404, description: 'Student profile not found' })
+  async updateStudentProfileOwner(
+    @Param('id') id: string,
+    @Body() updateProfileDto: UpdateStudentProfileDto,
+  ) {
+    return this.userService.updateStudentProfile(id, updateProfileDto);
+  }
+
+  @Patch(':id/teacher-profile')
+  @OwnerOnly({
+    entityType: 'User',
+    entityField: 'id',
+    userField: 'id',
+    allowedRoles: [UserType.ADMIN],
+  })
+  @ApiOperation({ summary: 'Update teacher profile by user ID (Admin or owner only)' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Teacher profile updated successfully' })
+  @ApiResponse({ status: 404, description: 'Teacher profile not found' })
+  async updateTeacherProfileOwner(
+    @Param('id') id: string,
+    @Body() updateProfileDto: UpdateTeacherProfileDto,
+  ) {
+    return this.userService.updateTeacherProfile(id, updateProfileDto);
   }
 
   @Delete(':id')
@@ -230,8 +328,34 @@ export class UserController {
       throw new BadRequestException('No file provided');
     }
 
-    const avatarUrl = await this.fileUploadService.uploadAvatar(user.id, file);
-    return this.userService.updateAvatar(user.id, avatarUrl);
+    this.logger.log(`User ${user.id} uploading avatar`);
+
+    // Upload file using S3 FileManagementService
+    const fileRecord = await this.fileManagementService.uploadFile(
+      file,
+      {
+        fileType: FileType.IMAGE,
+        relatedType: FileRelatedType.USER_AVATAR,
+        relatedId: user.id,
+        accessLevel: FileAccessLevel.PUBLIC,
+      },
+      user.id,
+    );
+
+    const updatedUser = await this.userService.updateAvatar(user.id, fileRecord.fileUrl);
+
+    return {
+      success: true,
+      message: 'Avatar uploaded successfully',
+      user: updatedUser,
+      file: {
+        id: fileRecord.id,
+        url: fileRecord.fileUrl,
+        thumbnailUrl: fileRecord.thumbnailPath,
+        fileSize: fileRecord.fileSize,
+        processingStatus: fileRecord.processingStatus,
+      },
+    };
   }
 
   @Post('me/cover')
@@ -244,8 +368,34 @@ export class UserController {
       throw new BadRequestException('No file provided');
     }
 
-    const coverUrl = await this.fileUploadService.uploadCoverImage(user.id, file);
-    return this.userService.updateCoverImage(user.id, coverUrl);
+    this.logger.log(`User ${user.id} uploading cover image`);
+
+    // Upload file using S3 FileManagementService
+    const fileRecord = await this.fileManagementService.uploadFile(
+      file,
+      {
+        fileType: FileType.IMAGE,
+        relatedType: FileRelatedType.USER_COVER,
+        relatedId: user.id,
+        accessLevel: FileAccessLevel.PUBLIC,
+      },
+      user.id,
+    );
+
+    const updatedUser = await this.userService.updateCoverImage(user.id, fileRecord.fileUrl);
+
+    return {
+      success: true,
+      message: 'Cover uploaded successfully',
+      user: updatedUser,
+      file: {
+        id: fileRecord.id,
+        url: fileRecord.fileUrl,
+        thumbnailUrl: fileRecord.thumbnailPath,
+        fileSize: fileRecord.fileSize,
+        processingStatus: fileRecord.processingStatus,
+      },
+    };
   }
 
   // ==================== USER STATUS MANAGEMENT ====================

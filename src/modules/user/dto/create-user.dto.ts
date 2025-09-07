@@ -37,7 +37,7 @@ export class CreateUserDto {
     example: '$2b$12$...',
   })
   @IsString()
-  passwordHash: string;
+  passwordHash?: string;
 
   @ApiPropertyOptional({
     description: 'First name',
@@ -56,6 +56,16 @@ export class CreateUserDto {
   @IsString()
   @MaxLength(100)
   lastName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Password (must meet security requirements)',
+    example: 'SecurePassword123!',
+    minLength: 8,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  password?: string;
 
   @ApiPropertyOptional({
     description: 'Phone number',

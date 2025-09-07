@@ -72,6 +72,20 @@ export class Role extends BaseEntity {
   icon?: string;
 
   @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Số lượng người dùng có vai trò này',
+  })
+  userCount?: number;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    comment: 'Số lượng quyền hạn có vai trò này',
+  })
+  permissionCount?: number;
+
+  @Column({
     type: 'json',
     nullable: true,
     comment: 'Trường JSON để lưu các cấu hình đặc thù dành riêng cho vai trò này',

@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsBoolean,
   IsObject,
+  IsNotEmpty,
   Min,
   Max,
   Length,
@@ -42,6 +43,7 @@ export class SubmitAnswerDto {
   questionId: string;
 
   @ApiProperty({ description: 'Answer value' })
+  @IsNotEmpty()
   answer: any;
 
   @ApiPropertyOptional({ description: 'Time spent on question in seconds' })

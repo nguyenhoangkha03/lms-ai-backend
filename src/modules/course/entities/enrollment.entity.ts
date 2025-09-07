@@ -82,7 +82,7 @@ export class Enrollment extends BaseEntity {
     default: 0,
     comment: 'Số tiền thực tế mà sinh viên đã trả cho khóa học',
   })
-  paymentAmount: number;
+  paymentAmount?: number;
 
   @Column({
     type: 'varchar',
@@ -90,7 +90,7 @@ export class Enrollment extends BaseEntity {
     default: 'USD',
     comment: 'Đơn vị tiền tệ của giao dịch (ví dụ: USD, VND)',
   })
-  paymentCurrency: string;
+  paymentCurrency?: string;
 
   @Column({
     type: 'varchar',
@@ -124,7 +124,7 @@ export class Enrollment extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     nullable: true,
     comment: 'Điểm số (ví dụ: từ 1-5 sao) mà sinh viên đánh giá cho khóa học',
@@ -150,14 +150,14 @@ export class Enrollment extends BaseEntity {
     default: 0,
     comment: 'Tổng thời gian (tính bằng giây) mà sinh viên đã dành cho khóa học này',
   })
-  totalTimeSpent: number;
+  totalTimeSpent?: number;
 
   @Column({
     type: 'int',
     default: 0,
     comment: 'Đếm số bài học mà sinh viên đã hoàn thành trong khóa học',
   })
-  lessonsCompleted: number;
+  lessonsCompleted?: number;
 
   @Column({
     type: 'int',
@@ -165,7 +165,7 @@ export class Enrollment extends BaseEntity {
     comment:
       'Tổng số bài học của khóa học tại thời điểm sinh viên đăng ký (để tính toán tiến độ chính xác).',
   })
-  totalLessons: number;
+  totalLessons?: number;
 
   @Column({
     type: 'timestamp',
@@ -208,11 +208,12 @@ export class Enrollment extends BaseEntity {
   metadata?: Record<string, any>;
 
   // Relationships
-  @ManyToOne(() => User, user => user.id)
+
+  @ManyToOne(() => User, user => user.enrollments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'studentId' })
   student: User;
 
-  @ManyToOne(() => Course, course => course.enrollments)
+  @ManyToOne(() => Course, course => course.enrollments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'courseId' })
   course: Course;
 
@@ -243,8 +244,8 @@ export class Enrollment extends BaseEntity {
   }
 
   get formattedTimeSpent(): string {
-    const hours = Math.floor(this.totalTimeSpent / 3600);
-    const minutes = Math.floor((this.totalTimeSpent % 3600) / 60);
+    const hours = Math.floor(this.totalTimeSpent! / 3600);
+    const minutes = Math.floor((this.totalTimeSpent! % 3600) / 60);
 
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
@@ -253,8 +254,8 @@ export class Enrollment extends BaseEntity {
   }
 
   get completionRate(): number {
-    if (this.totalLessons === 0) return 0;
-    return (this.lessonsCompleted / this.totalLessons) * 100;
+    if (this.totalLessons! === 0) return 0;
+    return (this.lessonsCompleted! / this.totalLessons!) * 100;
   }
 
   get daysEnrolled(): number {

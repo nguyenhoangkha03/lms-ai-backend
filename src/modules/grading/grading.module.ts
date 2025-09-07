@@ -29,6 +29,7 @@ import { AuthModule } from '../auth/auth.module';
 import { UserModule } from '../user/user.module';
 import { CourseModule } from '../course/course.module';
 import { AssessmentModule } from '../assessment/assessment.module';
+import { NotificationModule } from '../notification/notification.module';
 import { CustomCacheModule as CacheModule } from '@/cache/cache.module';
 import { WinstonModule } from '@/logger/winston.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -40,6 +41,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     forwardRef(() => UserModule),
     forwardRef(() => CourseModule),
     forwardRef(() => AssessmentModule),
+    forwardRef(() => NotificationModule),
     HttpModule.register({
       timeout: 30000,
       maxRedirects: 5,

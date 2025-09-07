@@ -14,6 +14,7 @@ import { PasswordService } from './services/password.service';
 import { TwoFactorService } from './services/two-factor.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { SessionService } from './services/session.service';
+import { EmailService } from './services/email.service';
 
 // Strategies
 import { LocalStrategy } from './strategies/local.strategy';
@@ -39,6 +40,10 @@ import { RateLimitGuard } from './guards/rate-limit.guard';
 import { OwnerGuard } from './guards/owner.guard';
 import { ApiKeyGuard } from './guards/api-key.guard';
 import { SecurityEventInterceptor } from './interceptors/security-event.interceptor';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../user/entities/user.entity';
+import { UserProfile } from '../user/entities/user-profile.entity';
+import { TeacherProfile } from '../user/entities/teacher-profile.entity';
 
 @Module({
   imports: [
@@ -56,6 +61,8 @@ import { SecurityEventInterceptor } from './interceptors/security-event.intercep
     CustomCacheModule,
     WinstonModule,
     SystemModule,
+
+    TypeOrmModule.forFeature([User, UserProfile, TeacherProfile]),
   ],
   controllers: [AuthController],
   providers: [
@@ -65,6 +72,7 @@ import { SecurityEventInterceptor } from './interceptors/security-event.intercep
     TwoFactorService,
     EmailVerificationService,
     SessionService,
+    EmailService,
 
     // Authentication Strategies
     LocalStrategy,
@@ -96,6 +104,7 @@ import { SecurityEventInterceptor } from './interceptors/security-event.intercep
     TwoFactorService,
     EmailVerificationService,
     SessionService,
+    EmailService,
     JwtAuthGuard,
     RolesGuard,
     SessionGuard,

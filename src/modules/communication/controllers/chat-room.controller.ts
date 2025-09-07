@@ -18,6 +18,7 @@ import { ChatRoomService } from '../services/chat-room.service';
 import { ChatService } from '../services/chat.service';
 import { CreateRoomDto, UpdateRoomDto, InviteToRoomDto } from '../dto/chat.dto';
 import { ParticipantRole } from '@/common/enums/communication.enums';
+import { ChatContactService } from '../services/chat-contact.service';
 
 @ApiTags('Chat Rooms')
 @ApiBearerAuth()
@@ -27,6 +28,7 @@ export class ChatRoomController {
   constructor(
     private readonly roomService: ChatRoomService,
     private readonly chatService: ChatService,
+    private readonly contactService: ChatContactService,
   ) {}
 
   @Post()
@@ -49,11 +51,55 @@ export class ChatRoomController {
   @ApiResponse({ status: 200, description: 'Rooms retrieved successfully' })
   async getUserRooms(
     @Request() req,
-    @Query('type') type?: string,
+    @Query('roomType') roomType?: string,
+    @Query('courseId') courseId?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
     @Query('limit') limit: number = 50,
     @Query('offset') offset: number = 0,
   ) {
-    const result = await this.roomService.getUserRooms(req.user.id, type, limit, offset);
+    const result = await this.roomService.getUserRooms(req.user.id, {
+      roomType,
+      courseId,
+      status,
+      search,
+      limit,
+      offset,
+    });
+
+    return {
+      success: true,
+      data: result.rooms,
+      total: result.total,
+    };
+  }
+
+  @Get('suggested-contacts')
+  @ApiOperation({ summary: 'Get suggested contacts for user' })
+  @ApiResponse({ status: 200, description: 'Suggested contacts retrieved successfully' })
+  async getSuggestedContacts(
+    @Request() req,
+    @Query('limit') limit: number = 20,
+  ) {
+    const suggestions = await this.contactService.getSuggestedContacts(req.user.id, limit);
+
+    return {
+      success: true,
+      data: { suggestions },
+    };
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search public rooms' })
+  @ApiResponse({ status: 200, description: 'Search results retrieved successfully' })
+  async searchRooms(
+    @Query('query') query: string,
+    @Request() req,
+    @Query('type') type?: string,
+    @Query('limit') limit: number = 20,
+    @Query('offset') offset: number = 0,
+  ) {
+    const result = await this.roomService.searchPublicRooms(query, type, limit, offset);
 
     return {
       success: true,
@@ -116,11 +162,42 @@ export class ChatRoomController {
     };
   }
 
+  @Get(':roomId/check-access')
+  @ApiOperation({ summary: 'Check if user can access room' })
+  @ApiResponse({ status: 200, description: 'Access check completed' })
+  async checkRoomAccess(@Param('roomId', ParseUUIDPipe) roomId: string, @Request() req) {
+    const hasAccess = await this.chatService.checkUserAccess(roomId, req.user.id);
+    const room = await this.roomService.getRoomBasicInfo(roomId);
+    
+    return {
+      success: true,
+      data: {
+        hasAccess,
+        roomId,
+        userId: req.user.id,
+        room: {
+          id: room.id,
+          name: room.name,
+          isActive: room.isActive,
+          canAcceptNewMembers: room.canAcceptNewMembers,
+          participantCount: room.participantCount,
+          maxParticipants: room.maxParticipants,
+        }
+      }
+    };
+  }
+
   @Post(':roomId/join')
   @ApiOperation({ summary: 'Join a chat room' })
   @ApiResponse({ status: 200, description: 'Joined room successfully' })
   async joinRoom(@Param('roomId', ParseUUIDPipe) roomId: string, @Request() req) {
-    await this.roomService.joinRoom(roomId, req.user.id);
+    try {
+      await this.roomService.joinRoom(roomId, req.user.id);
+      console.log(`User ${req.user.id} successfully joined room ${roomId}`);
+    } catch (error) {
+      console.error(`Failed to join room: ${error.message}`, { roomId, userId: req.user.id });
+      throw error;
+    }
 
     return {
       success: true,
@@ -166,10 +243,13 @@ export class ChatRoomController {
   @ApiResponse({ status: 200, description: 'Participants retrieved successfully' })
   async getRoomParticipants(
     @Param('roomId', ParseUUIDPipe) roomId: string,
-    @Query('limit') limit: number = 50,
-    @Query('offset') offset: number = 0,
     @Request() req,
+    @Query('limit') limitStr?: string,
+    @Query('offset') offsetStr?: string,
   ) {
+    const limit = limitStr ? parseInt(limitStr, 10) : 50;
+    const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+
     const hasAccess = await this.chatService.checkUserAccess(roomId, req.user.id);
     if (!hasAccess) {
       throw new BadRequestException('Access denied to chat room');
@@ -226,21 +306,41 @@ export class ChatRoomController {
     };
   }
 
-  @Get('search')
-  @ApiOperation({ summary: 'Search public rooms' })
-  @ApiResponse({ status: 200, description: 'Search results retrieved successfully' })
-  async searchRooms(
-    @Query('query') query: string,
+  @Post('direct-message/:userId')
+  @ApiOperation({ summary: 'Create or get direct message room with user' })
+  @ApiResponse({ status: 201, description: 'Direct message room created/retrieved successfully' })
+  async createDirectMessage(
     @Request() req,
-    @Query('type') type?: string,
-    @Query('limit') limit: number = 20,
-    @Query('offset') offset: number = 0,
+    @Param('userId', ParseUUIDPipe) userId: string,
   ) {
-    const result = await this.roomService.searchPublicRooms(query, type, limit, offset);
+    try {
+      const room = await this.contactService.createOrGetDirectRoom(req.user.id, userId);
+
+      if (!room) {
+        throw new BadRequestException('Unable to create direct message room');
+      }
+
+      return {
+        success: true,
+        data: { room },
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Get('direct-message-permission/:userId')
+  @ApiOperation({ summary: 'Check direct message permission with user' })
+  @ApiResponse({ status: 200, description: 'Permission check completed' })
+  async checkDirectMessagePermission(
+    @Request() req,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ) {
+    const permission = await this.contactService.checkDirectMessagePermission(req.user.id, userId);
 
     return {
       success: true,
-      data: result,
+      data: { permission },
     };
   }
 }

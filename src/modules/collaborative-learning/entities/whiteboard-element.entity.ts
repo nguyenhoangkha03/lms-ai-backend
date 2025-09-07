@@ -104,7 +104,7 @@ export class WhiteboardElement extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     default: 1.0,
     comment: 'Element opacity',

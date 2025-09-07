@@ -16,7 +16,7 @@ import * as mimeTypes from 'mime-types';
 
 export enum StorageProvider {
   LOCAL = 'local',
-  S3 = 's3',
+  S3 = 'S3',
   MINIO = 'minio',
 }
 
@@ -48,6 +48,7 @@ export class FileStorageService {
   private readonly bucketName: string;
   private readonly cdnUrl?: string;
   private readonly region: string;
+  private useLocalFallback: boolean = false;
 
   constructor(
     private readonly configService: ConfigService,
@@ -55,12 +56,28 @@ export class FileStorageService {
   ) {
     this.logger.setContext(FileStorageService.name);
 
-    this.provider = this.configService.get<StorageProvider>('STORAGE_TYPE', StorageProvider.LOCAL);
+    this.provider = this.configService.get('STORAGE_TYPE', StorageProvider.LOCAL);
     this.localPath = this.configService.get('UPLOAD_PATH', './uploads');
     this.bucketName = this.configService.get('AWS_S3_BUCKET', 'lms-files');
     this.cdnUrl = this.configService.get('CDN_URL');
     this.region = this.configService.get('AWS_REGION', 'us-east-1');
 
+    // Debug logging
+    const accessKeyId = this.configService.get('AWS_ACCESS_KEY_ID');
+    const secretAccessKey = this.configService.get('AWS_SECRET_ACCESS_KEY');
+    this.logger.log(`Storage provider: ${this.provider}`);
+    this.logger.log(`S3 bucket: ${this.bucketName}`);
+    this.logger.log(`AWS region: ${this.region}`);
+    this.logger.log(
+      `AWS_ACCESS_KEY_ID: ${accessKeyId ? `${accessKeyId.substring(0, 8)}...` : 'MISSING'}`,
+    );
+    this.logger.log(
+      `AWS_SECRET_ACCESS_KEY: ${secretAccessKey ? `${secretAccessKey.substring(0, 8)}...` : 'MISSING'}`,
+    );
+
+    this.logger.log(
+      `Initializinggggggggggggggggggggggggggggggggggg S3 client for ${this.provider}`,
+    );
     if (this.provider === StorageProvider.S3 || this.provider === StorageProvider.MINIO) {
       this.initializeS3Client();
     } else {
@@ -76,8 +93,18 @@ export class FileStorageService {
     const secretAccessKey = this.configService.get('AWS_SECRET_ACCESS_KEY');
     const endpoint = this.configService.get('MINIO_ENDPOINT'); // For MinIO
 
+    this.logger.log(`Initializing S3 client for ${this.provider}`);
+    this.logger.log(`Access Key ID length: ${accessKeyId?.length || 0}`);
+    this.logger.log(`Secret Access Key length: ${secretAccessKey?.length || 0}`);
+
     if (!accessKeyId || !secretAccessKey) {
-      throw new Error('AWS credentials not configured');
+      this.logger.warn('AWS credentials not configured, falling back to local storage');
+      this.logger.warn(
+        `Missing: ${!accessKeyId ? 'AWS_ACCESS_KEY_ID' : ''} ${!secretAccessKey ? 'AWS_SECRET_ACCESS_KEY' : ''}`,
+      );
+      this.useLocalFallback = true;
+      this.ensureLocalDirectories();
+      return;
     }
 
     const clientConfig: any = {
@@ -132,14 +159,49 @@ export class FileStorageService {
     key: string,
     options: UploadOptions = {},
   ): Promise<StorageFile> {
-    const buffer = Buffer.isBuffer(file) ? file : file.buffer;
+    // Get buffer and ensure it's a proper Buffer
+    let buffer: Buffer;
+    const rawBuffer = Buffer.isBuffer(file) ? file : file.buffer;
+
+    // Convert array-like object to proper Buffer if needed
+    if (Buffer.isBuffer(rawBuffer)) {
+      buffer = rawBuffer;
+    } else if (
+      rawBuffer &&
+      typeof rawBuffer === 'object' &&
+      (rawBuffer as any).constructor?.name === 'Object'
+    ) {
+      // Handle array-like object
+      const keys = Object.keys(rawBuffer as any);
+      const isArrayLike = keys.every(key => /^\d+$/.test(key));
+      if (isArrayLike) {
+        const values = keys.map(key => (rawBuffer as any)[key]);
+        buffer = Buffer.from(values);
+        this.logger.log(
+          `FileStorageService: Converted array-like object to Buffer, size: ${buffer.length}`,
+        );
+      } else {
+        throw new Error(`Invalid buffer object structure`);
+      }
+    } else {
+      buffer = Buffer.from(rawBuffer as any);
+    }
+
     const contentType =
       options.contentType ||
       (Buffer.isBuffer(file) ? 'application/octet-stream' : file.mimetype) ||
       mimeTypes.lookup(key) ||
       'application/octet-stream';
 
-    if (this.provider === StorageProvider.LOCAL) {
+    this.logger.log(
+      `Upload file with provider: ${this.provider}, S3 client initialized: ${!!this.s3Client}, useLocalFallback: ${this.useLocalFallback}`,
+    );
+
+    this.logger.log(
+      `Buffer ready for upload: isBuffer: ${Buffer.isBuffer(buffer)}, size: ${buffer.length}`,
+    );
+
+    if (this.provider === StorageProvider.LOCAL || this.useLocalFallback) {
       return this.uploadToLocal(buffer, key, contentType, options);
     } else {
       return this.uploadToS3(buffer, key, contentType, options);
@@ -160,8 +222,37 @@ export class FileStorageService {
     // Ensure directory exists
     await fs.mkdir(path.dirname(filePath), { recursive: true });
 
+    // Ensure buffer is proper Buffer
+    let properBuffer: Buffer;
+    if (Buffer.isBuffer(buffer)) {
+      properBuffer = buffer;
+    } else if (
+      buffer &&
+      typeof buffer === 'object' &&
+      (buffer as any).constructor?.name === 'Object'
+    ) {
+      // Handle array-like object (same logic as in FileManagementService)
+      const keys = Object.keys(buffer as any);
+      const isArrayLike = keys.every(key => /^\d+$/.test(key));
+      if (isArrayLike) {
+        const values = keys.map(key => (buffer as any)[key]);
+        properBuffer = Buffer.from(values);
+        this.logger.debug(
+          `Local: Converted array-like object to Buffer, size: ${properBuffer.length}`,
+        );
+      } else {
+        this.logger.error(`Local: Cannot convert object to buffer - not array-like`);
+        throw new Error(`Invalid buffer object structure for local upload`);
+      }
+    } else {
+      this.logger.debug(
+        `Local: Converting buffer type: ${typeof buffer}, constructor: ${(buffer as any)?.constructor?.name}`,
+      );
+      properBuffer = Buffer.from(buffer as any);
+    }
+
     // Write file
-    await fs.writeFile(filePath, buffer);
+    await fs.writeFile(filePath, properBuffer);
 
     const stats = await fs.stat(filePath);
     const url = this.cdnUrl ? `${this.cdnUrl}/${key}` : `/uploads/${key}`;
@@ -187,15 +278,21 @@ export class FileStorageService {
     options: UploadOptions,
   ): Promise<StorageFile> {
     if (!this.s3Client) {
-      throw new Error('S3 client not initialized');
+      this.logger.warn('S3 client not initialized, falling back to local storage');
+      this.useLocalFallback = true;
+      this.ensureLocalDirectories();
+      return this.uploadToLocal(buffer, key, contentType, options);
     }
+
+    // Buffer is already ensured to be proper Buffer from uploadFile()
+    this.logger.log(`S3: Uploading buffer size: ${buffer.length} bytes`);
 
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,
       Body: buffer,
       ContentType: contentType,
-      ACL: options.acl || 'private',
+      // ACL removed - bucket doesn't support ACLs (Object Ownership enforced)
       Metadata: options.metadata,
       CacheControl: options.cacheControl,
       Expires: options.expires,
@@ -211,6 +308,8 @@ export class FileStorageService {
 
       this.logger.log(`File uploaded to ${this.provider.toUpperCase()}: ${key}`);
 
+      this.logger.log(`Successfully uploaded ${key} to S3, size: ${buffer.length} bytes`);
+
       return {
         key,
         url,
@@ -220,6 +319,9 @@ export class FileStorageService {
       };
     } catch (error) {
       this.logger.error(`Failed to upload to ${this.provider.toUpperCase()}:`, error);
+      this.logger.error(
+        `Error details: Key=${key}, Size=${buffer?.length || 'unknown'}, ContentType=${contentType}`,
+      );
       throw new BadRequestException(`Upload failed: ${error.message}`);
     }
   }

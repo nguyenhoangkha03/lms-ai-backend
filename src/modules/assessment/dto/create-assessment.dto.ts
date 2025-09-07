@@ -20,6 +20,7 @@ import {
   GradingMethod,
   DifficultyLevel,
   QuestionType,
+  AssessmentStatus,
 } from '@/common/enums/assessment.enums';
 
 export class CreateQuestionDto {
@@ -104,6 +105,11 @@ export class CreateAssessmentDto {
   @IsString()
   @Length(0, 500)
   description?: string;
+
+  @ApiPropertyOptional({ description: 'Assessment status', enum: Object.values(AssessmentStatus) })
+  @IsOptional()
+  @IsEnum(AssessmentStatus)
+  status?: AssessmentStatus;
 
   @ApiPropertyOptional({ description: 'Detailed instructions' })
   @IsOptional()

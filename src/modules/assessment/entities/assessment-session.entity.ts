@@ -133,7 +133,7 @@ export class AssessmentSession extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     nullable: true,
     comment: 'Điểm chất lượng mạng',

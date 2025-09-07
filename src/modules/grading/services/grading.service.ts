@@ -158,6 +158,13 @@ export class GradingService {
       throw new NotFoundException('Assessment attempt not found');
     }
 
+    this.logger.log(`Found attempt with ${attempt.assessment?.questions?.length || 0} questions`);
+    this.logger.log(`Attempt answers: ${attempt.answers}`);
+    
+    if (!attempt.assessment?.questions || attempt.assessment.questions.length === 0) {
+      throw new Error('No questions found for assessment');
+    }
+
     const questions = attempt.assessment.questions;
     const answers = JSON.parse(attempt.answers || '{}');
 
@@ -168,22 +175,49 @@ export class GradingService {
     for (const question of questions!) {
       if (question.questionType === 'multiple_choice' || question.questionType === 'true_false') {
         const correctAnswer = JSON.parse(question.correctAnswer!);
-        const studentAnswer = answers[question.id];
+        const studentAnswerData = answers[question.id];
+        const studentAnswer = studentAnswerData?.answer || studentAnswerData; // Extract answer from object
 
-        const questionMaxScore = question.points || 1;
+        this.logger.log(`Question ${question.id}: studentAnswer="${studentAnswer}", correctAnswer="${correctAnswer}"`);
+        this.logger.log(`Question options: ${question.options}`);
+
+        const questionMaxScore = Number(question.points) || 1;
         maxScore += questionMaxScore;
 
         let questionScore = 0;
-        if (this.isAnswerCorrect(studentAnswer, correctAnswer)) {
+        let isCorrect = false;
+
+        // For multiple choice questions, check if selected option is correct
+        if (question.options) {
+          try {
+            const options = JSON.parse(question.options);
+            const selectedOption = options.find((opt: any) => opt.id === studentAnswer);
+            
+            this.logger.log(`Selected option: ${JSON.stringify(selectedOption)}`);
+            
+            isCorrect = selectedOption && selectedOption.isCorrect === true;
+          } catch (error) {
+            this.logger.error(`Error parsing options for question ${question.id}:`, error);
+            isCorrect = false;
+          }
+        } else {
+          // Fallback for questions without options JSON
+          isCorrect = this.isAnswerCorrect(studentAnswer, correctAnswer);
+        }
+
+        if (isCorrect) {
           questionScore = questionMaxScore;
           totalScore += questionScore;
+          this.logger.log(`Question ${question.id}: CORRECT! Score: ${questionScore}`);
+        } else {
+          this.logger.log(`Question ${question.id}: WRONG! Score: 0`);
         }
 
         questionScores[question.id] = {
           score: questionScore,
           maxScore: questionMaxScore,
           isCorrect: questionScore > 0,
-          studentAnswer,
+          studentAnswer: studentAnswer,
           correctAnswer,
         };
       }

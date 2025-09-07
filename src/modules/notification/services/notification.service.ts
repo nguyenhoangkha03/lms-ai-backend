@@ -91,6 +91,18 @@ export class NotificationService {
       dateFrom,
       dateTo,
     } = query;
+
+    console.log(`User ${userId} retrieved page ${page}`);
+    console.log(`User ${userId} retrieved limit ${limit}`);
+    console.log(`User ${userId} retrieved type ${type}`);
+    console.log(`User ${userId} retrieved category ${category}`);
+    console.log(`User ${userId} retrieved priority ${priority}`);
+    console.log(`User ${userId} retrieved isRead ${isRead}`);
+    console.log(`User ${userId} retrieved relatedType ${relatedType}`);
+    console.log(`User ${userId} retrieved search ${search}`);
+    console.log(`User ${userId} retrieved dateFrom ${dateFrom}`);
+    console.log(`User ${userId} retrieved dateTo ${dateTo}`);
+
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.notificationRepository

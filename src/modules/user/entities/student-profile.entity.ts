@@ -56,7 +56,7 @@ export class StudentProfile extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     nullable: true,
     comment: 'Điểm trung bình tích lũy hiện tại của sinh viên',
@@ -201,6 +201,13 @@ export class StudentProfile extends BaseEntity {
     comment: 'Sự đồng ý của phụ huynh',
   })
   parentalConsent: boolean;
+
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: 'Sinh viên đã hoàn thành quy trình onboarding',
+  })
+  onboardingCompleted: boolean;
 
   @Column({
     type: 'varchar',

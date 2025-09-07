@@ -80,6 +80,15 @@ export enum AuditAction {
   SECURITY_EVENT = 'security_event',
   PAUSE_ASSESSMENT = 'pause_assessment',
   RESUME_ASSESSMENT = 'resume_assessment',
+  // Teacher-specific audit actions
+  TEACHER_APPLICATION_SUBMITTED = 'teacher_application_submitted',
+  TEACHER_APPROVED = 'teacher_approved',
+  TEACHER_REJECTED = 'teacher_rejected',
+  TEACHER_APPLICATION_REVIEWED = 'teacher_application_reviewed',
+  ADMIN_USER_CREATED = 'admin_user_created',
+  USER_LOGIN = 'user_login',
+  PASSWORD_RESET = 'password_reset',
+  USER_CREATED = 'user_created',
 }
 
 export enum AuditLevel {

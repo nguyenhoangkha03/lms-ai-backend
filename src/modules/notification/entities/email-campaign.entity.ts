@@ -28,7 +28,6 @@ export enum CampaignType {
 @Index(['type'])
 @Index(['scheduledAt'])
 @Index(['createdBy'])
-@Index(['targetAudience'])
 export class EmailCampaign extends BaseEntity {
   @Column({
     type: 'varchar',

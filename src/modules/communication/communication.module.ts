@@ -29,6 +29,7 @@ import { ChatMessageService } from './services/chat-message.service';
 import { ChatModerationService } from './services/chat-moderation.service';
 import { ChatFileService } from './services/chat-file.service';
 import { ChatNotificationService } from './services/chat-notification.service';
+import { ChatContactService } from './services/chat-contact.service';
 import { UserService } from '../user/services/user.service';
 import { NotificationService } from '../notification/services/notification.service';
 import { WebRTCService } from './services/webrtc.service';
@@ -41,6 +42,7 @@ import { VideoAnalyticsService } from './services/video-analytics.service';
 
 // Gateways
 import { ChatGateway } from './gateways/chat.gateway';
+import { CourseEnrollmentListener } from './listeners/course-enrollment.listener';
 
 // Processors
 import { ChatMessageProcessor } from './processors/chat-message.processor';
@@ -56,6 +58,7 @@ import { CourseModule } from '../course/course.module';
 import { FileManagementModule } from '../file-management/file-management.module';
 import { NotificationModule } from '../notification/notification.module';
 import { AuthModule } from '../auth/auth.module';
+import { CollaborativeLearningModule } from '../collaborative-learning/collaborative-learning.module';
 import { CustomCacheModule } from '@/cache/cache.module';
 import { WinstonModule } from '@/logger/winston.module';
 import { HttpModule } from '@nestjs/axios';
@@ -105,6 +108,7 @@ import { VideoGateway } from './gateways/video.gateway';
     FileManagementModule,
     NotificationModule,
     AuthModule,
+    CollaborativeLearningModule,
     CustomCacheModule,
     WinstonModule,
   ],
@@ -126,6 +130,7 @@ import { VideoGateway } from './gateways/video.gateway';
     ChatModerationService,
     ChatFileService,
     ChatNotificationService,
+    ChatContactService,
     // Video Services
     VideoSessionService,
     ZoomIntegrationService,
@@ -137,6 +142,8 @@ import { VideoGateway } from './gateways/video.gateway';
     // Gateways
     ChatGateway,
     VideoGateway,
+    // Listeners
+    CourseEnrollmentListener,
     // Processors
     ChatMessageProcessor,
     ChatModerationProcessor,
@@ -152,6 +159,7 @@ import { VideoGateway } from './gateways/video.gateway';
     ChatService,
     ChatRoomService,
     ChatMessageService,
+    ChatContactService,
     ChatGateway,
     VideoSessionService,
     VideoGateway,

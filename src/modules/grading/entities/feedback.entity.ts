@@ -84,7 +84,7 @@ export class Feedback extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 3,
+    precision: 5,
     scale: 2,
     nullable: true,
     comment: 'Mức độ tự tin của AI (0.0 - 1.0)',
