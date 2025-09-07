@@ -160,7 +160,7 @@ export class GradingService {
 
     this.logger.log(`Found attempt with ${attempt.assessment?.questions?.length || 0} questions`);
     this.logger.log(`Attempt answers: ${attempt.answers}`);
-    
+
     if (!attempt.assessment?.questions || attempt.assessment.questions.length === 0) {
       throw new Error('No questions found for assessment');
     }
@@ -178,7 +178,9 @@ export class GradingService {
         const studentAnswerData = answers[question.id];
         const studentAnswer = studentAnswerData?.answer || studentAnswerData; // Extract answer from object
 
-        this.logger.log(`Question ${question.id}: studentAnswer="${studentAnswer}", correctAnswer="${correctAnswer}"`);
+        this.logger.log(
+          `Question ${question.id}: studentAnswer="${studentAnswer}", correctAnswer="${correctAnswer}"`,
+        );
         this.logger.log(`Question options: ${question.options}`);
 
         const questionMaxScore = Number(question.points) || 1;
@@ -192,9 +194,9 @@ export class GradingService {
           try {
             const options = JSON.parse(question.options);
             const selectedOption = options.find((opt: any) => opt.id === studentAnswer);
-            
+
             this.logger.log(`Selected option: ${JSON.stringify(selectedOption)}`);
-            
+
             isCorrect = selectedOption && selectedOption.isCorrect === true;
           } catch (error) {
             this.logger.error(`Error parsing options for question ${question.id}:`, error);
