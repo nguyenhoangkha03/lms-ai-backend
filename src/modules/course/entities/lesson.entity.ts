@@ -10,6 +10,7 @@ import { ContentModerationStatus, ContentStatus } from '@/common/enums/content.e
 import { ModerationFlag } from '../services/content-moderation.service';
 import { TutoringSession } from '@/modules/intelligent-tutoring/entities/tutoring-session.entity';
 import { AdaptiveContent } from '@/modules/intelligent-tutoring/entities/adaptive-content.entity';
+import { Question } from '@/modules/assessment/entities/question.entity';
 
 @Entity('lessons')
 @Index(['courseId'])
@@ -393,6 +394,9 @@ export class Lesson extends BaseEntity {
     cascade: true,
   })
   adaptiveContent: AdaptiveContent[];
+
+  @OneToMany(() => Question, question => question.lesson)
+  questions: Question[];
 
   // Virtual properties
   get isPublished(): boolean {

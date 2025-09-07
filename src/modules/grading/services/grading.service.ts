@@ -316,6 +316,7 @@ export class GradingService {
       .createQueryBuilder('grade')
       .leftJoinAndSelect('grade.student', 'student')
       .leftJoinAndSelect('grade.assessment', 'assessment')
+      .leftJoinAndSelect('assessment.course', 'course')
       .leftJoinAndSelect('grade.grader', 'grader');
 
     if (query.studentId) {

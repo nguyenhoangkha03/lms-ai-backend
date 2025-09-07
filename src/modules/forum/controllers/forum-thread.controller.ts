@@ -67,8 +67,8 @@ export class ForumThreadController {
   ) {
     return this.threadService.findAll({
       categoryId,
-      page,
-      limit,
+      page: page ? parseInt(page.toString(), 10) : undefined,
+      limit: limit ? parseInt(limit.toString(), 10) : undefined,
       status,
       featured,
     });

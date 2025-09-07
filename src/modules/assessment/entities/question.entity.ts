@@ -2,6 +2,7 @@ import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '@/common/entities/base.entity';
 import { QuestionType, DifficultyLevel } from '@/common/enums/assessment.enums';
 import { Assessment } from './assessment.entity';
+import { Lesson } from '@/modules/course/entities/lesson.entity';
 
 @Entity('questions')
 @Index(['assessmentId', 'orderIndex'])
@@ -22,6 +23,14 @@ export class Question extends BaseEntity {
     comment: 'Nội dung chính của câu hỏi',
   })
   questionText: string;
+
+  @Column({
+    type: 'varchar',
+    length: 36,
+    comment: 'Khóa ngoại liên kết tới lessons.id, xác định câu hỏi này thuộc về bài học nào',
+    nullable: true,
+  })
+  lessonId?: string;
 
   @Column({
     type: 'enum',
@@ -133,22 +142,26 @@ export class Question extends BaseEntity {
   @JoinColumn({ name: 'assessmentId' })
   assessment: Assessment;
 
+  @ManyToOne(() => Lesson, lesson => lesson.questions, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lessonId' })
+  lesson: Lesson;
+
   // Virtual properties
   get optionsJson() {
     if (!this.options) return [];
-    
+
     try {
       // Thử parse JSON trực tiếp trước
       return JSON.parse(this.options);
     } catch (error) {
       console.log('Initial JSON parse failed, attempting to fix malformed JSON...');
       console.log('Original options string:', this.options);
-      
+
       try {
         // Thử sửa JSON bị lỗi format
         let fixedJson = this.options;
-        
-        // Fix thiếu dấu ngoặc kép quanh property names và values  
+
+        // Fix thiếu dấu ngoặc kép quanh property names và values
         if (!fixedJson.includes('"id"') && fixedJson.includes('id:')) {
           fixedJson = fixedJson
             // Thêm dấu ngoặc kép quanh property names
@@ -157,7 +170,12 @@ export class Question extends BaseEntity {
             .replace(/:([^,}\]]+)/g, (match, value) => {
               const trimmed = value.trim();
               // Không thêm ngoặc kép nếu đã có hoặc là boolean/number
-              if (trimmed.startsWith('"') || trimmed === 'true' || trimmed === 'false' || !isNaN(Number(trimmed))) {
+              if (
+                trimmed.startsWith('"') ||
+                trimmed === 'true' ||
+                trimmed === 'false' ||
+                !isNaN(Number(trimmed))
+              ) {
                 return ':' + trimmed;
               }
               return ':"' + trimmed + '"';
@@ -165,15 +183,14 @@ export class Question extends BaseEntity {
             // Replace single quotes với double quotes
             .replace(/'/g, '"');
         }
-        
+
         console.log('Fixed JSON string:', fixedJson);
         const parsed = JSON.parse(fixedJson);
         console.log('Successfully parsed fixed JSON:', parsed);
         return parsed;
-        
       } catch (secondError) {
         console.error('Failed to parse even after fixing:', secondError);
-        
+
         // Fallback: extract text content từ malformed JSON
         try {
           const textMatches = this.options.match(/text:([^,}]+)/g);
@@ -185,14 +202,14 @@ export class Question extends BaseEntity {
                 text: text,
                 isCorrect: false,
                 feedback: '',
-                orderIndex: index
+                orderIndex: index,
               };
             });
           }
         } catch (finalError) {
           console.error('Final fallback also failed:', finalError);
         }
-        
+
         // Final fallback
         return [];
       }
@@ -205,18 +222,21 @@ export class Question extends BaseEntity {
 
   get tagsJson() {
     if (!this.tags) return [];
-    
+
     try {
       return JSON.parse(this.tags);
     } catch (error) {
       console.log('Failed to parse tags JSON:', error);
       console.log('Original tags string:', this.tags);
-      
+
       // Fallback: split by comma if it looks like a comma-separated string
       if (typeof this.tags === 'string' && !this.tags.startsWith('[')) {
-        return this.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+        return this.tags
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag);
       }
-      
+
       return [];
     }
   }

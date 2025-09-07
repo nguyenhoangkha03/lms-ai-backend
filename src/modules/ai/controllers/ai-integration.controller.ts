@@ -32,43 +32,12 @@ export class AIIntegrationController {
     summary: 'Get AI lesson recommendations after assessment',
     description: 'Lấy đề xuất lessons từ AI sau khi hoàn thành bài kiểm tra',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Lesson recommendations retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        data: {
-          type: 'object',
-          properties: {
-            strategy: { type: 'string', example: 'INTENSIVE_FOUNDATION' },
-            strategy_confidence: { type: 'number', example: 0.79 },
-            recommendations: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  lesson_id: { type: 'string', example: 'lesson-html-tags' },
-                  lesson_title: { type: 'string', example: 'Các thẻ tiêu đề và đoạn văn' },
-                  priority_rank: { type: 'string', example: 'CRITICAL' },
-                  priority_score: { type: 'number', example: 8.12 },
-                  reason: { type: 'string', example: 'Bạn đã trả lời sai 2 câu hỏi' },
-                },
-              },
-            },
-            total_recommendations: { type: 'number', example: 1 },
-          },
-        },
-        timestamp: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
   @HttpCode(HttpStatus.OK)
   async getLessonRecommendations(
     @Body() request: LessonRecommendationRequest,
     @CurrentUser() user: User,
   ) {
+    console.log('requesttttttttttttttttttttttttttttt', request);
     try {
       if (!request.user_id || !request.assessment_attemp_id) {
         throw new BadRequestException('user_id and assessment_attemp_id are required');
@@ -156,16 +125,16 @@ export class AIIntegrationController {
         data: {
           type: 'object',
           properties: {
-            performance_level: { 
-              type: 'string', 
+            performance_level: {
+              type: 'string',
               enum: ['excellent', 'good', 'average', 'poor'],
-              example: 'good' 
+              example: 'good',
             },
             predicted_score: { type: 'number', example: 8.02 },
-            trend_prediction: { 
-              type: 'string', 
+            trend_prediction: {
+              type: 'string',
               enum: ['tăng', 'giảm', 'ổn định'],
-              example: 'giảm' 
+              example: 'giảm',
             },
             user_id: { type: 'string' },
           },
@@ -175,10 +144,7 @@ export class AIIntegrationController {
     },
   })
   @HttpCode(HttpStatus.OK)
-  async trackAIPerformance(
-    @Body() request: AITrackingRequest,
-    @CurrentUser() user: User,
-  ) {
+  async trackAIPerformance(@Body() request: AITrackingRequest, @CurrentUser() user: User) {
     try {
       if (!request.data || !request.data.user_id || !request.data.course_id) {
         throw new BadRequestException('data.user_id and data.course_id are required');

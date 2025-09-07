@@ -96,19 +96,25 @@ export class AIIntegrationService {
       this.logger.log(`Getting lesson recommendations for user ${request.user_id}`);
 
       const response = await firstValueFrom(
-        this.httpService.post(`${this.aiApiUrl}/api/recommend-lessons`, request, {
-          headers: {
-            'Content-Type': 'application/json',
+        this.httpService.post(
+          `${this.aiApiUrl}/api/recommend-lessons`,
+          { data: request },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000, // 30 seconds timeout
           },
-          timeout: 30000, // 30 seconds timeout
-        }),
+        ),
       );
 
-      this.logger.log(`Successfully got ${response.data.data?.recommendations?.length || 0} recommendations`);
+      this.logger.log(
+        `Successfully got ${response.data.data?.recommendations?.length || 0} recommendations`,
+      );
       return response.data;
     } catch (error) {
       this.logger.error(`Failed to get lesson recommendations: ${error.message}`);
-      
+
       if (error instanceof AxiosError) {
         this.logger.error(`AI API Error Response: ${JSON.stringify(error.response?.data)}`);
       }
@@ -149,7 +155,7 @@ export class AIIntegrationService {
       return response.data;
     } catch (error) {
       this.logger.error(`Failed to predict learning attitude: ${error.message}`);
-      
+
       if (error instanceof AxiosError) {
         this.logger.error(`AI API Error Response: ${JSON.stringify(error.response?.data)}`);
       }
@@ -171,9 +177,7 @@ export class AIIntegrationService {
   /**
    * Gọi AI API để track performance và dự đoán xu hướng
    */
-  async trackAIPerformance(
-    request: AITrackingRequest,
-  ): Promise<AITrackingResponse> {
+  async trackAIPerformance(request: AITrackingRequest): Promise<AITrackingResponse> {
     try {
       this.logger.log(
         `Tracking AI performance for user ${request.data.user_id} in course ${request.data.course_id}`,
@@ -192,7 +196,7 @@ export class AIIntegrationService {
       return response.data;
     } catch (error) {
       this.logger.error(`Failed to track AI performance: ${error.message}`);
-      
+
       if (error instanceof AxiosError) {
         this.logger.error(`AI API Error Response: ${JSON.stringify(error.response?.data)}`);
       }

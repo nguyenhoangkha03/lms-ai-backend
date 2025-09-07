@@ -60,7 +60,7 @@ export class ForumTagController {
     description: 'Popular tags retrieved successfully',
   })
   async findPopular(@Query('limit') limit?: number) {
-    return this.tagService.findPopularTags(limit);
+    return this.tagService.findPopularTags(limit ? parseInt(limit.toString(), 10) : undefined);
   }
 
   @Get('search')
@@ -72,7 +72,7 @@ export class ForumTagController {
     description: 'Tag search results',
   })
   async search(@Query('q') query: string, @Query('limit') limit?: number) {
-    return this.tagService.searchTags(query, limit);
+    return this.tagService.searchTags(query, limit ? parseInt(limit.toString(), 10) : undefined);
   }
 
   @Get(':id')

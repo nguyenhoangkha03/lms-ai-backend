@@ -59,17 +59,17 @@ export class GradingController {
   @ApiResponse({ status: 201, description: 'Grade created successfully', type: Grade })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Assessment attempt not found' })
-  @UsePipes(new ValidationPipe({ transform: true }))
+  //   @UsePipes(new ValidationPipe({ transform: true }))
   async createGrade(@Body() createGradeDto: CreateGradeDto, @Request() req: any): Promise<Grade> {
     this.logger.log(`Creating grade for student ${createGradeDto.studentId}`);
     return this.gradingService.createGrade(createGradeDto, req.user.id);
   }
 
   @Get()
-  @Roles(UserType.TEACHER, UserType.ADMIN)
+  @Roles(UserType.TEACHER, UserType.ADMIN, UserType.STUDENT)
   @ApiOperation({ summary: 'Get grades with filtering and pagination' })
   @ApiResponse({ status: 200, description: 'Grades retrieved successfully' })
-  @UsePipes(new ValidationPipe({ transform: true }))
+  //   @UsePipes(new ValidationPipe({ transform: true }))
   async findGrades(
     @Query() query: GradeQueryDto,
     @Request() req: any,
@@ -103,7 +103,7 @@ export class GradingController {
   @ApiParam({ name: 'id', description: 'Grade ID' })
   @ApiResponse({ status: 200, description: 'Grade updated successfully', type: Grade })
   @ApiResponse({ status: 404, description: 'Grade not found' })
-  @UsePipes(new ValidationPipe({ transform: true }))
+  //   @UsePipes(new ValidationPipe({ transform: true }))
   async updateGrade(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateGradeDto: UpdateGradeDto,
